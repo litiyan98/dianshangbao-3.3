@@ -4074,16 +4074,15 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            <div className="max-w-4xl mx-auto flex flex-col gap-8 mt-8">
-               <div className="bg-white/60 backdrop-blur-2xl border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-3xl overflow-hidden p-5 md:p-12 space-y-12">
-                <section>
-                  <label className="mb-6 flex items-start gap-3">
-                    <span className="status-pulse-dot mt-2" aria-hidden="true" />
-                    <span className="flex flex-col">
-                      <span className="text-[11px] font-bold text-gray-400 tracking-[0.2em] uppercase">01</span>
-                      <span className="text-xl md:text-2xl font-semibold text-[#1d1d1f] tracking-tight mt-1">商品原图</span>
-                    </span>
-                  </label>
+            <div className="w-full bg-[#f5f5f7] pb-24 mt-8">
+               <div className="max-w-4xl mx-auto">
+                <section className="bg-white rounded-[2rem] p-8 md:p-10 mb-8 mx-auto max-w-4xl border border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.03)] transition-shadow duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.06)]">
+                  <div className="flex items-center gap-4 mb-8">
+                    <div className="flex items-center justify-center px-4 py-1.5 bg-violet-600 rounded-full shadow-sm">
+                      <span className="text-xs font-bold tracking-widest text-white">01</span>
+                    </div>
+                    <h2 className="text-2xl font-semibold text-[#1d1d1f] tracking-tight">商品原图</h2>
+                  </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
                     {sourceImages.map((img, i) => (
                       <div key={i} className="aspect-square relative group bg-white rounded-[24px] overflow-hidden border border-stone-50 shadow-sm transition-all duration-500 ease-out hover:scale-[1.01] hover:shadow-[0_20px_40px_rgba(0,0,0,0.06)]">
@@ -4108,17 +4107,12 @@ const App: React.FC = () => {
                     )}
                   </div>
                 </section>
-                <section ref={sceneRef} className={`apple-reveal-base ${isSceneVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}>
-                  <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-6">
-                    <div>
-                      <label className="flex items-start gap-3">
-                        <span className="status-pulse-dot mt-2" aria-hidden="true" />
-                        <span className="flex flex-col">
-                          <span className="text-[11px] font-bold text-gray-400 tracking-[0.2em] uppercase">02</span>
-                          <span className="text-xl md:text-2xl font-semibold text-[#1d1d1f] tracking-tight mt-1">场景与光影</span>
-                        </span>
-                      </label>
+                <section ref={sceneRef} className={`bg-white rounded-[2rem] p-8 md:p-10 mb-8 mx-auto max-w-4xl border border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.03)] transition-shadow duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.06)] apple-reveal-base ${isSceneVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}>
+                  <div className="flex items-center gap-4 mb-8">
+                    <div className="flex items-center justify-center px-4 py-1.5 bg-violet-600 rounded-full shadow-sm">
+                      <span className="text-xs font-bold tracking-widest text-white">02</span>
                     </div>
+                    <h2 className="text-2xl font-semibold text-[#1d1d1f] tracking-tight">场景与光影</h2>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
@@ -4195,13 +4189,12 @@ const App: React.FC = () => {
                 </section>
 
                 {/* [ 03.5 ] 构图控制中心 (尺寸与排版整合版) */}
-                <section ref={outputRef} className={`apple-reveal-base ${isOutputVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}>
-                  <div className="mb-6 flex items-start gap-3">
-                    <span className="status-pulse-dot mt-2" aria-hidden="true" />
-                    <div className="flex flex-col">
-                      <span className="text-[11px] font-bold text-gray-400 tracking-[0.2em] uppercase">03</span>
-                      <span className="text-xl md:text-2xl font-semibold text-[#1d1d1f] tracking-tight mt-1">尺寸与构图</span>
+                <section ref={outputRef} className={`bg-white rounded-[2rem] p-8 md:p-10 mb-8 mx-auto max-w-4xl border border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.03)] transition-shadow duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.06)] apple-reveal-base ${isOutputVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}>
+                  <div className="flex items-center gap-4 mb-8">
+                    <div className="flex items-center justify-center px-4 py-1.5 bg-violet-600 rounded-full shadow-sm">
+                      <span className="text-xs font-bold tracking-widest text-white">03</span>
                     </div>
+                    <h2 className="text-2xl font-semibold text-[#1d1d1f] tracking-tight">尺寸与构图</h2>
                   </div>
                   <div className="bg-white/40 p-6 rounded-[24px] border border-stone-100 space-y-6">
                     
@@ -4293,18 +4286,13 @@ const App: React.FC = () => {
                   </div>
                 </section>
 
-                <section ref={posterRef} className={`apple-reveal-base ${isPosterVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}>
-                  <div className="flex items-start justify-between mb-6">
-                    <div className="flex items-start gap-3">
-                      <span className="status-pulse-dot mt-2" aria-hidden="true" />
-                      <div className="flex items-center">
-                        <div className="flex flex-col">
-                          <span className="text-[11px] font-bold text-gray-400 tracking-[0.2em] uppercase">04</span>
-                          <span className="text-xl md:text-2xl font-semibold text-[#1d1d1f] tracking-tight mt-1">营销文案</span>
-                        </div>
-                        <span className="text-xs font-normal text-gray-400 ml-3 tracking-normal">可选</span>
-                      </div>
+                <section ref={posterRef} className={`bg-white rounded-[2rem] p-8 md:p-10 mb-8 mx-auto max-w-4xl border border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.03)] transition-shadow duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.06)] apple-reveal-base ${isPosterVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}>
+                  <div className="flex items-center gap-4 mb-8">
+                    <div className="flex items-center justify-center px-4 py-1.5 bg-gray-100 rounded-full border border-gray-200/50">
+                      <span className="text-xs font-bold tracking-widest text-gray-400">04</span>
                     </div>
+                    <h2 className="text-2xl font-semibold text-[#1d1d1f] tracking-tight">营销文案</h2>
+                    <span className="text-xs font-normal text-gray-400 ml-1 tracking-normal">可选</span>
                   </div>
                   <div className="space-y-5 bg-white/60 backdrop-blur-2xl border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-[2rem] p-8 md:p-10 relative overflow-hidden z-20">
                     <div className={`space-y-3 copy-container-wrapper text-state-shell ${
@@ -4437,18 +4425,15 @@ const App: React.FC = () => {
 
                 <div
                   ref={refStyleRef}
-                  className={`glass-panel p-5 md:p-10 space-y-12 rounded-[48px] apple-reveal-base ${isRefStyleVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}
+                  className={`bg-white rounded-[2rem] p-8 md:p-10 mb-8 mx-auto max-w-4xl border border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.03)] transition-shadow duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.06)] apple-reveal-base ${isRefStyleVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}
                 >
                    <section>
-                    <div className="mb-8 flex items-start gap-3">
-                      <span className="status-pulse-dot mt-2" aria-hidden="true" />
-                      <div className="flex items-center">
-                        <div className="flex flex-col">
-                          <span className="text-[11px] font-bold text-gray-400 tracking-[0.2em] uppercase">05</span>
-                          <span className="text-xl md:text-2xl font-semibold text-[#1d1d1f] tracking-tight mt-1">风格参考</span>
-                        </div>
-                        <span className="text-xs font-normal text-gray-400 ml-3 tracking-normal">可选</span>
+                    <div className="flex items-center gap-4 mb-8">
+                      <div className="flex items-center justify-center px-4 py-1.5 bg-gray-100 rounded-full border border-gray-200/50">
+                        <span className="text-xs font-bold tracking-widest text-gray-400">05</span>
                       </div>
+                      <h2 className="text-2xl font-semibold text-[#1d1d1f] tracking-tight">风格参考</h2>
+                      <span className="text-xs font-normal text-gray-400 ml-1 tracking-normal">可选</span>
                     </div>
 
                     <section className="mb-8 border-b border-stone-100 pb-8">
