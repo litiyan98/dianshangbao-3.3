@@ -25,6 +25,7 @@ export default {
         'gradient-x': 'gradient-x 3s ease infinite',
         'pulse-glow': 'pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         float: 'float 3s ease-in-out infinite',
+        'liquid-flow': 'liquidFlow 20s ease infinite',
       },
       keyframes: {
         'gradient-x': {
@@ -50,6 +51,16 @@ export default {
         float: {
           '0%, 100%': { transform: 'translateY(0)' },
           '50%': { transform: 'translateY(-5px)' },
+        },
+        liquidFlow: {
+          '0%, 100%': {
+            backgroundSize: '400% 400%',
+            backgroundPosition: '0% 50%',
+          },
+          '50%': {
+            backgroundSize: '400% 400%',
+            backgroundPosition: '100% 50%',
+          },
         },
       },
     },

@@ -3878,7 +3878,13 @@ const App: React.FC = () => {
           WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 150px)',
         }}
       >
-        <div className="absolute inset-0 bg-gradient-to-br from-[#fdfbfb] via-[#f3f4f6] to-[#e5e7eb] opacity-80"></div>
+        <div
+          className="absolute inset-0 w-full h-full opacity-90 animate-liquid-flow"
+          style={{
+            background: 'linear-gradient(-45deg, #e8e9eb, #f5f7fa, #c4c6ca, #ffffff, #e8e9eb)',
+            backgroundSize: '400% 400%'
+          }}
+        ></div>
       </div>
       {/* 组件内联注入 CSS，100% 保证动效渲染 */}
       <style>{`
