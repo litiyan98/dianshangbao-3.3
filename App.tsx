@@ -17,9 +17,9 @@ import { removeBackground as imglyRemoveBackground } from '@imgly/background-rem
 import { useAppleReveal } from './hooks/useAppleReveal';
 
 const BARRAGE_TEXTS = [
-  "视觉即资产，用前沿算力驱动电商新增长 ✦", "突破物理影棚限制，全球场景即刻渲染 ✦", "重构视觉生产力，一个人就是一个设计部 ✦", 
-  "一键生成高转化主图，让点击率自然飙升 ✦", "告别昂贵外包，AI 视觉总监 24 小时待命 ✦", "毫秒级生成跨境本土化场景，让商品走向世界 ✦", 
-  "告别繁琐修图，AI 精准把控每一缕光影 ✦", "降低 90% 视觉拍摄成本，利润空间再度突破 ✦", "多国籍模特一键切换，轻松拿捏海外受众审美 ✦", "赋予商品情绪价值，用视觉打动每一位买家 ✦"
+  '影棚级光影 ✦',
+  '极简操作 ✦',
+  '商用级高画质 ✦',
 ];
 
 const ECOMMERCE_TIPS = [
@@ -4007,9 +4007,9 @@ const App: React.FC = () => {
         {step === 'upload' ? (
           <div className="w-full space-y-12 reveal-up">
             <div className="text-center space-y-6">
-              <h3 className="text-[3.5rem] md:text-[80px] font-serif italic text-stone-900 tracking-tighter leading-none mt-4 md:mt-0">好主图，自带转化率<span className="text-[#002FA7]">.</span></h3>
-              <p className="font-sans text-[13px] text-stone-500 tracking-[0.5em] font-black uppercase inline-block border-y border-stone-100 py-5 max-w-3xl leading-relaxed">
-                驱动前沿 AI 视觉神经元：释放最先进制图算力，为每一位商家的转化率极客赋能。
+              <h3 className="text-[3.5rem] md:text-[80px] font-serif font-black text-stone-900 tracking-tighter leading-none mt-4 md:mt-0">好主图，天生能卖货。</h3>
+              <p className="font-sans text-[15px] text-gray-500 leading-relaxed max-w-3xl mx-auto">
+                只需上传原图，AI 自动为你渲染影棚级大片。准备好迎接下一次爆款。
               </p>
               
               <div className="w-full overflow-hidden relative py-4 opacity-90 pointer-events-none fade-edges">
@@ -4026,11 +4026,11 @@ const App: React.FC = () => {
             <div className="max-w-4xl mx-auto flex flex-col gap-8 mt-8">
                <div className="bg-white/60 backdrop-blur-2xl border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-3xl overflow-hidden p-5 md:p-12 space-y-12">
                 <section>
-                  <label className="mb-6 flex items-center gap-3">
-                    <span className="status-pulse-dot" aria-hidden="true" />
-                    <span className="inline-flex items-baseline gap-2">
-                      <span className="text-[11px] tracking-[0.2em] text-gray-400 font-medium uppercase">STEP 01</span>
-                      <span className="text-xl md:text-2xl font-semibold text-[#1d1d1f] tracking-tight">商品图像注入</span>
+                  <label className="mb-6 flex items-start gap-3">
+                    <span className="status-pulse-dot mt-2" aria-hidden="true" />
+                    <span className="flex flex-col">
+                      <span className="text-[11px] font-semibold text-gray-400 tracking-[0.25em] uppercase">01</span>
+                      <span className="text-2xl font-semibold text-[#1d1d1f] tracking-tight mt-1">商品原图</span>
                     </span>
                   </label>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
@@ -4051,7 +4051,7 @@ const App: React.FC = () => {
                         <input type="file" multiple className="hidden" onChange={handleUpload} />
                         <Plus className="text-stone-300 group-hover:text-[#002FA7] transition-colors" size={28} />
                         <span className="mt-3 text-[13px] text-stone-500 font-bold tracking-wide group-hover:text-[#002FA7]">
-                          🖱️ 点击此处选择商品主图
+                          点击或拖拽上传原图
                         </span>
                       </label>
                     )}
@@ -4060,20 +4060,19 @@ const App: React.FC = () => {
                 <section ref={sceneRef} className={`apple-reveal-base ${isSceneVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}>
                   <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-6">
                     <div>
-                      <label className="flex items-center gap-3">
-                        <span className="status-pulse-dot" aria-hidden="true" />
-                        <span className="inline-flex items-baseline gap-2">
-                          <span className="text-[11px] tracking-[0.2em] text-gray-400 font-medium uppercase">STEP 02</span>
-                          <span className="text-xl md:text-2xl font-semibold text-[#1d1d1f] tracking-tight">场景与灵感配置</span>
+                      <label className="flex items-start gap-3">
+                        <span className="status-pulse-dot mt-2" aria-hidden="true" />
+                        <span className="flex flex-col">
+                          <span className="text-[11px] font-semibold text-gray-400 tracking-[0.25em] uppercase">02</span>
+                          <span className="text-2xl font-semibold text-[#1d1d1f] tracking-tight mt-1">场景与光影</span>
                         </span>
                       </label>
-                      <p className="text-[10px] text-stone-400 mt-1 tracking-wide">模型集群：{MODEL_HINT_IMAGE}</p>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest block">场景设定 (Scene)</label>
+                      <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest block">场景设定</label>
                       <select 
                         value={promptScene} 
                         onChange={(e) => setPromptScene(e.target.value)}
@@ -4092,7 +4091,7 @@ const App: React.FC = () => {
                       </select>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest block">画面色调 (Tone)</label>
+                      <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest block">画面色调</label>
                       <select 
                         value={promptTone} 
                         onChange={(e) => setPromptTone(e.target.value)}
@@ -4116,7 +4115,7 @@ const App: React.FC = () => {
                     <textarea 
                       value={userPrompt} onChange={(e) => setUserPrompt(e.target.value)}
                       className="w-full min-h-[120px] resize-none rounded-2xl bg-[#f5f5f7] px-4 py-3 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-purple-500/20 transition-colors duration-300"
-                      placeholder={"// 导演指令：请描述您期望的画面细节与氛围...\n例如：清晨柔和的阳光透过百叶窗，商品放置在带有水滴的黑大理石台面上。"}
+                      placeholder={"描述你期望的画面细节。例如：清晨的阳光透过百叶窗，洒在带有水滴的黑大理石上。"}
                     />
                   </div>
 
@@ -4133,7 +4132,7 @@ const App: React.FC = () => {
                       loading={isAnalyzingPrompt}
                       disabled={isAnalyzingPrompt}
                       icon={<Wand2 size={16} />}
-                      idleText={userPrompt ? '重新生成灵感' : 'AI 帮我写神级提示词'}
+                      idleText={userPrompt ? '✨ 重新优化描述' : '✨ 优化画面描述'}
                       loadingText={`✨ 灵感引擎思考中 ${promptCountdown ?? 60}s`}
                       doneText="✨ 灵感已注入"
                       showDone={buttonDoneFlash.prompt}
@@ -4146,19 +4145,23 @@ const App: React.FC = () => {
 
                 {/* [ 03.5 ] 构图控制中心 (尺寸与排版整合版) */}
                 <section ref={outputRef} className={`apple-reveal-base ${isOutputVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}>
-                  <label className="text-xl md:text-2xl font-semibold text-[#1d1d1f] tracking-tight mb-6 flex items-center gap-3">
-                    🔲 第三步：构图控制中心 (尺寸与排版)
-                  </label>
+                  <div className="mb-6 flex items-start gap-3">
+                    <span className="status-pulse-dot mt-2" aria-hidden="true" />
+                    <div className="flex flex-col">
+                      <span className="text-[11px] font-semibold text-gray-400 tracking-[0.25em] uppercase">03</span>
+                      <span className="text-2xl font-semibold text-[#1d1d1f] tracking-tight mt-1">尺寸与构图</span>
+                    </div>
+                  </div>
                   <div className="bg-white/40 p-6 rounded-[24px] border border-stone-100 space-y-6">
                     
                     {/* 1. 画布比例选择 */}
                     <div>
-                      <label className="text-[11px] font-bold text-stone-500 mb-3 block">1. 选择输出尺寸 (电商平台标准)</label>
+                      <label className="text-[11px] font-bold text-stone-500 mb-3 block">选择输出尺寸</label>
                       <div className="p-1.5 bg-[#f5f5f7] rounded-xl inline-flex gap-1 w-full">
                         {[
-                          { id: '1:1', label: '淘宝主图' },
-                          { id: '3:4', label: '小红书种草' },
-                          { id: '9:16', label: '短视频封面' }
+                          { id: '1:1', label: '方形' },
+                          { id: '3:4', label: '竖版' },
+                          { id: '9:16', label: '长图' }
                         ].map(ratio => (
                           <button 
                             key={ratio.id} 
@@ -4179,7 +4182,7 @@ const App: React.FC = () => {
 
                     {/* 2. 留白与位置选择 */}
                     <div>
-                      <label className="text-[11px] font-bold text-stone-500 mb-3 block">2. 选择商品位置 (为文案预留空间)</label>
+                      <label className="text-[11px] font-bold text-stone-500 mb-3 block">选择商品位置</label>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 p-1.5 bg-[#f5f5f7] rounded-xl">
                         {[
                           { id: 'center', label: '居中聚焦' },
@@ -4212,7 +4215,7 @@ const App: React.FC = () => {
                     {/* 3. 🎯 目标投放平台选择器 */}
                     <div className="border-t border-stone-100/50 pt-6">
                       <label className="text-[14px] font-black text-stone-800 mb-3 flex items-center gap-2">
-                        🎯 目标投放平台 (视觉算法预设)
+                        目标投放平台
                       </label>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 p-1.5 bg-[#f5f5f7] rounded-xl">
                         {[
@@ -4240,10 +4243,17 @@ const App: React.FC = () => {
                 </section>
 
                 <section ref={posterRef} className={`apple-reveal-base ${isPosterVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}>
-                  <div className="flex items-center justify-between mb-6">
-                    <label className="text-xl md:text-2xl font-semibold text-[#1d1d1f] tracking-tight flex items-center gap-3">
-                      🔤 第四步：海报文字设计 (选填)
-                    </label>
+                  <div className="flex items-start justify-between mb-6">
+                    <div className="flex items-start gap-3">
+                      <span className="status-pulse-dot mt-2" aria-hidden="true" />
+                      <div className="flex items-center">
+                        <div className="flex flex-col">
+                          <span className="text-[11px] font-semibold text-gray-400 tracking-[0.25em] uppercase">04</span>
+                          <span className="text-2xl font-semibold text-[#1d1d1f] tracking-tight mt-1">营销文案</span>
+                        </div>
+                        <span className="text-sm text-gray-400 font-normal ml-3">可选</span>
+                      </div>
+                    </div>
                   </div>
                   <div className="space-y-5 bg-white/40 p-6 rounded-[24px] border border-stone-100">
                     <div className={`space-y-3 copy-container-wrapper text-state-shell ${
@@ -4296,7 +4306,7 @@ const App: React.FC = () => {
                     </div>
 
                     <div className="pt-2">
-                      <label className="text-[10px] text-stone-500 font-bold mb-3 block">流式排版预设 (一键飞位)</label>
+                      <label className="text-[10px] text-stone-500 font-bold mb-3 block">排版风格</label>
                       <div className="flex gap-2">
                         {TEXT_PRESETS.map(preset => (
                           <button
@@ -4419,13 +4429,21 @@ const App: React.FC = () => {
                   className={`glass-panel p-5 md:p-10 space-y-12 rounded-[48px] apple-reveal-base ${isRefStyleVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}
                 >
                    <section>
-                    <label className="text-xl md:text-2xl font-semibold text-[#1d1d1f] tracking-tight mb-8 flex items-center gap-4">🎨 第五步：上传参考风格 (仅提取光影与氛围)</label>
-                    
+                    <div className="mb-8 flex items-start gap-3">
+                      <span className="status-pulse-dot mt-2" aria-hidden="true" />
+                      <div className="flex items-center">
+                        <div className="flex flex-col">
+                          <span className="text-[11px] font-semibold text-gray-400 tracking-[0.25em] uppercase">05</span>
+                          <span className="text-2xl font-semibold text-[#1d1d1f] tracking-tight mt-1">风格参考</span>
+                        </div>
+                        <span className="text-sm text-gray-400 font-normal ml-3">可选</span>
+                      </div>
+                    </div>
+
                     <section className="mb-8 border-b border-stone-100 pb-8">
                       <div className="flex flex-col sm:flex-row gap-4 items-center">
                         <div className="flex-1">
-                          <label className="text-[12px] font-bold text-stone-600 mb-2 block">有喜欢的爆款图？传上来直接抄风格：</label>
-                          <p className="text-[10px] text-stone-400">AI 将自动提取参考图的光影、色调和构图逻辑</p>
+                          <p className="text-[12px] text-gray-500 leading-relaxed">上传心仪的参考图，AI 将自动学习并重塑其光影与质感。</p>
                         </div>
                         {styleReferenceImage ? (
                           <div className="relative w-20 h-20 rounded-xl overflow-hidden border-2 border-[#002FA7] group">
@@ -4488,7 +4506,7 @@ const App: React.FC = () => {
                           loading={isProcessing && activeGenerateCount === 3}
                           disabled={isProcessing || sourceImages.length === 0}
                           icon={<Sparkles size={18} />}
-                          idleText="✨ 一键生成 3 大营销场景 (荐)"
+                          idleText="✨ 生成 3 款大师级主图"
                           loadingText="🚀 正在并发渲染：高转化主图 / 沉浸场景 / 极简海报..."
                           doneText="✨ 渲染完成"
                           showDone={buttonDoneFlash.genMatrix}
@@ -4497,7 +4515,7 @@ const App: React.FC = () => {
                           block
                         />
                       </div>
-                      <p className="text-[10px] text-stone-500 font-bold text-center">(消耗 3 点生图额度)</p>
+                      <p className="text-xs text-gray-400 mt-2 text-center">本次操作消耗 3 额度</p>
                     </div>
                     <div className="space-y-2">
                       <div className="rounded-2xl transition-all duration-500 ease-out shadow-[0_6px_20px_rgba(168,85,247,0.14)] hover:scale-[1.02] hover:shadow-[0_10px_30px_rgba(168,85,247,0.3)]">
@@ -4506,7 +4524,7 @@ const App: React.FC = () => {
                           loading={isProcessing && activeGenerateCount === 1}
                           disabled={isProcessing || sourceImages.length === 0}
                           icon={<Zap size={18} />}
-                          idleText="只生成 1 张精修图"
+                          idleText="⚡️ 生成单张精修"
                           loadingText="✨ AI 视觉神经元正在为您注入顶级商业摄影参数..."
                           doneText="✨ 渲染完成"
                           showDone={buttonDoneFlash.genSingle}
@@ -4515,7 +4533,7 @@ const App: React.FC = () => {
                           block
                         />
                       </div>
-                      <p className="text-[10px] text-stone-500 font-bold text-center">(消耗 1 点生图额度)</p>
+                      <p className="text-xs text-gray-400 mt-2 text-center">本次操作消耗 1 额度</p>
                     </div>
                   </div>
                 </div>
