@@ -3871,6 +3871,15 @@ const App: React.FC = () => {
 
   return (
     <div className="relative min-h-screen w-full flex flex-col items-center justify-center overflow-hidden">
+      <div
+        className="fixed inset-0 -z-10 w-full h-screen pointer-events-none"
+        style={{
+          maskImage: 'linear-gradient(to bottom, transparent 0%, black 150px)',
+          WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 150px)',
+        }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-br from-[#fdfbfb] via-[#f3f4f6] to-[#e5e7eb] opacity-80"></div>
+      </div>
       {/* 组件内联注入 CSS，100% 保证动效渲染 */}
       <style>{`
         @keyframes slide-left {
@@ -3932,14 +3941,15 @@ const App: React.FC = () => {
                 type="button"
                 title="剩余算力点，点击补充"
                 onClick={handleQuickPay}
-                className="group relative flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#1d1d1f] border border-gray-700/50 shadow-sm cursor-pointer overflow-hidden transition-all duration-300 hover:border-purple-500/30 hover:shadow-[0_0_15px_rgba(168,85,247,0.2)]"
+                className="group relative flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-white border border-gray-200 shadow-sm cursor-pointer overflow-hidden transition-all duration-300 hover:border-gray-300 hover:shadow-[0_0_20px_rgba(200,200,200,0.5)]"
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-gray-400 transition-colors group-hover:text-white group-hover:drop-shadow-[0_0_6px_rgba(255,255,255,0.6)]">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-gray-400 relative z-10 transition-colors duration-300 group-hover:text-gray-700">
                   <path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z"></path>
                 </svg>
-                <span className="tracking-wide font-semibold text-white">
-                  {isCreditsLoading ? '--' : (userCredits ?? 0)} <span className="text-gray-400 font-medium ml-0.5 group-hover:text-gray-300">Tokens</span>
+                <span className="relative z-10 text-sm font-semibold text-[#1d1d1f]">
+                  {isCreditsLoading ? '--' : (userCredits ?? 0)} <span className="font-normal text-gray-500 transition-colors duration-300 group-hover:text-gray-800">Tokens</span>
                 </span>
+                <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-gray-100/80 to-transparent group-hover:translate-x-full transition-transform duration-[1000ms] ease-in-out z-0 pointer-events-none"></div>
               </button>
 
               <div ref={avatarMenuRef} className="relative">
@@ -4074,17 +4084,9 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            <div className="relative w-full bg-[#f5f5f7] pb-24 mt-8 overflow-hidden">
-               <div
-                 className="absolute inset-0 w-full h-full z-0 pointer-events-none"
-                 style={{ maskImage: 'linear-gradient(to bottom, transparent 0%, black 150px)', WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 150px)' }}
-               >
-                 <div className="absolute -top-16 left-[-10%] h-[45%] w-[45%] bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.85),transparent_70%)] blur-3xl" />
-                 <div className="absolute top-[22%] right-[-12%] h-[38%] w-[42%] bg-[radial-gradient(circle_at_center,rgba(167,139,250,0.18),transparent_72%)] blur-3xl" />
-                 <div className="absolute bottom-[-12%] left-[12%] h-[40%] w-[52%] rounded-[48px] border border-white/30 bg-gradient-to-br from-white/60 via-white/15 to-transparent blur-[1px]" />
-               </div>
-               <div className="relative z-10 max-w-4xl mx-auto">
-                <section className="bg-white rounded-[2rem] p-8 md:p-10 mb-8 mx-auto max-w-4xl border border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.03)] transition-shadow duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.06)]">
+            <div className="relative w-full pb-24 mt-8">
+               <div className="relative z-10 max-w-4xl mx-auto flex flex-col">
+                <section className="order-1 bg-white rounded-[2rem] p-8 md:p-10 mb-8 mx-auto max-w-4xl border border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.03)] transition-shadow duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.06)]">
                   <div className="flex items-end gap-4 mb-8 select-none">
                     <span className="text-5xl md:text-6xl font-black tracking-tighter leading-none bg-clip-text text-transparent bg-gradient-to-br from-gray-400 via-gray-200 to-gray-400 drop-shadow-[0_1px_1px_rgba(255,255,255,0.8)]">
                       01
@@ -4117,10 +4119,10 @@ const App: React.FC = () => {
                     )}
                   </div>
                 </section>
-                <section ref={sceneRef} className={`bg-white rounded-[2rem] p-8 md:p-10 mb-8 mx-auto max-w-4xl border border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.03)] transition-shadow duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.06)] apple-reveal-base ${isSceneVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}>
+                <section ref={sceneRef} className={`order-3 bg-white rounded-[2rem] p-8 md:p-10 mb-8 mx-auto max-w-4xl border border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.03)] transition-shadow duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.06)] apple-reveal-base ${isSceneVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}>
                   <div className="flex items-end gap-4 mb-8 select-none">
                     <span className="text-5xl md:text-6xl font-black tracking-tighter leading-none bg-clip-text text-transparent bg-gradient-to-br from-gray-400 via-gray-200 to-gray-400 drop-shadow-[0_1px_1px_rgba(255,255,255,0.8)]">
-                      02
+                      03
                     </span>
                     <h2 className="text-2xl md:text-3xl font-bold text-[#1d1d1f] tracking-tight pb-1">
                       场景与光影
@@ -4201,10 +4203,10 @@ const App: React.FC = () => {
                 </section>
 
                 {/* [ 03.5 ] 构图控制中心 (尺寸与排版整合版) */}
-                <section ref={outputRef} className={`bg-white rounded-[2rem] p-8 md:p-10 mb-8 mx-auto max-w-4xl border border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.03)] transition-shadow duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.06)] apple-reveal-base ${isOutputVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}>
+                <section ref={outputRef} className={`order-4 bg-white rounded-[2rem] p-8 md:p-10 mb-8 mx-auto max-w-4xl border border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.03)] transition-shadow duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.06)] apple-reveal-base ${isOutputVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}>
                   <div className="flex items-end gap-4 mb-8 select-none">
                     <span className="text-5xl md:text-6xl font-black tracking-tighter leading-none bg-clip-text text-transparent bg-gradient-to-br from-gray-400 via-gray-200 to-gray-400 drop-shadow-[0_1px_1px_rgba(255,255,255,0.8)]">
-                      03
+                      04
                     </span>
                     <h2 className="text-2xl md:text-3xl font-bold text-[#1d1d1f] tracking-tight pb-1">
                       尺寸与构图
@@ -4300,153 +4302,44 @@ const App: React.FC = () => {
                   </div>
                 </section>
 
-                <section ref={posterRef} className={`bg-white rounded-[2rem] p-8 md:p-10 mb-8 mx-auto max-w-4xl border border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.03)] transition-shadow duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.06)] apple-reveal-base ${isPosterVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}>
+                <section ref={posterRef} className={`order-5 bg-white rounded-[2rem] p-8 md:p-10 mb-8 mx-auto max-w-4xl border border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.03)] transition-shadow duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.06)] apple-reveal-base ${isPosterVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}>
                   <div className="flex items-end gap-4 mb-8 select-none">
                     <span className="text-5xl md:text-6xl font-black tracking-tighter leading-none bg-clip-text text-transparent bg-gradient-to-br from-gray-400 via-gray-200 to-gray-400 drop-shadow-[0_1px_1px_rgba(255,255,255,0.8)]">
-                      04
+                      05
                     </span>
                     <div className="flex items-end gap-3 pb-1">
-                      <h2 className="text-2xl md:text-3xl font-bold text-[#1d1d1f] tracking-tight">营销文案</h2>
+                      <h2 className="text-2xl md:text-3xl font-bold text-[#1d1d1f] tracking-tight">海报文字设计</h2>
                       <span className="text-xs font-normal text-gray-400 tracking-normal mb-1">可选</span>
                     </div>
                   </div>
                   <div className="space-y-5 bg-white/60 backdrop-blur-2xl border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-[2rem] p-8 md:p-10 relative overflow-hidden z-20">
-                    <div className={`space-y-3 copy-container-wrapper text-state-shell ${
-                        isExtractingCopy ? 'is-generating' : copyGlowState === 'success' ? 'is-success' : ''
-                      }`}>
-                      <div className={`relative group copy-editor-card copy-editor-card--title ${
-                        highlightCopy ? 'copy-editor-card--highlight' : ''
-                      }`}>
-                        <p className="copy-editor-card__label">主标题</p>
-                        <textarea 
-                          placeholder="主标题 (例如：极致顺滑 纵享丝滑)" 
-                          value={textConfig.title} 
-                          onChange={e => setTextConfig({...textConfig, title: e.target.value})} 
-                          rows={2}
-                          className="w-full bg-gray-50/50 hover:bg-gray-100/50 focus:bg-white focus:ring-2 focus:ring-[#1d1d1f]/10 border-none rounded-2xl px-6 py-4 pr-24 min-h-[84px] resize-none text-base text-[#1d1d1f] transition-all duration-300 placeholder:text-gray-400 focus:outline-none" 
-                        />
-                        <MorphingAiButton
-                          onClick={handleExtractCopy}
-                          loading={isExtractingCopy}
-                          disabled={isExtractingCopy}
-                          icon={<Sparkles size={12} />}
-                          idleText="爆款文案制作"
-                          loadingText={`爆款文案制作中 ${copywritingCountdown ?? 60}s`}
-                          doneText="✨ 文案已完成"
-                          showDone={buttonDoneFlash.copy}
-                          size="sm"
-                          variant="primary"
-                          className="absolute right-2 top-1/2 -translate-y-1/2"
-                        />
-                      </div>
-                      <div className={`holo-ticker max-w-[280px] ml-auto ${isExtractingCopy ? 'is-visible' : ''}`}>
-                        <div className="holo-ticker-track">
-                          <span className="holo-ticker-line">{MODEL_HINT_COPY}</span>
-                          <span className="holo-ticker-line">最长 60 秒，首次慢响应自动重试 1 次</span>
-                          <span className="holo-ticker-line">{MODEL_HINT_COPY}</span>
-                        </div>
-                      </div>
-                      <div className={`copy-editor-card copy-editor-card--detail ${
-                        highlightCopy ? 'copy-editor-card--highlight' : ''
-                      }`}>
-                        <p className="copy-editor-card__label">正文 / 副标题</p>
-                        <textarea 
-                          placeholder="副标题 (例如：2026 春夏限定款)" 
-                          value={textConfig.detail} 
-                          onChange={e => setTextConfig({...textConfig, detail: e.target.value})} 
-                          rows={2}
-                          className="w-full bg-gray-50/50 hover:bg-gray-100/50 focus:bg-white focus:ring-2 focus:ring-[#1d1d1f]/10 border-none rounded-2xl px-6 py-4 min-h-[78px] resize-none text-base text-[#1d1d1f] transition-all duration-300 placeholder:text-gray-400 focus:outline-none" 
-                        />
-                      </div>
-                    </div>
+                    <div className="max-w-xl mx-auto flex flex-col gap-5 w-full">
+                      <input
+                        type="text"
+                        placeholder="主标题..."
+                        value={textConfig.title}
+                        onChange={e => setTextConfig({ ...textConfig, title: e.target.value })}
+                        className="w-full bg-gray-50/80 hover:bg-white focus:bg-white focus:ring-2 focus:ring-gray-200 border-none rounded-2xl px-6 py-4 text-[#1d1d1f] transition-all shadow-sm"
+                      />
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                      <div>
-                        <label className="text-[10px] text-stone-500 font-bold mb-2 block">字体风格</label>
-                        <select value={textConfig.fontStyle} onChange={e => setTextConfig({...textConfig, fontStyle: e.target.value as FontStyle})} className="w-full bg-[#f5f5f7] rounded-xl px-4 py-2.5 text-sm font-medium text-[#1d1d1f] focus:outline-none focus:bg-white focus:ring-2 focus:ring-purple-500/20 transition-colors duration-300">
-                          {FONT_STYLE_OPTIONS.map(option => (
-                            <option key={option.id} value={option.id}>{option.label}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="col-span-2">
-                          <div className="flex justify-between items-center mb-2">
-                            <label className="text-[10px] text-stone-500 font-bold">主标题颜色 (爆款直选)</label>
-                            <button onClick={() => setShowAdvancedColor(!showAdvancedColor)} className="text-[9px] text-[#002FA7] flex items-center gap-1 font-bold hover:underline">
-                              <Palette size={10}/> {showAdvancedColor ? '收起专业色板' : '专业自定义'}
-                            </button>
-                          </div>
-
-                          <div className="flex items-center justify-between mb-3 px-2 py-1.5 rounded-lg bg-stone-50 border border-stone-100">
-                            <span className="text-[10px] text-stone-600 font-bold">AI 明暗自适应</span>
-                            <button
-                              onClick={() => setIsAutoTextContrast(prev => !prev)}
-                              className={`px-2.5 py-1 rounded-full text-[10px] font-black transition-all ${isAutoTextContrast ? 'bg-[#002FA7] text-white' : 'bg-white text-stone-500 border border-stone-200'}`}
-                            >
-                              {isAutoTextContrast ? 'ON' : 'OFF'}
-                            </button>
-                          </div>
-                          
-                          <div className="flex gap-2 mb-2">
-                            {PRESET_COLORS.map(color => (
-                              <button key={color} onClick={() => setTextConfig({...textConfig, mainColor: color})} className={`w-8 h-8 rounded-full shadow-sm border-2 transition-all ${textConfig.mainColor === color ? 'border-[#002FA7] scale-110' : 'border-transparent hover:scale-105'}`} style={{ backgroundColor: color, border: color === '#FFFFFF' ? '1px solid #e5e7eb' : '' }} />
-                            ))}
-                          </div>
-
-                          {showAdvancedColor && (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3 bg-stone-50 p-3 rounded-xl border border-stone-100">
-                              <div className="flex items-center gap-2">
-                                <input type="color" value={textConfig.mainColor} onChange={e => setTextConfig({...textConfig, mainColor: e.target.value})} className="w-8 h-8 rounded cursor-pointer border-none bg-transparent" />
-                                <span className="text-[10px] text-stone-500">主色 (自定义)</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <input type="color" value={textConfig.subColor || '#ffffff'} onChange={e => setTextConfig({...textConfig, subColor: e.target.value})} className="w-8 h-8 rounded cursor-pointer border-none bg-transparent" />
-                                <span className="text-[10px] text-stone-500">副色调</span>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                         <label className="text-[10px] text-stone-500 font-bold mb-2 flex justify-between">
-                           <span>文字大小</span>
-                           <span className="text-[#002FA7]">{textConfig.fontSize}</span>
-                         </label>
-                         <input type="range" min="4" max="25" value={textConfig.fontSize} onChange={e => setTextConfig({...textConfig, fontSize: Number(e.target.value)})} className="w-full h-2 bg-gray-200/80 rounded-full appearance-none cursor-pointer accent-[#1d1d1f] hover:accent-gray-700 transition-colors" />
-                      </div>
-                      <div>
-                         <label className="text-[10px] text-stone-500 font-bold mb-2 flex justify-between">
-                           <span>文字阴影</span>
-                           <span className="text-[#002FA7]">{textConfig.shadowIntensity}</span>
-                         </label>
-                         <input type="range" min="0" max="30" value={textConfig.shadowIntensity} onChange={e => setTextConfig({...textConfig, shadowIntensity: Number(e.target.value)})} className="w-full h-2 bg-gray-200/80 rounded-full appearance-none cursor-pointer accent-[#1d1d1f] hover:accent-gray-700 transition-colors" />
-                      </div>
-                    </div>
-
-                    <div className="mt-4 pt-4 border-t border-stone-100">
-                      <label className="text-[10px] text-stone-500 font-bold mb-2 block">文字对齐方式 (已开启智能跟随)</label>
-                      <div className="bg-gray-100/50 p-1 rounded-xl inline-flex gap-1 w-full">
-                        {(['left', 'center', 'right'] as const).map(align => (
-                          <button key={align} onClick={() => setTextConfig({...textConfig, textAlign: align})} className={`flex-1 py-1.5 rounded-lg transition-all ${textConfig.textAlign === align ? 'bg-white shadow-sm text-[#1d1d1f] rounded-lg text-sm font-semibold' : 'text-sm font-medium text-gray-500 hover:text-gray-700'}`}>
-                            {align === 'left' ? '左对齐' : align === 'center' ? '居中对齐' : '右对齐'}
-                          </button>
-                        ))}
-                      </div>
+                      <textarea
+                        placeholder="副标题/正文..."
+                        value={textConfig.detail}
+                        onChange={e => setTextConfig({ ...textConfig, detail: e.target.value })}
+                        className="w-full h-24 resize-none bg-gray-50/80 hover:bg-white focus:bg-white focus:ring-2 focus:ring-gray-200 border-none rounded-2xl px-6 py-4 text-[#1d1d1f] transition-all shadow-sm"
+                      ></textarea>
                     </div>
                   </div>
                 </section>
 
                 <div
                   ref={refStyleRef}
-                  className={`bg-white rounded-[2rem] p-8 md:p-10 mb-8 mx-auto max-w-4xl border border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.03)] transition-shadow duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.06)] apple-reveal-base ${isRefStyleVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}
+                  className={`order-2 bg-white rounded-[2rem] p-8 md:p-10 mb-8 mx-auto max-w-4xl border border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.03)] transition-shadow duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.06)] apple-reveal-base ${isRefStyleVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}
                 >
                    <section>
                     <div className="flex items-end gap-4 mb-8 select-none">
                       <span className="text-5xl md:text-6xl font-black tracking-tighter leading-none bg-clip-text text-transparent bg-gradient-to-br from-gray-400 via-gray-200 to-gray-400 drop-shadow-[0_1px_1px_rgba(255,255,255,0.8)]">
-                        05
+                        02
                       </span>
                       <div className="flex items-end gap-3 pb-1">
                         <h2 className="text-2xl md:text-3xl font-bold text-[#1d1d1f] tracking-tight">风格参考</h2>
@@ -4508,10 +4401,11 @@ const App: React.FC = () => {
                       </div>
                     </section>
                   </section>
+                </div>
 
-                  <div
-                    ref={generateRef}
-                    className={`apple-reveal-base mt-8 pt-6 border-t border-white/20 grid grid-cols-1 sm:grid-cols-2 gap-4 w-full ${isGenerateVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}
+                <div
+                  ref={generateRef}
+                    className={`order-6 apple-reveal-base mt-8 pt-6 border-t border-white/20 grid grid-cols-1 sm:grid-cols-2 gap-4 w-full ${isGenerateVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}
                   >
                     <div className="space-y-2">
                       <div className="rounded-2xl transition-all duration-500 ease-out shadow-[0_8px_24px_rgba(168,85,247,0.35)] hover:scale-[1.02] hover:shadow-[0_12px_32px_rgba(168,85,247,0.5)]">
@@ -4551,7 +4445,6 @@ const App: React.FC = () => {
                       <p className="text-xs text-gray-400 mt-2 text-center">本次操作消耗 1 额度</p>
                     </div>
                   </div>
-                </div>
               </div>
             </div>
 
