@@ -4035,7 +4035,7 @@ const App: React.FC = () => {
                   </label>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
                     {sourceImages.map((img, i) => (
-                      <div key={i} className="aspect-square relative group bg-white rounded-[24px] overflow-hidden border border-stone-50 shadow-sm transition-all duration-500 ease-out hover:scale-[1.01] hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)]">
+                      <div key={i} className="aspect-square relative group bg-white rounded-[24px] overflow-hidden border border-stone-50 shadow-sm transition-all duration-500 ease-out hover:scale-[1.01] hover:shadow-[0_20px_40px_rgba(0,0,0,0.06)]">
                         <img src={img} className="w-full h-full object-cover" alt="" />
                         {/* 新增：悬浮删除按钮 */}
                         <button 
@@ -4047,7 +4047,7 @@ const App: React.FC = () => {
                       </div>
                     ))}
                     {sourceImages.length < 5 && (
-                      <label className="aspect-square border-2 border-dashed border-stone-200 rounded-[24px] flex flex-col items-center justify-center cursor-pointer hover:border-[#002FA7] hover:bg-stone-50/90 transition-all duration-500 ease-out hover:scale-[1.01] hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)] group">
+                      <label className="aspect-square border-2 border-dashed border-stone-200 rounded-[24px] flex flex-col items-center justify-center cursor-pointer hover:border-[#002FA7] hover:bg-stone-50/90 transition-all duration-500 ease-out hover:scale-[1.01] hover:shadow-[0_20px_40px_rgba(0,0,0,0.06)] group">
                         <input type="file" multiple className="hidden" onChange={handleUpload} />
                         <Plus className="text-stone-300 group-hover:text-[#002FA7] transition-colors" size={28} />
                         <span className="mt-3 text-[13px] text-stone-500 font-bold tracking-wide group-hover:text-[#002FA7]">
@@ -4482,7 +4482,7 @@ const App: React.FC = () => {
                     className={`apple-reveal-base mt-8 pt-6 border-t border-white/20 grid grid-cols-1 sm:grid-cols-2 gap-4 w-full ${isGenerateVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}
                   >
                     <div className="space-y-2">
-                      <div className="rounded-2xl transition-all duration-500 ease-out shadow-[0_8px_24px_rgba(168,85,247,0.28)] hover:scale-[1.02] hover:shadow-[0_12px_36px_rgba(168,85,247,0.45)]">
+                      <div className="rounded-2xl transition-all duration-500 ease-out shadow-[0_8px_24px_rgba(168,85,247,0.35)] hover:scale-[1.02] hover:shadow-[0_12px_32px_rgba(168,85,247,0.5)]">
                         <MorphingAiButton
                           onClick={handleGenerateSuite}
                           loading={isProcessing && activeGenerateCount === 3}
