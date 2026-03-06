@@ -3875,8 +3875,8 @@ const App: React.FC = () => {
       <div
         className="fixed inset-0 -z-10 w-full h-screen pointer-events-none select-none bg-transparent"
         style={{
-          maskImage: 'linear-gradient(to bottom, transparent 0%, black 150px)',
-          WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 150px)',
+          maskImage: 'linear-gradient(to bottom, transparent 0%, transparent 50vh, black 85vh)',
+          WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, transparent 50vh, black 85vh)',
         }}
       >
         <LiquidMetalBackground />
