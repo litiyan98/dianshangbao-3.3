@@ -187,6 +187,8 @@ const App: React.FC = () => {
   const suiteRefs = useRef<(HTMLDivElement | null)[]>([]);
   const { ref: sceneRef, isVisible: isSceneVisible } = useAppleReveal<HTMLElement>(0.15);
   const { ref: outputRef, isVisible: isOutputVisible } = useAppleReveal<HTMLElement>(0.15);
+  const { ref: posterRef, isVisible: isPosterVisible } = useAppleReveal<HTMLElement>(0.15);
+  const { ref: refStyleRef, isVisible: isRefStyleVisible } = useAppleReveal<HTMLDivElement>(0.15);
   const { ref: generateRef, isVisible: isGenerateVisible } = useAppleReveal<HTMLDivElement>(0.15);
 
   const [lightboxTarget, setLightboxTarget] = useState<LightboxTarget | null>(null);
@@ -4237,7 +4239,7 @@ const App: React.FC = () => {
                   </div>
                 </section>
 
-                <section>
+                <section ref={posterRef} className={`apple-reveal-base ${isPosterVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}>
                   <div className="flex items-center justify-between mb-6">
                     <label className="text-[14px] font-black text-stone-800 flex items-center gap-3">
                       🔤 第四步：海报文字设计 (选填)
@@ -4412,7 +4414,10 @@ const App: React.FC = () => {
                   </div>
                 </section>
 
-                <div className="glass-panel p-5 md:p-10 space-y-12 rounded-[48px]">
+                <div
+                  ref={refStyleRef}
+                  className={`glass-panel p-5 md:p-10 space-y-12 rounded-[48px] apple-reveal-base ${isRefStyleVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}
+                >
                    <section>
                     <label className="text-[14px] font-black text-stone-800 mb-8 flex items-center gap-4">🎨 第五步：上传参考风格 (仅提取光影与氛围)</label>
                     
