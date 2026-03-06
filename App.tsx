@@ -4400,6 +4400,21 @@ const App: React.FC = () => {
                         onChange={e => setTextConfig({ ...textConfig, detail: e.target.value })}
                         className="w-full h-24 resize-none bg-gray-50/80 hover:bg-white focus:bg-white focus:ring-2 focus:ring-gray-200 border-none rounded-2xl px-6 py-4 text-[#1d1d1f] transition-all shadow-sm"
                       ></textarea>
+
+                      <div className="flex justify-end mt-2">
+                        <MorphingAiButton
+                          onClick={handleExtractCopy}
+                          loading={isExtractingCopy}
+                          disabled={isExtractingCopy}
+                          icon={<Sparkles size={12} />}
+                          idleText="爆款文案制作"
+                          loadingText={`爆款文案制作中 ${copywritingCountdown ?? 60}s`}
+                          doneText="✨ 文案已完成"
+                          showDone={buttonDoneFlash.copy}
+                          size="sm"
+                          variant="primary"
+                        />
+                      </div>
                     </div>
                   </div>
                 </section>
