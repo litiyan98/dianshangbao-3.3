@@ -3932,14 +3932,13 @@ const App: React.FC = () => {
                 type="button"
                 title="剩余算力点，点击补充"
                 onClick={handleQuickPay}
-                className="group relative flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-white border border-gray-200/80 shadow-sm cursor-pointer overflow-hidden transition-all duration-500 hover:shadow-md hover:border-purple-200/50"
+                className="group relative flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#1d1d1f] border border-gray-700/50 shadow-sm cursor-pointer overflow-hidden transition-all duration-300 hover:border-purple-500/30 hover:shadow-[0_0_15px_rgba(168,85,247,0.2)]"
               >
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none bg-[linear-gradient(110deg,transparent_20%,rgba(168,85,247,0.08)_45%,rgba(255,255,255,0.8)_50%,rgba(168,85,247,0.08)_55%,transparent_80%)] bg-[length:200%_100%]"></div>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-gray-400 relative z-10 transition-colors group-hover:text-purple-500 duration-500">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-gray-400 transition-colors group-hover:text-white group-hover:drop-shadow-[0_0_6px_rgba(255,255,255,0.6)]">
                   <path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z"></path>
                 </svg>
-                <span className="relative z-10 tracking-wide font-semibold text-[#1d1d1f]">
-                  {isCreditsLoading ? '--' : (userCredits ?? 0)} <span className="text-gray-400 font-medium ml-0.5">Tokens</span>
+                <span className="tracking-wide font-semibold text-white">
+                  {isCreditsLoading ? '--' : (userCredits ?? 0)} <span className="text-gray-400 font-medium ml-0.5 group-hover:text-gray-300">Tokens</span>
                 </span>
               </button>
 
@@ -4086,11 +4085,11 @@ const App: React.FC = () => {
                </div>
                <div className="relative z-10 max-w-4xl mx-auto">
                 <section className="bg-white rounded-[2rem] p-8 md:p-10 mb-8 mx-auto max-w-4xl border border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.03)] transition-shadow duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.06)]">
-                  <div className="relative mb-10 pt-6 pl-4 overflow-hidden">
-                    <span className="absolute -top-4 -left-2 text-[110px] md:text-[140px] font-black text-gray-900 opacity-[0.03] select-none pointer-events-none leading-none z-0 tracking-tighter">
+                  <div className="flex items-end gap-4 mb-8 select-none">
+                    <span className="text-5xl md:text-6xl font-black tracking-tighter leading-none bg-clip-text text-transparent bg-gradient-to-br from-gray-400 via-gray-200 to-gray-400 drop-shadow-[0_1px_1px_rgba(255,255,255,0.8)]">
                       01
                     </span>
-                    <h2 className="relative z-10 text-2xl md:text-3xl font-bold text-[#1d1d1f] tracking-tight">
+                    <h2 className="text-2xl md:text-3xl font-bold text-[#1d1d1f] tracking-tight pb-1">
                       商品原图
                     </h2>
                   </div>
@@ -4119,11 +4118,11 @@ const App: React.FC = () => {
                   </div>
                 </section>
                 <section ref={sceneRef} className={`bg-white rounded-[2rem] p-8 md:p-10 mb-8 mx-auto max-w-4xl border border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.03)] transition-shadow duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.06)] apple-reveal-base ${isSceneVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}>
-                  <div className="relative mb-10 pt-6 pl-4 overflow-hidden">
-                    <span className="absolute -top-4 -left-2 text-[110px] md:text-[140px] font-black text-gray-900 opacity-[0.03] select-none pointer-events-none leading-none z-0 tracking-tighter">
+                  <div className="flex items-end gap-4 mb-8 select-none">
+                    <span className="text-5xl md:text-6xl font-black tracking-tighter leading-none bg-clip-text text-transparent bg-gradient-to-br from-gray-400 via-gray-200 to-gray-400 drop-shadow-[0_1px_1px_rgba(255,255,255,0.8)]">
                       02
                     </span>
-                    <h2 className="relative z-10 text-2xl md:text-3xl font-bold text-[#1d1d1f] tracking-tight">
+                    <h2 className="text-2xl md:text-3xl font-bold text-[#1d1d1f] tracking-tight pb-1">
                       场景与光影
                     </h2>
                   </div>
@@ -4203,11 +4202,11 @@ const App: React.FC = () => {
 
                 {/* [ 03.5 ] 构图控制中心 (尺寸与排版整合版) */}
                 <section ref={outputRef} className={`bg-white rounded-[2rem] p-8 md:p-10 mb-8 mx-auto max-w-4xl border border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.03)] transition-shadow duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.06)] apple-reveal-base ${isOutputVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}>
-                  <div className="relative mb-10 pt-6 pl-4 overflow-hidden">
-                    <span className="absolute -top-4 -left-2 text-[110px] md:text-[140px] font-black text-gray-900 opacity-[0.03] select-none pointer-events-none leading-none z-0 tracking-tighter">
+                  <div className="flex items-end gap-4 mb-8 select-none">
+                    <span className="text-5xl md:text-6xl font-black tracking-tighter leading-none bg-clip-text text-transparent bg-gradient-to-br from-gray-400 via-gray-200 to-gray-400 drop-shadow-[0_1px_1px_rgba(255,255,255,0.8)]">
                       03
                     </span>
-                    <h2 className="relative z-10 text-2xl md:text-3xl font-bold text-[#1d1d1f] tracking-tight">
+                    <h2 className="text-2xl md:text-3xl font-bold text-[#1d1d1f] tracking-tight pb-1">
                       尺寸与构图
                     </h2>
                   </div>
@@ -4302,13 +4301,13 @@ const App: React.FC = () => {
                 </section>
 
                 <section ref={posterRef} className={`bg-white rounded-[2rem] p-8 md:p-10 mb-8 mx-auto max-w-4xl border border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.03)] transition-shadow duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.06)] apple-reveal-base ${isPosterVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}>
-                  <div className="relative mb-10 pt-6 pl-4 overflow-hidden">
-                    <span className="absolute -top-4 -left-2 text-[110px] md:text-[140px] font-black text-gray-900 opacity-[0.03] select-none pointer-events-none leading-none z-0 tracking-tighter">
+                  <div className="flex items-end gap-4 mb-8 select-none">
+                    <span className="text-5xl md:text-6xl font-black tracking-tighter leading-none bg-clip-text text-transparent bg-gradient-to-br from-gray-400 via-gray-200 to-gray-400 drop-shadow-[0_1px_1px_rgba(255,255,255,0.8)]">
                       04
                     </span>
-                    <div className="relative z-10 flex items-center gap-3">
+                    <div className="flex items-end gap-3 pb-1">
                       <h2 className="text-2xl md:text-3xl font-bold text-[#1d1d1f] tracking-tight">营销文案</h2>
-                      <span className="text-xs font-normal text-gray-400 tracking-normal">可选</span>
+                      <span className="text-xs font-normal text-gray-400 tracking-normal mb-1">可选</span>
                     </div>
                   </div>
                   <div className="space-y-5 bg-white/60 backdrop-blur-2xl border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-[2rem] p-8 md:p-10 relative overflow-hidden z-20">
@@ -4445,13 +4444,13 @@ const App: React.FC = () => {
                   className={`bg-white rounded-[2rem] p-8 md:p-10 mb-8 mx-auto max-w-4xl border border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.03)] transition-shadow duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.06)] apple-reveal-base ${isRefStyleVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}
                 >
                    <section>
-                    <div className="relative mb-10 pt-6 pl-4 overflow-hidden">
-                      <span className="absolute -top-4 -left-2 text-[110px] md:text-[140px] font-black text-gray-900 opacity-[0.03] select-none pointer-events-none leading-none z-0 tracking-tighter">
+                    <div className="flex items-end gap-4 mb-8 select-none">
+                      <span className="text-5xl md:text-6xl font-black tracking-tighter leading-none bg-clip-text text-transparent bg-gradient-to-br from-gray-400 via-gray-200 to-gray-400 drop-shadow-[0_1px_1px_rgba(255,255,255,0.8)]">
                         05
                       </span>
-                      <div className="relative z-10 flex items-center gap-3">
+                      <div className="flex items-end gap-3 pb-1">
                         <h2 className="text-2xl md:text-3xl font-bold text-[#1d1d1f] tracking-tight">风格参考</h2>
-                        <span className="text-xs font-normal text-gray-400 tracking-normal">可选</span>
+                        <span className="text-xs font-normal text-gray-400 tracking-normal mb-1">可选</span>
                       </div>
                     </div>
 
