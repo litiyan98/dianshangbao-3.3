@@ -4084,9 +4084,9 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            <div className="relative w-full pb-24 mt-8">
-               <div className="relative z-10 max-w-4xl mx-auto flex flex-col">
-                <section className="order-1 bg-white rounded-[2rem] p-8 md:p-10 mb-8 mx-auto max-w-4xl border border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.03)] transition-shadow duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.06)]">
+            <div className="relative w-full pb-24 mt-8 bg-transparent">
+               <div className="relative z-10 max-w-4xl mx-auto">
+                <section className="bg-white rounded-[2rem] p-8 md:p-10 mb-8 mx-auto max-w-4xl border border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.03)] transition-shadow duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.06)]">
                   <div className="flex items-end gap-4 mb-8 select-none">
                     <span className="text-5xl md:text-6xl font-black tracking-tighter leading-none bg-clip-text text-transparent bg-gradient-to-br from-gray-400 via-gray-200 to-gray-400 drop-shadow-[0_1px_1px_rgba(255,255,255,0.8)]">
                       01
@@ -4119,7 +4119,78 @@ const App: React.FC = () => {
                     )}
                   </div>
                 </section>
-                <section ref={sceneRef} className={`order-3 bg-white rounded-[2rem] p-8 md:p-10 mb-8 mx-auto max-w-4xl border border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.03)] transition-shadow duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.06)] apple-reveal-base ${isSceneVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}>
+                <div
+                  ref={refStyleRef}
+                  className={`bg-white rounded-[2rem] p-8 md:p-10 mb-8 mx-auto max-w-4xl border border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.03)] transition-shadow duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.06)] apple-reveal-base ${isRefStyleVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}
+                >
+                   <section>
+                    <div className="flex items-end gap-4 mb-8 select-none">
+                      <span className="text-5xl md:text-6xl font-black tracking-tighter leading-none bg-clip-text text-transparent bg-gradient-to-br from-gray-400 via-gray-200 to-gray-400 drop-shadow-[0_1px_1px_rgba(255,255,255,0.8)]">
+                        02
+                      </span>
+                      <div className="flex items-end gap-3 pb-1">
+                        <h2 className="text-2xl md:text-3xl font-bold text-[#1d1d1f] tracking-tight">风格参考</h2>
+                        <span className="text-xs font-normal text-gray-400 tracking-normal mb-1">可选</span>
+                      </div>
+                    </div>
+
+                    <section className="mb-8 border-b border-stone-100 pb-8">
+                      <div className="flex flex-col sm:flex-row gap-4 items-center">
+                        <div className="flex-1">
+                          <p className="text-[12px] text-gray-500 leading-relaxed">上传心仪的参考图，AI 将自动学习并重塑其光影与质感。</p>
+                        </div>
+                        {styleReferenceImage ? (
+                          <div className="relative w-20 h-20 rounded-xl overflow-hidden border-2 border-[#002FA7] group">
+                            <img src={styleReferenceImage} className="w-full h-full object-cover" />
+                            {/* 新增：风格图删除按钮 */}
+                            <button 
+                              onClick={() => {
+                                setStyleReferenceImage(null);
+                                setVisualDNA(null);
+                              }} 
+                              className="absolute top-1 right-1 bg-black/60 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-all hover:bg-red-600 backdrop-blur-sm"
+                            >
+                              <X size={10}/>
+                            </button>
+                          </div>
+                        ) : (
+                          <label className="w-20 h-20 border-2 border-dashed border-stone-200 rounded-xl flex items-center justify-center cursor-pointer hover:border-[#002FA7] transition-all relative">
+                            <input type="file" className="hidden" onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                const reader = new FileReader();
+                                reader.onloadend = async () => {
+                                  const rawBase64 = reader.result as string;
+                                  const compressedBase64 = await compressImage(rawBase64, 800);
+                                  setStyleReferenceImage(compressedBase64);
+                                  
+                                  // 自动提取视觉基因
+                                  setIsExtractingDNA(true);
+                                  try {
+                                    const dna = await extractVisualDNA(compressedBase64.split(',')[1], localUserId);
+                                    setVisualDNA(dna);
+                                  } catch (err) {
+                                    console.error("DNA Extraction failed", err);
+                                  } finally {
+                                    setIsExtractingDNA(false);
+                                  }
+                                };
+                                reader.readAsDataURL(file);
+                              }
+                            }} />
+                            {isExtractingDNA ? (
+                              <Loader2 className="animate-spin text-[#002FA7]" size={20} />
+                            ) : (
+                              <Plus className="text-stone-300" size={20} />
+                            )}
+                          </label>
+                        )}
+                      </div>
+                    </section>
+                  </section>
+                </div>
+
+                <section ref={sceneRef} className={`bg-white rounded-[2rem] p-8 md:p-10 mb-8 mx-auto max-w-4xl border border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.03)] transition-shadow duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.06)] apple-reveal-base ${isSceneVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}>
                   <div className="flex items-end gap-4 mb-8 select-none">
                     <span className="text-5xl md:text-6xl font-black tracking-tighter leading-none bg-clip-text text-transparent bg-gradient-to-br from-gray-400 via-gray-200 to-gray-400 drop-shadow-[0_1px_1px_rgba(255,255,255,0.8)]">
                       03
@@ -4203,7 +4274,7 @@ const App: React.FC = () => {
                 </section>
 
                 {/* [ 03.5 ] 构图控制中心 (尺寸与排版整合版) */}
-                <section ref={outputRef} className={`order-4 bg-white rounded-[2rem] p-8 md:p-10 mb-8 mx-auto max-w-4xl border border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.03)] transition-shadow duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.06)] apple-reveal-base ${isOutputVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}>
+                <section ref={outputRef} className={`bg-white rounded-[2rem] p-8 md:p-10 mb-8 mx-auto max-w-4xl border border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.03)] transition-shadow duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.06)] apple-reveal-base ${isOutputVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}>
                   <div className="flex items-end gap-4 mb-8 select-none">
                     <span className="text-5xl md:text-6xl font-black tracking-tighter leading-none bg-clip-text text-transparent bg-gradient-to-br from-gray-400 via-gray-200 to-gray-400 drop-shadow-[0_1px_1px_rgba(255,255,255,0.8)]">
                       04
@@ -4302,7 +4373,7 @@ const App: React.FC = () => {
                   </div>
                 </section>
 
-                <section ref={posterRef} className={`order-5 bg-white rounded-[2rem] p-8 md:p-10 mb-8 mx-auto max-w-4xl border border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.03)] transition-shadow duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.06)] apple-reveal-base ${isPosterVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}>
+                <section ref={posterRef} className={`bg-white rounded-[2rem] p-8 md:p-10 mb-8 mx-auto max-w-4xl border border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.03)] transition-shadow duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.06)] apple-reveal-base ${isPosterVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}>
                   <div className="flex items-end gap-4 mb-8 select-none">
                     <span className="text-5xl md:text-6xl font-black tracking-tighter leading-none bg-clip-text text-transparent bg-gradient-to-br from-gray-400 via-gray-200 to-gray-400 drop-shadow-[0_1px_1px_rgba(255,255,255,0.8)]">
                       05
@@ -4332,80 +4403,10 @@ const App: React.FC = () => {
                   </div>
                 </section>
 
-                <div
-                  ref={refStyleRef}
-                  className={`order-2 bg-white rounded-[2rem] p-8 md:p-10 mb-8 mx-auto max-w-4xl border border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.03)] transition-shadow duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.06)] apple-reveal-base ${isRefStyleVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}
-                >
-                   <section>
-                    <div className="flex items-end gap-4 mb-8 select-none">
-                      <span className="text-5xl md:text-6xl font-black tracking-tighter leading-none bg-clip-text text-transparent bg-gradient-to-br from-gray-400 via-gray-200 to-gray-400 drop-shadow-[0_1px_1px_rgba(255,255,255,0.8)]">
-                        02
-                      </span>
-                      <div className="flex items-end gap-3 pb-1">
-                        <h2 className="text-2xl md:text-3xl font-bold text-[#1d1d1f] tracking-tight">风格参考</h2>
-                        <span className="text-xs font-normal text-gray-400 tracking-normal mb-1">可选</span>
-                      </div>
-                    </div>
-
-                    <section className="mb-8 border-b border-stone-100 pb-8">
-                      <div className="flex flex-col sm:flex-row gap-4 items-center">
-                        <div className="flex-1">
-                          <p className="text-[12px] text-gray-500 leading-relaxed">上传心仪的参考图，AI 将自动学习并重塑其光影与质感。</p>
-                        </div>
-                        {styleReferenceImage ? (
-                          <div className="relative w-20 h-20 rounded-xl overflow-hidden border-2 border-[#002FA7] group">
-                            <img src={styleReferenceImage} className="w-full h-full object-cover" />
-                            {/* 新增：风格图删除按钮 */}
-                            <button 
-                              onClick={() => {
-                                setStyleReferenceImage(null);
-                                setVisualDNA(null);
-                              }} 
-                              className="absolute top-1 right-1 bg-black/60 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-all hover:bg-red-600 backdrop-blur-sm"
-                            >
-                              <X size={10}/>
-                            </button>
-                          </div>
-                        ) : (
-                          <label className="w-20 h-20 border-2 border-dashed border-stone-200 rounded-xl flex items-center justify-center cursor-pointer hover:border-[#002FA7] transition-all relative">
-                            <input type="file" className="hidden" onChange={async (e) => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                const reader = new FileReader();
-                                reader.onloadend = async () => {
-                                  const rawBase64 = reader.result as string;
-                                  const compressedBase64 = await compressImage(rawBase64, 800);
-                                  setStyleReferenceImage(compressedBase64);
-                                  
-                                  // 自动提取视觉基因
-                                  setIsExtractingDNA(true);
-                                  try {
-                                    const dna = await extractVisualDNA(compressedBase64.split(',')[1], localUserId);
-                                    setVisualDNA(dna);
-                                  } catch (err) {
-                                    console.error("DNA Extraction failed", err);
-                                  } finally {
-                                    setIsExtractingDNA(false);
-                                  }
-                                };
-                                reader.readAsDataURL(file);
-                              }
-                            }} />
-                            {isExtractingDNA ? (
-                              <Loader2 className="animate-spin text-[#002FA7]" size={20} />
-                            ) : (
-                              <Plus className="text-stone-300" size={20} />
-                            )}
-                          </label>
-                        )}
-                      </div>
-                    </section>
-                  </section>
-                </div>
 
                 <div
                   ref={generateRef}
-                    className={`order-6 apple-reveal-base mt-8 pt-6 border-t border-white/20 grid grid-cols-1 sm:grid-cols-2 gap-4 w-full ${isGenerateVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}
+                    className={`apple-reveal-base mt-8 pt-6 border-t border-white/20 grid grid-cols-1 sm:grid-cols-2 gap-4 w-full ${isGenerateVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}
                   >
                     <div className="space-y-2">
                       <div className="rounded-2xl transition-all duration-500 ease-out shadow-[0_8px_24px_rgba(168,85,247,0.35)] hover:scale-[1.02] hover:shadow-[0_12px_32px_rgba(168,85,247,0.5)]">
