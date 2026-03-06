@@ -4306,7 +4306,7 @@ const App: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                  <div className="space-y-5 bg-white/40 p-6 rounded-[24px] border border-stone-100">
+                  <div className="space-y-5 bg-white/60 backdrop-blur-2xl border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-[2rem] p-8 md:p-10 relative overflow-hidden z-20">
                     <div className={`space-y-3 copy-container-wrapper text-state-shell ${
                         isExtractingCopy ? 'is-generating' : copyGlowState === 'success' ? 'is-success' : ''
                       }`}>
@@ -4319,7 +4319,7 @@ const App: React.FC = () => {
                           value={textConfig.title} 
                           onChange={e => setTextConfig({...textConfig, title: e.target.value})} 
                           rows={2}
-                          className="w-full rounded-2xl bg-[#f5f5f7] px-4 py-3 pr-24 min-h-[84px] resize-y text-sm text-gray-700 leading-relaxed placeholder:text-gray-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-purple-500/20 transition-colors duration-300" 
+                          className="w-full bg-gray-50/50 hover:bg-gray-100/50 focus:bg-white focus:ring-2 focus:ring-[#1d1d1f]/10 border-none rounded-2xl px-6 py-4 pr-24 min-h-[84px] resize-none text-base text-[#1d1d1f] transition-all duration-300 placeholder:text-gray-400 focus:outline-none" 
                         />
                         <MorphingAiButton
                           onClick={handleExtractCopy}
@@ -4351,31 +4351,11 @@ const App: React.FC = () => {
                           value={textConfig.detail} 
                           onChange={e => setTextConfig({...textConfig, detail: e.target.value})} 
                           rows={2}
-                          className="w-full rounded-2xl bg-[#f5f5f7] px-4 py-3 min-h-[78px] resize-y text-sm text-gray-700 leading-relaxed placeholder:text-gray-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-purple-500/20 transition-colors duration-300" 
+                          className="w-full bg-gray-50/50 hover:bg-gray-100/50 focus:bg-white focus:ring-2 focus:ring-[#1d1d1f]/10 border-none rounded-2xl px-6 py-4 min-h-[78px] resize-none text-base text-[#1d1d1f] transition-all duration-300 placeholder:text-gray-400 focus:outline-none" 
                         />
                       </div>
                     </div>
 
-                    <div className="pt-2">
-                      <label className="text-[10px] text-stone-500 font-bold mb-3 block">排版风格</label>
-                      <div className="p-1.5 bg-[#f5f5f7] rounded-xl inline-flex gap-1 w-full">
-                        {TEXT_PRESETS.map(preset => (
-                          <button
-                            key={preset.id}
-                            onClick={() => applyTextPreset(preset.id)}
-                            className={`flex-1 py-2.5 rounded-lg transition-all flex flex-col items-center gap-1 ${
-                              textLayout === preset.id
-                                ? 'bg-white text-sm font-semibold text-gray-900 shadow-sm'
-                                : 'text-sm font-medium text-gray-500 hover:text-gray-700'
-                            }`}
-                          >
-                            <span>{preset.icon}</span>
-                            <span>{preset.name}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                       <div>
                         <label className="text-[10px] text-stone-500 font-bold mb-2 block">字体风格</label>
@@ -4431,42 +4411,22 @@ const App: React.FC = () => {
                            <span>文字大小</span>
                            <span className="text-[#002FA7]">{textConfig.fontSize}</span>
                          </label>
-                         <input type="range" min="4" max="25" value={textConfig.fontSize} onChange={e => setTextConfig({...textConfig, fontSize: Number(e.target.value)})} className="w-full accent-[#002FA7]" />
+                         <input type="range" min="4" max="25" value={textConfig.fontSize} onChange={e => setTextConfig({...textConfig, fontSize: Number(e.target.value)})} className="w-full h-2 bg-gray-200/80 rounded-full appearance-none cursor-pointer accent-[#1d1d1f] hover:accent-gray-700 transition-colors" />
                       </div>
                       <div>
                          <label className="text-[10px] text-stone-500 font-bold mb-2 flex justify-between">
                            <span>文字阴影</span>
                            <span className="text-[#002FA7]">{textConfig.shadowIntensity}</span>
                          </label>
-                         <input type="range" min="0" max="30" value={textConfig.shadowIntensity} onChange={e => setTextConfig({...textConfig, shadowIntensity: Number(e.target.value)})} className="w-full accent-[#002FA7]" />
+                         <input type="range" min="0" max="30" value={textConfig.shadowIntensity} onChange={e => setTextConfig({...textConfig, shadowIntensity: Number(e.target.value)})} className="w-full h-2 bg-gray-200/80 rounded-full appearance-none cursor-pointer accent-[#1d1d1f] hover:accent-gray-700 transition-colors" />
                       </div>
                     </div>
 
-                    <details className="mt-3 bg-stone-50/80 border border-stone-100 rounded-xl p-3">
-                      <summary className="text-[11px] font-bold text-stone-500 cursor-pointer select-none">高级定位微调（可选）</summary>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3">
-                        <div>
-                          <label className="text-[10px] text-stone-500 font-bold mb-2 flex justify-between">
-                            <span>水平位置</span>
-                            <span className="text-[#002FA7]">{textConfig.positionX}%</span>
-                          </label>
-                          <input type="range" min="5" max="95" value={textConfig.positionX} onChange={e => setTextConfig({...textConfig, positionX: Number(e.target.value)})} className="w-full accent-[#002FA7]" />
-                        </div>
-                        <div>
-                          <label className="text-[10px] text-stone-500 font-bold mb-2 flex justify-between">
-                            <span>垂直位置</span>
-                            <span className="text-[#002FA7]">{textConfig.positionY}%</span>
-                          </label>
-                          <input type="range" min="5" max="95" value={textConfig.positionY} onChange={e => setTextConfig({...textConfig, positionY: Number(e.target.value)})} className="w-full accent-[#002FA7]" />
-                        </div>
-                      </div>
-                    </details>
-
                     <div className="mt-4 pt-4 border-t border-stone-100">
                       <label className="text-[10px] text-stone-500 font-bold mb-2 block">文字对齐方式 (已开启智能跟随)</label>
-                      <div className="p-1.5 bg-[#f5f5f7] rounded-xl inline-flex gap-1 w-full">
+                      <div className="bg-gray-100/50 p-1 rounded-xl inline-flex gap-1 w-full">
                         {(['left', 'center', 'right'] as const).map(align => (
-                          <button key={align} onClick={() => setTextConfig({...textConfig, textAlign: align})} className={`flex-1 py-1.5 rounded-lg transition-all ${textConfig.textAlign === align ? 'bg-white text-sm font-semibold text-gray-900 shadow-sm' : 'text-sm font-medium text-gray-500 hover:text-gray-700'}`}>
+                          <button key={align} onClick={() => setTextConfig({...textConfig, textAlign: align})} className={`flex-1 py-1.5 rounded-lg transition-all ${textConfig.textAlign === align ? 'bg-white shadow-sm text-[#1d1d1f] rounded-lg text-sm font-semibold' : 'text-sm font-medium text-gray-500 hover:text-gray-700'}`}>
                             {align === 'left' ? '左对齐' : align === 'center' ? '居中对齐' : '右对齐'}
                           </button>
                         ))}
