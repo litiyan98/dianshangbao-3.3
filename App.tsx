@@ -160,19 +160,14 @@ const TEXT_PRESETS: Array<{
   { id: 'minimalist', name: '极简风', icon: '◻️', positionX: 90, positionY: 88, align: 'right', fontSize: 7, shadowIntensity: 12 },
 ];
 
-const useIntersectionReveal = (threshold = 0.1) => {
-  const sectionRef = useRef<HTMLElement | null>(null);
-  const canUseObserver = typeof window !== 'undefined' && 'IntersectionObserver' in window;
+const useIntersectionReveal = <T extends HTMLElement>(threshold = 0.1) => {
+  const sectionRef = useRef<T | null>(null);
+  const canUseObserver = typeof IntersectionObserver !== 'undefined';
   const [isVisible, setIsVisible] = useState(!canUseObserver);
 
   useEffect(() => {
     const target = sectionRef.current;
-    if (!target) return;
-
-    if (!canUseObserver) {
-      setIsVisible(true);
-      return;
-    }
+    if (!target || !canUseObserver) return;
 
     const observer = new IntersectionObserver((entries, obs) => {
       entries.forEach((entry) => {
@@ -214,9 +209,9 @@ const App: React.FC = () => {
   const [selectedRechargePackage, setSelectedRechargePackage] = useState<RechargePackage | null>(null);
   const resultRef = useRef<HTMLDivElement>(null);
   const suiteRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const step02Reveal = useIntersectionReveal(0.1);
-  const step03Reveal = useIntersectionReveal(0.1);
-  const generateAreaReveal = useIntersectionReveal(0.1);
+  const step02Reveal = useIntersectionReveal<HTMLElement>(0.1);
+  const step03Reveal = useIntersectionReveal<HTMLElement>(0.1);
+  const generateAreaReveal = useIntersectionReveal<HTMLDivElement>(0.1);
 
   const [lightboxTarget, setLightboxTarget] = useState<LightboxTarget | null>(null);
   const [editorPalette, setEditorPalette] = useState<string[]>([]);

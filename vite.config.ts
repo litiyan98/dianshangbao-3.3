@@ -15,6 +15,11 @@ export default defineConfig(({mode}) => {
         '@': path.resolve(__dirname, '.'),
       },
     },
+    build: {
+      // This project intentionally bundles large ONNX runtime artifacts.
+      // Raise the warning threshold to avoid non-actionable chunk-size warnings in CI.
+      chunkSizeWarningLimit: 30000,
+    },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
