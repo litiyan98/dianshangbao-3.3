@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
-  X, Plus, Hand, Download, Sparkles, Wand2, Palette, Zap, Loader2, Lightbulb, ZoomIn, User, Trash2
+  X, Plus, Download, Sparkles, Wand2, Palette, Zap, Loader2, Lightbulb, ZoomIn, Trash2
 } from 'lucide-react';
 import { ScenarioType, MarketAnalysis, TextConfig, GenerationMode, FontStyle, CompositionLayout, AspectRatio, StickerConfig, VisualDNA, LogoConfig } from './types';
 import { SCENARIO_CONFIGS, DEFAULT_STICKERS } from './constants';
@@ -3909,16 +3909,15 @@ const App: React.FC = () => {
         }
       `}</style>
 
-      <header className="sticky top-0 w-full h-16 md:h-24 z-50 px-4 md:px-12 flex items-center justify-between border-b border-black/[0.06] bg-white/[0.85] backdrop-blur-[20px] shadow-[inset_0_1px_0_rgba(255,255,255,0.6),0_8px_24px_rgba(15,23,42,0.05)]">
-        <div className="flex items-center gap-2 md:gap-4 group cursor-pointer">
-          <div className="relative p-1.5 md:p-2.5 bg-orange-50 rounded-xl md:rounded-2xl shadow-sm">
-            <Hand className="w-5 h-5 md:w-7 md:h-7 text-orange-500" />
-          </div>
-          <div className="flex items-center gap-2 md:gap-3">
-            <span className="font-serif text-xl md:text-2xl font-black tracking-wide text-gray-900 leading-none">电商宝</span>
-            <span className="hidden md:inline-block w-px h-5 bg-stone-300/70" />
-            <span className="hidden md:inline text-sm font-medium text-gray-500">一站式电商视觉增长工作台</span>
-          </div>
+      <header className="fixed top-0 inset-x-0 z-50 h-16 bg-white/70 backdrop-blur-xl transition-all duration-300 ease-out flex items-center justify-between px-6 border-b border-white/20">
+        <div className="flex items-center gap-2.5 cursor-pointer group">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1d1d1f" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="transform group-hover:scale-105 transition-transform duration-300">
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+          </svg>
+          <span className="text-xl font-bold tracking-tight text-[#1d1d1f]">
+            电商宝 <span className="text-sm font-semibold text-gray-400 tracking-wider ml-0.5">PRO</span>
+          </span>
         </div>
         
         <div className="flex items-center gap-2 md:gap-4 relative z-[110]">
@@ -3933,31 +3932,30 @@ const App: React.FC = () => {
                 type="button"
                 title="剩余算力点，点击补充"
                 onClick={handleQuickPay}
-                className="group flex items-center gap-2 pl-3 pr-2.5 h-10 rounded-full border border-indigo-300/35 bg-gradient-to-br from-indigo-900 via-indigo-800 to-violet-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_10px_22px_rgba(49,46,129,0.32)] hover:brightness-110 transition-all"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#f5f5f7] hover:bg-[#e8e8ed] transition-colors cursor-pointer text-sm font-medium text-[#1d1d1f]"
               >
-                <span className="text-[14px] text-white drop-shadow-[0_0_6px_rgba(255,255,255,0.45)]">✦</span>
-                <span className="font-mono text-[14px] font-black tabular-nums text-white">
-                  {isCreditsLoading ? '--' : (userCredits ?? 0)}
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-gray-400">
+                  <path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z"></path>
+                </svg>
+                <span className="tracking-wide">
+                  {isCreditsLoading ? '--' : (userCredits ?? 0)} <span className="text-gray-500 font-normal">Tokens</span>
                 </span>
-                <span className="w-5 h-5 rounded-full bg-white/15 text-white text-[12px] font-black flex items-center justify-center group-hover:bg-white/25">+</span>
               </button>
 
               <div ref={avatarMenuRef} className="relative">
                 <button
                   type="button"
                   onClick={() => setIsAvatarMenuOpen(prev => !prev)}
-                  className="relative w-10 h-10 rounded-full overflow-hidden bg-white border border-stone-200 shadow-sm ring-2 ring-purple-500/30 ring-offset-2 ring-offset-white/80 hover:border-indigo-300 transition-all"
+                  className="flex items-center gap-3 ml-2 cursor-pointer group"
                 >
-                  {userInfo.photo ? (
-                    <img src={userInfo.photo} alt="avatar" className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="w-full h-full flex items-center justify-center">
-                      <User size={16} className="text-stone-500" />
-                    </span>
-                  )}
-                  <span className="absolute -bottom-0.5 -right-0.5 w-[18px] h-[18px] rounded-full bg-gradient-to-r from-violet-500 to-indigo-500 text-white text-[9px] font-black flex items-center justify-center border border-white">
-                    👑
+                  <span className="hidden md:block text-sm font-medium text-gray-500 group-hover:text-gray-800 transition-colors">
+                    Hi, {userInfo.nickname || '体验官'}
                   </span>
+                  <img
+                    src={userInfo.photo || 'https://api.dicebear.com/7.x/notionists/svg?seed=Felix'}
+                    alt="User Avatar"
+                    className="w-8 h-8 rounded-full object-cover bg-gray-100 ring-1 ring-gray-200/50"
+                  />
                 </button>
 
                 {isAvatarMenuOpen && (
