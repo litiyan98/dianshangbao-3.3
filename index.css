@@ -74,6 +74,28 @@
     transform: translateY(0);
   }
 
+  /* Apple 级视差模糊浮现引擎 */
+  .apple-reveal-base {
+    /* 开启硬件加速，防止掉帧 */
+    will-change: opacity, transform, filter;
+    /* 0.8秒神级阻尼：起步极快，刹车极度丝滑 */
+    transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+                transform 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+                filter 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .apple-reveal-hidden {
+    opacity: 0;
+    transform: translateY(40px);
+    filter: blur(10px); /* 核心秘方：高斯模糊 */
+  }
+
+  .apple-reveal-visible {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+
   .ai-engine-pill {
     display: inline-flex;
     align-items: center;

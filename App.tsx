@@ -14,6 +14,7 @@ import CreditModal, { RECHARGE_PACKAGES, type CreditTab, type RechargePackage } 
 import PaymentModal from './components/PaymentModal';
 import MorphingAiButton from './components/MorphingAiButton';
 import { removeBackground as imglyRemoveBackground } from '@imgly/background-removal';
+import { useAppleReveal } from './hooks/useAppleReveal';
 
 const BARRAGE_TEXTS = [
   "视觉即资产，用前沿算力驱动电商新增长 ✦", "突破物理影棚限制，全球场景即刻渲染 ✦", "重构视觉生产力，一个人就是一个设计部 ✦", 
@@ -160,31 +161,6 @@ const TEXT_PRESETS: Array<{
   { id: 'minimalist', name: '极简风', icon: '◻️', positionX: 90, positionY: 88, align: 'right', fontSize: 7, shadowIntensity: 12 },
 ];
 
-const useIntersectionReveal = <T extends HTMLElement>(threshold = 0.1) => {
-  const sectionRef = useRef<T | null>(null);
-  const canUseObserver = typeof IntersectionObserver !== 'undefined';
-  const [isVisible, setIsVisible] = useState(!canUseObserver);
-
-  useEffect(() => {
-    const target = sectionRef.current;
-    if (!target || !canUseObserver) return;
-
-    const observer = new IntersectionObserver((entries, obs) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          setIsVisible(true);
-          obs.unobserve(entry.target);
-        }
-      });
-    }, { threshold });
-
-    observer.observe(target);
-    return () => observer.disconnect();
-  }, [canUseObserver, threshold]);
-
-  return { sectionRef, isVisible };
-};
-
 const App: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userInfo, setUserInfo] = useState<any>(null);
@@ -209,9 +185,9 @@ const App: React.FC = () => {
   const [selectedRechargePackage, setSelectedRechargePackage] = useState<RechargePackage | null>(null);
   const resultRef = useRef<HTMLDivElement>(null);
   const suiteRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const step02Reveal = useIntersectionReveal<HTMLElement>(0.1);
-  const step03Reveal = useIntersectionReveal<HTMLElement>(0.1);
-  const generateAreaReveal = useIntersectionReveal<HTMLDivElement>(0.1);
+  const { ref: sceneRef, isVisible: isSceneVisible } = useAppleReveal<HTMLElement>(0.15);
+  const { ref: outputRef, isVisible: isOutputVisible } = useAppleReveal<HTMLElement>(0.15);
+  const { ref: generateRef, isVisible: isGenerateVisible } = useAppleReveal<HTMLDivElement>(0.15);
 
   const [lightboxTarget, setLightboxTarget] = useState<LightboxTarget | null>(null);
   const [editorPalette, setEditorPalette] = useState<string[]>([]);
@@ -4079,7 +4055,7 @@ const App: React.FC = () => {
                     )}
                   </div>
                 </section>
-                <section ref={step02Reveal.sectionRef} className={step02Reveal.isVisible ? 'reveal-visible' : 'reveal-hidden'}>
+                <section ref={sceneRef} className={`apple-reveal-base ${isSceneVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}>
                   <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-6">
                     <div>
                       <label className="flex items-center gap-3">
@@ -4167,7 +4143,7 @@ const App: React.FC = () => {
                 </section>
 
                 {/* [ 03.5 ] 构图控制中心 (尺寸与排版整合版) */}
-                <section ref={step03Reveal.sectionRef} className={step03Reveal.isVisible ? 'reveal-visible' : 'reveal-hidden'}>
+                <section ref={outputRef} className={`apple-reveal-base ${isOutputVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}>
                   <label className="text-[14px] font-black text-stone-800 mb-6 flex items-center gap-3">
                     🔲 第三步：构图控制中心 (尺寸与排版)
                   </label>
@@ -4497,8 +4473,8 @@ const App: React.FC = () => {
                   </section>
 
                   <div
-                    ref={generateAreaReveal.sectionRef}
-                    className={`mt-8 pt-6 border-t border-white/20 grid grid-cols-1 sm:grid-cols-2 gap-4 w-full ${generateAreaReveal.isVisible ? 'reveal-visible' : 'reveal-hidden'}`}
+                    ref={generateRef}
+                    className={`apple-reveal-base mt-8 pt-6 border-t border-white/20 grid grid-cols-1 sm:grid-cols-2 gap-4 w-full ${isGenerateVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}
                   >
                     <div className="space-y-2">
                       <div className="rounded-2xl transition-all duration-500 ease-out shadow-[0_8px_24px_rgba(168,85,247,0.28)] hover:scale-[1.02] hover:shadow-[0_12px_36px_rgba(168,85,247,0.45)]">
