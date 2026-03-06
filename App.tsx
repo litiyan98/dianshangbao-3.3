@@ -2994,14 +2994,14 @@ const App: React.FC = () => {
           onChange={(e) => setTextConfig({ ...textConfig, title: e.target.value })}
           placeholder="主标题"
           rows={2}
-          className="w-full bg-[#f5f5f7] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:bg-white focus:ring-2 focus:ring-purple-500/20 transition-colors duration-300 resize-y min-h-[72px]"
+          className="w-full bg-[#f5f5f7] rounded-xl px-4 py-2.5 text-sm text-gray-700 leading-relaxed placeholder:text-gray-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-purple-500/20 transition-colors duration-300 resize-y min-h-[72px]"
         />
         <textarea
           value={textConfig.detail}
           onChange={(e) => setTextConfig({ ...textConfig, detail: e.target.value })}
           placeholder="副标题"
           rows={2}
-          className="w-full bg-[#f5f5f7] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:bg-white focus:ring-2 focus:ring-purple-500/20 transition-colors duration-300 resize-y min-h-[72px]"
+          className="w-full bg-[#f5f5f7] rounded-xl px-4 py-2.5 text-sm text-gray-700 leading-relaxed placeholder:text-gray-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-purple-500/20 transition-colors duration-300 resize-y min-h-[72px]"
         />
       </div>
 
@@ -3011,7 +3011,7 @@ const App: React.FC = () => {
           <select
             value={textConfig.fontStyle}
             onChange={e => setTextConfig({ ...textConfig, fontStyle: e.target.value as FontStyle })}
-            className="w-full bg-[#f5f5f7] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:bg-white focus:ring-2 focus:ring-purple-500/20 transition-colors duration-300"
+            className="w-full bg-[#f5f5f7] rounded-xl px-4 py-2.5 text-sm font-medium text-[#1d1d1f] focus:outline-none focus:bg-white focus:ring-2 focus:ring-purple-500/20 transition-colors duration-300"
           >
             {FONT_STYLE_OPTIONS.map(option => (
               <option key={option.id} value={option.id}>{option.label}</option>
@@ -3052,12 +3052,12 @@ const App: React.FC = () => {
 
       <div>
         <label className="text-[10px] text-stone-500 font-bold mb-2 block">文字对齐</label>
-        <div className="flex gap-2">
+        <div className="p-1.5 bg-[#f5f5f7] rounded-xl inline-flex gap-1 w-full">
           {(['left', 'center', 'right'] as const).map(align => (
             <button
               key={align}
               onClick={() => setTextConfig({ ...textConfig, textAlign: align })}
-              className={`flex-1 py-2 rounded-lg text-xs font-bold border ${textConfig.textAlign === align ? 'bg-[#002FA7] text-white border-[#002FA7]' : 'bg-white text-stone-600 border-stone-200'}`}
+              className={`flex-1 py-2 rounded-lg transition-all ${textConfig.textAlign === align ? 'bg-white text-sm font-semibold text-gray-900 shadow-sm' : 'text-sm font-medium text-gray-500 hover:text-gray-700'}`}
             >
               {align === 'left' ? '左对齐' : align === 'center' ? '居中对齐' : '右对齐'}
             </button>
@@ -4003,19 +4003,19 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      <main className="relative z-30 w-full max-w-6xl px-4 md:px-6 pt-24 pb-12 md:py-32 flex flex-col items-center overflow-x-hidden">
+      <main className="relative z-30 w-full max-w-6xl px-4 md:px-6 pt-24 pb-12 md:py-32 flex flex-col items-center overflow-x-hidden font-sans antialiased text-gray-900">
         {step === 'upload' ? (
           <div className="w-full space-y-12 reveal-up">
             <div className="text-center space-y-6">
-              <h3 className="text-[3.5rem] md:text-[80px] font-serif font-black text-stone-900 tracking-tighter leading-none mt-4 md:mt-0">好主图，天生能卖货。</h3>
-              <p className="font-sans text-[15px] text-gray-500 leading-relaxed max-w-3xl mx-auto">
+              <h3 className="text-4xl md:text-5xl font-bold text-[#1d1d1f] tracking-tight leading-tight mt-4 md:mt-0">好主图，天生能卖货。</h3>
+              <p className="text-base md:text-lg text-gray-500 leading-relaxed max-w-2xl mx-auto mt-4">
                 只需上传原图，AI 自动为你渲染影棚级大片。准备好迎接下一次爆款。
               </p>
               
               <div className="w-full overflow-hidden relative py-4 opacity-90 pointer-events-none fade-edges">
                 <div className="inline-marquee gap-6 pointer-events-none">
                   {[...BARRAGE_TEXTS, ...BARRAGE_TEXTS].map((text, i) => (
-                    <span key={i} className="text-[#002FA7] bg-[#002FA7]/5 px-6 py-2.5 rounded-full text-[12px] font-black tracking-widest border border-[#002FA7]/10 backdrop-blur-sm shadow-sm ml-6">
+                    <span key={i} className="text-xs font-medium text-gray-600 tracking-wide bg-[#f5f5f7] px-6 py-2.5 rounded-full border border-gray-200/70 shadow-sm ml-6">
                       {text}
                     </span>
                   ))}
@@ -4029,8 +4029,8 @@ const App: React.FC = () => {
                   <label className="mb-6 flex items-start gap-3">
                     <span className="status-pulse-dot mt-2" aria-hidden="true" />
                     <span className="flex flex-col">
-                      <span className="text-[11px] font-semibold text-gray-400 tracking-[0.25em] uppercase">01</span>
-                      <span className="text-2xl font-semibold text-[#1d1d1f] tracking-tight mt-1">商品原图</span>
+                      <span className="text-[11px] font-bold text-gray-400 tracking-[0.2em] uppercase">01</span>
+                      <span className="text-xl md:text-2xl font-semibold text-[#1d1d1f] tracking-tight mt-1">商品原图</span>
                     </span>
                   </label>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
@@ -4063,8 +4063,8 @@ const App: React.FC = () => {
                       <label className="flex items-start gap-3">
                         <span className="status-pulse-dot mt-2" aria-hidden="true" />
                         <span className="flex flex-col">
-                          <span className="text-[11px] font-semibold text-gray-400 tracking-[0.25em] uppercase">02</span>
-                          <span className="text-2xl font-semibold text-[#1d1d1f] tracking-tight mt-1">场景与光影</span>
+                          <span className="text-[11px] font-bold text-gray-400 tracking-[0.2em] uppercase">02</span>
+                          <span className="text-xl md:text-2xl font-semibold text-[#1d1d1f] tracking-tight mt-1">场景与光影</span>
                         </span>
                       </label>
                     </div>
@@ -4076,7 +4076,7 @@ const App: React.FC = () => {
                       <select 
                         value={promptScene} 
                         onChange={(e) => setPromptScene(e.target.value)}
-                        className="w-full h-12 bg-[#f5f5f7] rounded-xl px-4 text-xs font-bold text-stone-700 focus:outline-none focus:bg-white focus:ring-2 focus:ring-purple-500/20 transition-colors duration-300 appearance-none cursor-pointer"
+                        className="w-full h-12 bg-[#f5f5f7] rounded-xl px-4 text-sm font-medium text-[#1d1d1f] focus:outline-none focus:bg-white focus:ring-2 focus:ring-purple-500/20 transition-colors duration-300 appearance-none cursor-pointer"
                         style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '1em' }}
                       >
                         {[
@@ -4095,7 +4095,7 @@ const App: React.FC = () => {
                       <select 
                         value={promptTone} 
                         onChange={(e) => setPromptTone(e.target.value)}
-                        className="w-full h-12 bg-[#f5f5f7] rounded-xl px-4 text-xs font-bold text-stone-700 focus:outline-none focus:bg-white focus:ring-2 focus:ring-purple-500/20 transition-colors duration-300 appearance-none cursor-pointer"
+                        className="w-full h-12 bg-[#f5f5f7] rounded-xl px-4 text-sm font-medium text-[#1d1d1f] focus:outline-none focus:bg-white focus:ring-2 focus:ring-purple-500/20 transition-colors duration-300 appearance-none cursor-pointer"
                         style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '1em' }}
                       >
                         {[
@@ -4114,7 +4114,7 @@ const App: React.FC = () => {
                   }`}>
                     <textarea 
                       value={userPrompt} onChange={(e) => setUserPrompt(e.target.value)}
-                      className="w-full min-h-[120px] resize-none rounded-2xl bg-[#f5f5f7] px-4 py-3 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-purple-500/20 transition-colors duration-300"
+                      className="w-full min-h-[120px] resize-none rounded-2xl bg-[#f5f5f7] px-4 py-3 text-sm text-gray-700 leading-relaxed placeholder:text-gray-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-purple-500/20 transition-colors duration-300"
                       placeholder={"描述你期望的画面细节。例如：清晨的阳光透过百叶窗，洒在带有水滴的黑大理石上。"}
                     />
                   </div>
@@ -4148,8 +4148,8 @@ const App: React.FC = () => {
                   <div className="mb-6 flex items-start gap-3">
                     <span className="status-pulse-dot mt-2" aria-hidden="true" />
                     <div className="flex flex-col">
-                      <span className="text-[11px] font-semibold text-gray-400 tracking-[0.25em] uppercase">03</span>
-                      <span className="text-2xl font-semibold text-[#1d1d1f] tracking-tight mt-1">尺寸与构图</span>
+                      <span className="text-[11px] font-bold text-gray-400 tracking-[0.2em] uppercase">03</span>
+                      <span className="text-xl md:text-2xl font-semibold text-[#1d1d1f] tracking-tight mt-1">尺寸与构图</span>
                     </div>
                   </div>
                   <div className="bg-white/40 p-6 rounded-[24px] border border-stone-100 space-y-6">
@@ -4166,10 +4166,10 @@ const App: React.FC = () => {
                           <button 
                             key={ratio.id} 
                             onClick={() => setAspectRatio(ratio.id as AspectRatio)}
-                            className={`flex-1 py-2.5 rounded-lg text-[11px] transition-all ${
+                            className={`flex-1 py-2.5 rounded-lg transition-all ${
                               aspectRatio === ratio.id 
-                                ? 'bg-white text-gray-900 font-medium shadow-sm' 
-                                : 'text-gray-500 hover:text-gray-700'
+                                ? 'bg-white text-sm font-semibold text-gray-900 shadow-sm' 
+                                : 'text-sm font-medium text-gray-500 hover:text-gray-700'
                             }`}
                           >
                             {ratio.id} {ratio.label}
@@ -4195,8 +4195,8 @@ const App: React.FC = () => {
                             onClick={() => handleSmartLayoutChange(lyt.id as CompositionLayout)}
                             className={`flex flex-col items-center justify-center p-3 rounded-lg transition-all ${
                               layout === lyt.id 
-                                ? 'bg-white text-gray-900 font-medium shadow-sm' 
-                                : 'text-gray-500 hover:text-gray-700'
+                                ? 'bg-white text-sm font-semibold text-gray-900 shadow-sm' 
+                                : 'text-sm font-medium text-gray-500 hover:text-gray-700'
                             }`}
                           >
                             {/* 简单的几何示意图 */}
@@ -4206,7 +4206,7 @@ const App: React.FC = () => {
                               {lyt.id === 'right_space' && <div className="absolute left-1 top-1/2 -translate-y-1/2 w-4 h-4 bg-stone-400 rounded-full" />}
                               {lyt.id === 'top_space' && <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-4 h-4 bg-stone-400 rounded-full" />}
                             </div>
-                            <div className="text-[10px] font-medium">{lyt.label}</div>
+                            <div className="text-sm font-medium text-inherit">{lyt.label}</div>
                           </button>
                         ))}
                       </div>
@@ -4229,11 +4229,11 @@ const App: React.FC = () => {
                             onClick={() => setTargetPlatform(platform.id)}
                             className={`flex flex-col items-center justify-center p-3 rounded-lg transition-all ${
                               targetPlatform === platform.id 
-                                ? 'bg-white text-gray-900 font-medium shadow-sm' 
-                                : 'text-gray-500 hover:text-gray-700'
+                                ? 'bg-white text-sm font-semibold text-gray-900 shadow-sm' 
+                                : 'text-sm font-medium text-gray-500 hover:text-gray-700'
                             }`}
                           >
-                            <span className="text-[11px] font-medium">{platform.label}</span>
+                            <span className="text-sm font-medium text-inherit">{platform.label}</span>
                             <span className={`text-[8px] font-bold uppercase tracking-tighter ${targetPlatform === platform.id ? 'text-stone-500' : 'text-stone-400'}`}>{platform.sub}</span>
                           </button>
                         ))}
@@ -4248,10 +4248,10 @@ const App: React.FC = () => {
                       <span className="status-pulse-dot mt-2" aria-hidden="true" />
                       <div className="flex items-center">
                         <div className="flex flex-col">
-                          <span className="text-[11px] font-semibold text-gray-400 tracking-[0.25em] uppercase">04</span>
-                          <span className="text-2xl font-semibold text-[#1d1d1f] tracking-tight mt-1">营销文案</span>
+                          <span className="text-[11px] font-bold text-gray-400 tracking-[0.2em] uppercase">04</span>
+                          <span className="text-xl md:text-2xl font-semibold text-[#1d1d1f] tracking-tight mt-1">营销文案</span>
                         </div>
-                        <span className="text-sm text-gray-400 font-normal ml-3">可选</span>
+                        <span className="text-xs font-normal text-gray-400 ml-3 tracking-normal">可选</span>
                       </div>
                     </div>
                   </div>
@@ -4268,7 +4268,7 @@ const App: React.FC = () => {
                           value={textConfig.title} 
                           onChange={e => setTextConfig({...textConfig, title: e.target.value})} 
                           rows={2}
-                          className="w-full rounded-2xl bg-[#f5f5f7] px-4 py-3 font-serif text-[18px] font-extrabold leading-tight pr-24 min-h-[84px] resize-y text-stone-800 placeholder:text-stone-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-purple-500/20 transition-colors duration-300" 
+                          className="w-full rounded-2xl bg-[#f5f5f7] px-4 py-3 pr-24 min-h-[84px] resize-y text-sm text-gray-700 leading-relaxed placeholder:text-gray-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-purple-500/20 transition-colors duration-300" 
                         />
                         <MorphingAiButton
                           onClick={handleExtractCopy}
@@ -4300,22 +4300,22 @@ const App: React.FC = () => {
                           value={textConfig.detail} 
                           onChange={e => setTextConfig({...textConfig, detail: e.target.value})} 
                           rows={2}
-                          className="w-full rounded-2xl bg-[#f5f5f7] px-4 py-3 font-sans text-sm min-h-[78px] resize-y text-stone-700 placeholder:text-stone-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-purple-500/20 transition-colors duration-300" 
+                          className="w-full rounded-2xl bg-[#f5f5f7] px-4 py-3 min-h-[78px] resize-y text-sm text-gray-700 leading-relaxed placeholder:text-gray-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-purple-500/20 transition-colors duration-300" 
                         />
                       </div>
                     </div>
 
                     <div className="pt-2">
                       <label className="text-[10px] text-stone-500 font-bold mb-3 block">排版风格</label>
-                      <div className="flex gap-2">
+                      <div className="p-1.5 bg-[#f5f5f7] rounded-xl inline-flex gap-1 w-full">
                         {TEXT_PRESETS.map(preset => (
                           <button
                             key={preset.id}
                             onClick={() => applyTextPreset(preset.id)}
-                            className={`flex-1 py-2.5 rounded-xl text-[11px] font-bold border transition-all flex flex-col items-center gap-1 ${
+                            className={`flex-1 py-2.5 rounded-lg transition-all flex flex-col items-center gap-1 ${
                               textLayout === preset.id
-                                ? 'bg-[#002FA7] text-white border-[#002FA7] shadow-md'
-                                : 'bg-white text-stone-500 border-stone-200 hover:border-stone-300'
+                                ? 'bg-white text-sm font-semibold text-gray-900 shadow-sm'
+                                : 'text-sm font-medium text-gray-500 hover:text-gray-700'
                             }`}
                           >
                             <span>{preset.icon}</span>
@@ -4328,7 +4328,7 @@ const App: React.FC = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                       <div>
                         <label className="text-[10px] text-stone-500 font-bold mb-2 block">字体风格</label>
-                        <select value={textConfig.fontStyle} onChange={e => setTextConfig({...textConfig, fontStyle: e.target.value as FontStyle})} className="w-full bg-[#f5f5f7] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:bg-white focus:ring-2 focus:ring-purple-500/20 transition-colors duration-300">
+                        <select value={textConfig.fontStyle} onChange={e => setTextConfig({...textConfig, fontStyle: e.target.value as FontStyle})} className="w-full bg-[#f5f5f7] rounded-xl px-4 py-2.5 text-sm font-medium text-[#1d1d1f] focus:outline-none focus:bg-white focus:ring-2 focus:ring-purple-500/20 transition-colors duration-300">
                           {FONT_STYLE_OPTIONS.map(option => (
                             <option key={option.id} value={option.id}>{option.label}</option>
                           ))}
@@ -4413,9 +4413,9 @@ const App: React.FC = () => {
 
                     <div className="mt-4 pt-4 border-t border-stone-100">
                       <label className="text-[10px] text-stone-500 font-bold mb-2 block">文字对齐方式 (已开启智能跟随)</label>
-                      <div className="flex gap-2">
+                      <div className="p-1.5 bg-[#f5f5f7] rounded-xl inline-flex gap-1 w-full">
                         {(['left', 'center', 'right'] as const).map(align => (
-                          <button key={align} onClick={() => setTextConfig({...textConfig, textAlign: align})} className={`flex-1 py-1.5 rounded-lg text-xs font-bold border ${textConfig.textAlign === align ? 'bg-[#002FA7] text-white border-[#002FA7]' : 'bg-white text-stone-600 border-stone-200'}`}>
+                          <button key={align} onClick={() => setTextConfig({...textConfig, textAlign: align})} className={`flex-1 py-1.5 rounded-lg transition-all ${textConfig.textAlign === align ? 'bg-white text-sm font-semibold text-gray-900 shadow-sm' : 'text-sm font-medium text-gray-500 hover:text-gray-700'}`}>
                             {align === 'left' ? '左对齐' : align === 'center' ? '居中对齐' : '右对齐'}
                           </button>
                         ))}
@@ -4433,10 +4433,10 @@ const App: React.FC = () => {
                       <span className="status-pulse-dot mt-2" aria-hidden="true" />
                       <div className="flex items-center">
                         <div className="flex flex-col">
-                          <span className="text-[11px] font-semibold text-gray-400 tracking-[0.25em] uppercase">05</span>
-                          <span className="text-2xl font-semibold text-[#1d1d1f] tracking-tight mt-1">风格参考</span>
+                          <span className="text-[11px] font-bold text-gray-400 tracking-[0.2em] uppercase">05</span>
+                          <span className="text-xl md:text-2xl font-semibold text-[#1d1d1f] tracking-tight mt-1">风格参考</span>
                         </div>
-                        <span className="text-sm text-gray-400 font-normal ml-3">可选</span>
+                        <span className="text-xs font-normal text-gray-400 ml-3 tracking-normal">可选</span>
                       </div>
                     </div>
 
@@ -4512,6 +4512,7 @@ const App: React.FC = () => {
                           showDone={buttonDoneFlash.genMatrix}
                           variant="primary"
                           size="lg"
+                          className="text-base font-semibold tracking-wide text-white"
                           block
                         />
                       </div>
