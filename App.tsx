@@ -4071,7 +4071,7 @@ const App: React.FC = () => {
                       <select 
                         value={promptScene} 
                         onChange={(e) => setPromptScene(e.target.value)}
-                        className="w-full h-12 bg-white/80 border border-stone-200 rounded-2xl px-4 text-xs font-bold text-stone-700 outline-none focus:border-[#002FA7] focus:ring-4 focus:ring-[#002FA7]/5 transition-all appearance-none cursor-pointer shadow-sm"
+                        className="w-full h-12 bg-[#f5f5f7] rounded-xl px-4 text-xs font-bold text-stone-700 outline-none focus:bg-white focus:ring-2 focus:ring-purple-500/20 transition-colors duration-300 appearance-none cursor-pointer"
                         style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '1em' }}
                       >
                         {[
@@ -4090,7 +4090,7 @@ const App: React.FC = () => {
                       <select 
                         value={promptTone} 
                         onChange={(e) => setPromptTone(e.target.value)}
-                        className="w-full h-12 bg-white/80 border border-stone-200 rounded-2xl px-4 text-xs font-bold text-stone-700 outline-none focus:border-[#002FA7] focus:ring-4 focus:ring-[#002FA7]/5 transition-all appearance-none cursor-pointer shadow-sm"
+                        className="w-full h-12 bg-[#f5f5f7] rounded-xl px-4 text-xs font-bold text-stone-700 outline-none focus:bg-white focus:ring-2 focus:ring-purple-500/20 transition-colors duration-300 appearance-none cursor-pointer"
                         style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '1em' }}
                       >
                         {[
@@ -4109,7 +4109,7 @@ const App: React.FC = () => {
                   }`}>
                     <textarea 
                       value={userPrompt} onChange={(e) => setUserPrompt(e.target.value)}
-                      className="w-full min-h-[120px] resize-none rounded-sm bg-white/40 backdrop-blur-md border border-stone-200/60 px-4 py-3 text-sm text-stone-800 placeholder:text-stone-400 focus:bg-white/80 transition-all outline-none"
+                      className="w-full min-h-[120px] resize-none rounded-2xl bg-[#f5f5f7] px-4 py-3 text-sm text-stone-800 placeholder:text-stone-400 focus:bg-white focus:ring-2 focus:ring-purple-500/20 transition-colors duration-300 outline-none"
                       placeholder={"// 导演指令：请描述您期望的画面细节与氛围...\n例如：清晨柔和的阳光透过百叶窗，商品放置在带有水滴的黑大理石台面上。"}
                     />
                   </div>
@@ -4148,7 +4148,7 @@ const App: React.FC = () => {
                     {/* 1. 画布比例选择 */}
                     <div>
                       <label className="text-[11px] font-bold text-stone-500 mb-3 block">1. 选择输出尺寸 (电商平台标准)</label>
-                      <div className="flex gap-2">
+                      <div className="p-1 bg-[#f5f5f7] rounded-xl inline-flex gap-1 w-full">
                         {[
                           { id: '1:1', label: '淘宝主图' },
                           { id: '3:4', label: '小红书种草' },
@@ -4157,10 +4157,10 @@ const App: React.FC = () => {
                           <button 
                             key={ratio.id} 
                             onClick={() => setAspectRatio(ratio.id as AspectRatio)}
-                            className={`flex-1 py-2.5 rounded-xl text-[11px] font-black border transition-all ${
+                            className={`flex-1 py-2.5 rounded-lg text-[11px] font-black transition-all ${
                               aspectRatio === ratio.id 
-                                ? 'bg-[#002FA7] text-white border-[#002FA7] shadow-md' 
-                                : 'bg-white text-stone-500 border-stone-200 hover:border-stone-300'
+                                ? 'bg-white text-stone-900 shadow-sm' 
+                                : 'text-stone-600 hover:text-stone-900'
                             }`}
                           >
                             {ratio.id} {ratio.label}
@@ -4174,7 +4174,7 @@ const App: React.FC = () => {
                     {/* 2. 留白与位置选择 */}
                     <div>
                       <label className="text-[11px] font-bold text-stone-500 mb-3 block">2. 选择商品位置 (为文案预留空间)</label>
-                      <div className="grid grid-cols-4 gap-3">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 p-1 bg-[#f5f5f7] rounded-xl">
                         {[
                           { id: 'center', label: '居中聚焦' },
                           { id: 'left_space', label: '右置留左' },
@@ -4184,10 +4184,10 @@ const App: React.FC = () => {
                           <button
                             key={lyt.id}
                             onClick={() => handleSmartLayoutChange(lyt.id as CompositionLayout)}
-                            className={`flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all ${
+                            className={`flex flex-col items-center justify-center p-3 rounded-lg transition-all ${
                               layout === lyt.id 
-                                ? 'border-[#002FA7] bg-[#002FA7]/5 shadow-sm' 
-                                : 'border-stone-100 bg-white/60 hover:border-stone-200'
+                                ? 'bg-white shadow-sm' 
+                                : 'text-stone-600 hover:text-stone-900'
                             }`}
                           >
                             {/* 简单的几何示意图 */}
@@ -4208,7 +4208,7 @@ const App: React.FC = () => {
                       <label className="text-[14px] font-black text-stone-800 mb-3 flex items-center gap-2">
                         🎯 目标投放平台 (视觉算法预设)
                       </label>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 p-1 bg-[#f5f5f7] rounded-xl">
                         {[
                           { id: '通用电商', label: '🛒 通用电商', sub: 'General' },
                           { id: '亚马逊爆款', label: '📦 亚马逊', sub: 'Amazon' },
@@ -4218,14 +4218,14 @@ const App: React.FC = () => {
                           <button 
                             key={platform.id} 
                             onClick={() => setTargetPlatform(platform.id)}
-                            className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all ${
+                            className={`flex flex-col items-center justify-center p-3 rounded-lg transition-all ${
                               targetPlatform === platform.id 
-                                ? 'bg-stone-900 text-white border-stone-900 shadow-lg' 
-                                : 'bg-white text-stone-600 border-stone-100 hover:border-stone-300'
+                                ? 'bg-white text-stone-900 shadow-sm' 
+                                : 'text-stone-600 hover:text-stone-900'
                             }`}
                           >
                             <span className="text-[11px] font-black">{platform.label}</span>
-                            <span className={`text-[8px] font-bold uppercase tracking-tighter ${targetPlatform === platform.id ? 'text-white/50' : 'text-stone-400'}`}>{platform.sub}</span>
+                            <span className={`text-[8px] font-bold uppercase tracking-tighter ${targetPlatform === platform.id ? 'text-stone-500' : 'text-stone-400'}`}>{platform.sub}</span>
                           </button>
                         ))}
                       </div>
