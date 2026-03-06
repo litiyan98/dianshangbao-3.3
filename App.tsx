@@ -4006,20 +4006,45 @@ const App: React.FC = () => {
       <main className="relative z-30 w-full max-w-6xl px-4 md:px-6 pt-24 pb-12 md:py-32 flex flex-col items-center overflow-x-hidden font-sans antialiased text-gray-900">
         {step === 'upload' ? (
           <div className="w-full space-y-12 reveal-up">
-            <div className="text-center space-y-6">
-              <h3 className="text-4xl md:text-5xl font-bold text-[#1d1d1f] tracking-tight leading-tight mt-4 md:mt-0">好主图，天生能卖货。</h3>
-              <p className="text-base md:text-lg text-gray-500 leading-relaxed max-w-2xl mx-auto mt-4">
-                只需上传原图，AI 自动为你渲染影棚级大片。准备好迎接下一次爆款。
-              </p>
-              
-              <div className="w-full overflow-hidden relative py-4 opacity-90 pointer-events-none fade-edges">
-                <div className="inline-marquee gap-6 pointer-events-none">
-                  {[...BARRAGE_TEXTS, ...BARRAGE_TEXTS].map((text, i) => (
-                    <span key={i} className="text-xs font-medium text-gray-600 tracking-wide bg-[#f5f5f7] px-6 py-2.5 rounded-full border border-gray-200/70 shadow-sm ml-6">
+            <div className="flex flex-col lg:flex-row items-center justify-between gap-12 max-w-7xl mx-auto px-6 py-16">
+              <div className="w-full lg:w-[40%] text-left">
+                <h3 className="text-4xl md:text-5xl font-bold text-[#1d1d1f] tracking-tight leading-tight">好主图，天生能卖货。</h3>
+                <p className="text-base md:text-lg text-gray-500 leading-relaxed mt-4">
+                  只需上传原图，AI 自动为你渲染影棚级大片。准备好迎接下一次爆款。
+                </p>
+
+                <div className="mt-8 flex flex-wrap gap-3">
+                  {BARRAGE_TEXTS.map((text, i) => (
+                    <span key={i} className="text-xs font-medium text-gray-600 tracking-wide bg-[#f5f5f7] px-5 py-2 rounded-full border border-gray-200/70 shadow-sm">
                       {text}
                     </span>
                   ))}
                 </div>
+              </div>
+
+              <div className="relative w-full lg:w-[50%] h-[400px] lg:h-[550px] flex items-center justify-center group [perspective:1000px]">
+                <div className="pointer-events-none absolute inset-0 -z-10">
+                  <div className="absolute left-10 top-14 h-40 w-40 rounded-full bg-sky-200/50 blur-3xl" />
+                  <div className="absolute right-8 bottom-16 h-44 w-44 rounded-full bg-fuchsia-200/50 blur-3xl" />
+                </div>
+
+                <img
+                  src="/images/gallery-left.jpg"
+                  alt="AI Generated Croissant"
+                  className="absolute w-[50%] lg:w-[60%] h-auto object-cover rounded-2xl shadow-xl z-10 transition-all duration-700 ease-out transform-gpu -translate-x-12 -translate-y-8 -rotate-6 blur-[3px] opacity-80 group-hover:-translate-x-24 group-hover:-translate-y-12 group-hover:-rotate-12 group-hover:blur-0 group-hover:opacity-100"
+                />
+
+                <img
+                  src="/images/gallery-right.jpg"
+                  alt="AI Generated Fashion Still"
+                  className="absolute w-[52%] lg:w-[62%] h-auto object-cover rounded-2xl shadow-xl z-20 transition-all duration-700 ease-out transform-gpu translate-x-14 translate-y-10 rotate-6 blur-[3px] opacity-80 group-hover:translate-x-24 group-hover:translate-y-14 group-hover:rotate-12 group-hover:blur-0 group-hover:opacity-100"
+                />
+
+                <img
+                  src="/images/gallery-center.jpg"
+                  alt="AI Generated Hero Visual"
+                  className="absolute w-[62%] lg:w-[72%] h-auto object-cover rounded-3xl shadow-[0_24px_64px_rgba(0,0,0,0.18)] z-30 transition-all duration-700 ease-out transform-gpu group-hover:-translate-y-3 group-hover:scale-[1.02]"
+                />
               </div>
             </div>
 
