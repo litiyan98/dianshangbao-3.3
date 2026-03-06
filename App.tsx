@@ -22,6 +22,16 @@ const BARRAGE_TEXTS = [
   '商用级高画质 ✦',
 ];
 
+const HERO_GALLERY_IMAGES = [
+  '/images/IMG_8577.jpg',
+  '/images/IMG_8575.jpg',
+  '/images/6fe4c0ac8427443ff7ab87be873bd26f.JPG',
+  '/images/IMG_8578.jpg',
+  '/images/IMG_8574.jpg',
+  '/images/IMG_8576.jpg',
+  '/images/IMG_8579.jpg',
+];
+
 const ECOMMERCE_TIPS = [
   "【主图法则】前 3 秒决定去留，第一张主图必须直击用户核心痛点，背景切忌杂乱。", "【差异化竞争】标品拼视觉，非标品拼调性。用场景图替代纯白底图可提升约 30% 转化率。",
   "【移动端优化】90% 流量来自手机，详情页核心卖点文字建议放大至不小于 24px。", "【买家秀营销】高质量的买家秀比详情页更具说服力，尝试将 AI 生成的场景图作素材。",
@@ -179,6 +189,11 @@ const App: React.FC = () => {
   const [step, setStep] = useState<'upload' | 'result'>('upload');
   const [sourceImages, setSourceImages] = useState<string[]>([]);
   const [userPrompt, setUserPrompt] = useState("");
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  const handleNextImage = () => {
+    setCurrentIndex((prev) => (prev + 1) % HERO_GALLERY_IMAGES.length);
+  };
   
   // 支付相关状态
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -4007,8 +4022,11 @@ const App: React.FC = () => {
         {step === 'upload' ? (
           <div className="w-full space-y-12 reveal-up">
             <div className="flex flex-col lg:flex-row items-center justify-between gap-12 max-w-7xl mx-auto px-6 py-16">
-              <div className="w-full lg:w-[40%] text-left">
-                <h3 className="text-4xl md:text-5xl font-bold text-[#1d1d1f] tracking-tight leading-tight">好主图，天生能卖货。</h3>
+              <div className="w-full lg:w-[40%] flex flex-col items-start text-left">
+                <h3 className="text-4xl md:text-5xl font-bold text-[#1d1d1f] tracking-tight leading-tight">
+                  好主图，<br className="hidden md:block" />
+                  天生能卖货。
+                </h3>
                 <p className="text-base md:text-lg text-gray-500 leading-relaxed mt-4">
                   只需上传原图，AI 自动为你渲染影棚级大片。准备好迎接下一次爆款。
                 </p>
@@ -4028,23 +4046,33 @@ const App: React.FC = () => {
                   <div className="absolute right-8 bottom-16 h-44 w-44 rounded-full bg-fuchsia-200/50 blur-3xl" />
                 </div>
 
-                <img
-                  src="/images/gallery-left.jpg"
-                  alt="AI Generated Croissant"
-                  className="absolute w-[50%] lg:w-[60%] h-auto object-cover rounded-2xl shadow-xl z-10 transition-all duration-700 ease-out transform-gpu -translate-x-12 -translate-y-8 -rotate-6 blur-[3px] opacity-80 group-hover:-translate-x-24 group-hover:-translate-y-12 group-hover:-rotate-12 group-hover:blur-0 group-hover:opacity-100"
-                />
+                {HERO_GALLERY_IMAGES.map((src, index) => {
+                  const relIndex = (index - currentIndex + HERO_GALLERY_IMAGES.length) % HERO_GALLERY_IMAGES.length;
+                  const baseClasses = 'absolute h-auto object-cover rounded-2xl shadow-xl transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)] cursor-pointer transform-gpu';
+                  let stateClasses = '';
 
-                <img
-                  src="/images/gallery-right.jpg"
-                  alt="AI Generated Fashion Still"
-                  className="absolute w-[52%] lg:w-[62%] h-auto object-cover rounded-2xl shadow-xl z-20 transition-all duration-700 ease-out transform-gpu translate-x-14 translate-y-10 rotate-6 blur-[3px] opacity-80 group-hover:translate-x-24 group-hover:translate-y-14 group-hover:rotate-12 group-hover:blur-0 group-hover:opacity-100"
-                />
+                  if (relIndex === 0) {
+                    stateClasses = 'z-30 w-[60%] lg:w-[70%] scale-100 opacity-100 blur-0 translate-x-0 translate-y-0 shadow-[0_30px_60px_rgba(0,0,0,0.15)] group-hover:scale-105 group-hover:-translate-y-4 group-hover:shadow-[0_40px_80px_rgba(0,0,0,0.2)]';
+                  } else if (relIndex === 1) {
+                    stateClasses = 'z-20 w-[50%] lg:w-[60%] scale-95 opacity-80 blur-[3px] -translate-x-12 -translate-y-8 -rotate-6 group-hover:-translate-x-28 group-hover:-translate-y-12 group-hover:-rotate-12 group-hover:blur-0 group-hover:opacity-100';
+                  } else if (relIndex === 2) {
+                    stateClasses = 'z-10 w-[45%] lg:w-[55%] scale-90 opacity-70 blur-[4px] translate-x-16 translate-y-12 rotate-3 group-hover:translate-x-32 group-hover:translate-y-16 group-hover:rotate-6 group-hover:blur-0 group-hover:opacity-100';
+                  } else if (relIndex === HERO_GALLERY_IMAGES.length - 1) {
+                    stateClasses = 'z-40 w-[60%] lg:w-[70%] scale-110 opacity-0 blur-xl -translate-x-48 rotate-12 pointer-events-none';
+                  } else {
+                    stateClasses = 'z-0 w-[45%] lg:w-[55%] scale-75 opacity-0 blur-sm translate-x-0 translate-y-0 pointer-events-none';
+                  }
 
-                <img
-                  src="/images/gallery-center.jpg"
-                  alt="AI Generated Hero Visual"
-                  className="absolute w-[62%] lg:w-[72%] h-auto object-cover rounded-3xl shadow-[0_24px_64px_rgba(0,0,0,0.18)] z-30 transition-all duration-700 ease-out transform-gpu group-hover:-translate-y-3 group-hover:scale-[1.02]"
-                />
+                  return (
+                    <img
+                      key={src}
+                      src={src}
+                      alt={'Gallery Image ' + (index + 1)}
+                      className={baseClasses + ' ' + stateClasses}
+                      onClick={handleNextImage}
+                    />
+                  );
+                })}
               </div>
             </div>
 
