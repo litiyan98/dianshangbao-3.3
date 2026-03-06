@@ -2994,14 +2994,14 @@ const App: React.FC = () => {
           onChange={(e) => setTextConfig({ ...textConfig, title: e.target.value })}
           placeholder="主标题"
           rows={2}
-          className="w-full bg-white border border-stone-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#002FA7] resize-y min-h-[72px]"
+          className="w-full bg-[#f5f5f7] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:bg-white focus:ring-2 focus:ring-purple-500/20 transition-colors duration-300 resize-y min-h-[72px]"
         />
         <textarea
           value={textConfig.detail}
           onChange={(e) => setTextConfig({ ...textConfig, detail: e.target.value })}
           placeholder="副标题"
           rows={2}
-          className="w-full bg-white border border-stone-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#002FA7] resize-y min-h-[72px]"
+          className="w-full bg-[#f5f5f7] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:bg-white focus:ring-2 focus:ring-purple-500/20 transition-colors duration-300 resize-y min-h-[72px]"
         />
       </div>
 
@@ -3011,7 +3011,7 @@ const App: React.FC = () => {
           <select
             value={textConfig.fontStyle}
             onChange={e => setTextConfig({ ...textConfig, fontStyle: e.target.value as FontStyle })}
-            className="w-full bg-white border border-stone-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#002FA7]"
+            className="w-full bg-[#f5f5f7] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:bg-white focus:ring-2 focus:ring-purple-500/20 transition-colors duration-300"
           >
             {FONT_STYLE_OPTIONS.map(option => (
               <option key={option.id} value={option.id}>{option.label}</option>
@@ -3020,8 +3020,8 @@ const App: React.FC = () => {
         </div>
         <div className="grid grid-cols-2 gap-2">
           <label className="text-[10px] text-stone-500 font-bold col-span-2">文字颜色</label>
-          <input type="color" value={textConfig.mainColor} onChange={e => setTextConfig({ ...textConfig, mainColor: e.target.value })} className="w-full h-10 rounded cursor-pointer border border-stone-200 bg-white" />
-          <input type="color" value={textConfig.subColor || '#ffffff'} onChange={e => setTextConfig({ ...textConfig, subColor: e.target.value })} className="w-full h-10 rounded cursor-pointer border border-stone-200 bg-white" />
+          <input type="color" value={textConfig.mainColor} onChange={e => setTextConfig({ ...textConfig, mainColor: e.target.value })} className="w-full h-10 rounded-xl cursor-pointer bg-[#f5f5f7] focus:outline-none focus:bg-white focus:ring-2 focus:ring-purple-500/20 transition-colors duration-300" />
+          <input type="color" value={textConfig.subColor || '#ffffff'} onChange={e => setTextConfig({ ...textConfig, subColor: e.target.value })} className="w-full h-10 rounded-xl cursor-pointer bg-[#f5f5f7] focus:outline-none focus:bg-white focus:ring-2 focus:ring-purple-500/20 transition-colors duration-300" />
         </div>
       </div>
 
@@ -3598,14 +3598,14 @@ const App: React.FC = () => {
                     onChange={(e) => updateActiveText('text', e.target.value)}
                     placeholder="文字内容"
                     rows={2}
-                    className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#002FA7] resize-y min-h-[70px]"
+                    className="w-full bg-[#f5f5f7] rounded-2xl px-3 py-2.5 text-sm focus:outline-none focus:bg-white focus:ring-2 focus:ring-purple-500/20 transition-colors duration-300 resize-y min-h-[70px]"
                   />
                   <textarea
                     value={activeTextLayer.subText || ''}
                     onChange={(e) => updateActiveText('subText', e.target.value)}
                     placeholder="副文字（可选）"
                     rows={2}
-                    className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#002FA7] resize-y min-h-[70px]"
+                    className="w-full bg-[#f5f5f7] rounded-2xl px-3 py-2.5 text-sm focus:outline-none focus:bg-white focus:ring-2 focus:ring-purple-500/20 transition-colors duration-300 resize-y min-h-[70px]"
                   />
                 </div>
 
@@ -3642,7 +3642,7 @@ const App: React.FC = () => {
                         updateActiveText('fontFamily', FONT_REGISTRY[fontStyle].family);
                       }
                     }}
-                    className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#002FA7]"
+                    className="w-full bg-[#f5f5f7] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:bg-white focus:ring-2 focus:ring-purple-500/20 transition-colors duration-300"
                   >
                     {FONT_STYLE_OPTIONS.map(option => (
                       <option key={option.id} value={option.id}>{option.label}</option>
@@ -3683,7 +3683,7 @@ const App: React.FC = () => {
                           updateActiveText('color', e.target.value);
                         }
                       }}
-                      className="w-full h-10 rounded border border-stone-200 bg-white"
+                      className="w-full h-10 rounded-xl bg-[#f5f5f7] focus:outline-none focus:bg-white focus:ring-2 focus:ring-purple-500/20 transition-colors duration-300"
                     />
                   </div>
                 </div>
@@ -4029,8 +4029,8 @@ const App: React.FC = () => {
                   <label className="mb-6 flex items-center gap-3">
                     <span className="status-pulse-dot" aria-hidden="true" />
                     <span className="inline-flex items-baseline gap-2">
-                      <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-stone-400">STEP 01</span>
-                      <span className="text-[18px] font-black tracking-tight text-stone-900">商品图像注入</span>
+                      <span className="text-[11px] tracking-[0.2em] text-gray-400 font-medium uppercase">STEP 01</span>
+                      <span className="text-xl md:text-2xl font-semibold text-[#1d1d1f] tracking-tight">商品图像注入</span>
                     </span>
                   </label>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
@@ -4063,8 +4063,8 @@ const App: React.FC = () => {
                       <label className="flex items-center gap-3">
                         <span className="status-pulse-dot" aria-hidden="true" />
                         <span className="inline-flex items-baseline gap-2">
-                          <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-stone-400">STEP 02</span>
-                          <span className="text-[18px] font-black tracking-tight text-stone-900">场景与灵感配置</span>
+                          <span className="text-[11px] tracking-[0.2em] text-gray-400 font-medium uppercase">STEP 02</span>
+                          <span className="text-xl md:text-2xl font-semibold text-[#1d1d1f] tracking-tight">场景与灵感配置</span>
                         </span>
                       </label>
                       <p className="text-[10px] text-stone-400 mt-1 tracking-wide">模型集群：{MODEL_HINT_IMAGE}</p>
@@ -4077,7 +4077,7 @@ const App: React.FC = () => {
                       <select 
                         value={promptScene} 
                         onChange={(e) => setPromptScene(e.target.value)}
-                        className="w-full h-12 bg-[#f5f5f7] rounded-xl px-4 text-xs font-bold text-stone-700 outline-none focus:bg-white focus:ring-2 focus:ring-purple-500/20 transition-colors duration-300 appearance-none cursor-pointer"
+                        className="w-full h-12 bg-[#f5f5f7] rounded-xl px-4 text-xs font-bold text-stone-700 focus:outline-none focus:bg-white focus:ring-2 focus:ring-purple-500/20 transition-colors duration-300 appearance-none cursor-pointer"
                         style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '1em' }}
                       >
                         {[
@@ -4096,7 +4096,7 @@ const App: React.FC = () => {
                       <select 
                         value={promptTone} 
                         onChange={(e) => setPromptTone(e.target.value)}
-                        className="w-full h-12 bg-[#f5f5f7] rounded-xl px-4 text-xs font-bold text-stone-700 outline-none focus:bg-white focus:ring-2 focus:ring-purple-500/20 transition-colors duration-300 appearance-none cursor-pointer"
+                        className="w-full h-12 bg-[#f5f5f7] rounded-xl px-4 text-xs font-bold text-stone-700 focus:outline-none focus:bg-white focus:ring-2 focus:ring-purple-500/20 transition-colors duration-300 appearance-none cursor-pointer"
                         style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '1em' }}
                       >
                         {[
@@ -4115,7 +4115,7 @@ const App: React.FC = () => {
                   }`}>
                     <textarea 
                       value={userPrompt} onChange={(e) => setUserPrompt(e.target.value)}
-                      className="w-full min-h-[120px] resize-none rounded-2xl bg-[#f5f5f7] px-4 py-3 text-sm text-stone-800 placeholder:text-stone-400 focus:bg-white focus:ring-2 focus:ring-purple-500/20 transition-colors duration-300 outline-none"
+                      className="w-full min-h-[120px] resize-none rounded-2xl bg-[#f5f5f7] px-4 py-3 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-purple-500/20 transition-colors duration-300"
                       placeholder={"// 导演指令：请描述您期望的画面细节与氛围...\n例如：清晨柔和的阳光透过百叶窗，商品放置在带有水滴的黑大理石台面上。"}
                     />
                   </div>
@@ -4146,7 +4146,7 @@ const App: React.FC = () => {
 
                 {/* [ 03.5 ] 构图控制中心 (尺寸与排版整合版) */}
                 <section ref={outputRef} className={`apple-reveal-base ${isOutputVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}>
-                  <label className="text-[14px] font-black text-stone-800 mb-6 flex items-center gap-3">
+                  <label className="text-xl md:text-2xl font-semibold text-[#1d1d1f] tracking-tight mb-6 flex items-center gap-3">
                     🔲 第三步：构图控制中心 (尺寸与排版)
                   </label>
                   <div className="bg-white/40 p-6 rounded-[24px] border border-stone-100 space-y-6">
@@ -4154,7 +4154,7 @@ const App: React.FC = () => {
                     {/* 1. 画布比例选择 */}
                     <div>
                       <label className="text-[11px] font-bold text-stone-500 mb-3 block">1. 选择输出尺寸 (电商平台标准)</label>
-                      <div className="p-1 bg-[#f5f5f7] rounded-xl inline-flex gap-1 w-full">
+                      <div className="p-1.5 bg-[#f5f5f7] rounded-xl inline-flex gap-1 w-full">
                         {[
                           { id: '1:1', label: '淘宝主图' },
                           { id: '3:4', label: '小红书种草' },
@@ -4163,10 +4163,10 @@ const App: React.FC = () => {
                           <button 
                             key={ratio.id} 
                             onClick={() => setAspectRatio(ratio.id as AspectRatio)}
-                            className={`flex-1 py-2.5 rounded-lg text-[11px] font-black transition-all ${
+                            className={`flex-1 py-2.5 rounded-lg text-[11px] transition-all ${
                               aspectRatio === ratio.id 
-                                ? 'bg-white text-stone-900 shadow-sm' 
-                                : 'text-stone-600 hover:text-stone-900'
+                                ? 'bg-white text-gray-900 font-medium shadow-sm' 
+                                : 'text-gray-500 hover:text-gray-700'
                             }`}
                           >
                             {ratio.id} {ratio.label}
@@ -4180,7 +4180,7 @@ const App: React.FC = () => {
                     {/* 2. 留白与位置选择 */}
                     <div>
                       <label className="text-[11px] font-bold text-stone-500 mb-3 block">2. 选择商品位置 (为文案预留空间)</label>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 p-1 bg-[#f5f5f7] rounded-xl">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 p-1.5 bg-[#f5f5f7] rounded-xl">
                         {[
                           { id: 'center', label: '居中聚焦' },
                           { id: 'left_space', label: '右置留左' },
@@ -4192,8 +4192,8 @@ const App: React.FC = () => {
                             onClick={() => handleSmartLayoutChange(lyt.id as CompositionLayout)}
                             className={`flex flex-col items-center justify-center p-3 rounded-lg transition-all ${
                               layout === lyt.id 
-                                ? 'bg-white shadow-sm' 
-                                : 'text-stone-600 hover:text-stone-900'
+                                ? 'bg-white text-gray-900 font-medium shadow-sm' 
+                                : 'text-gray-500 hover:text-gray-700'
                             }`}
                           >
                             {/* 简单的几何示意图 */}
@@ -4203,7 +4203,7 @@ const App: React.FC = () => {
                               {lyt.id === 'right_space' && <div className="absolute left-1 top-1/2 -translate-y-1/2 w-4 h-4 bg-stone-400 rounded-full" />}
                               {lyt.id === 'top_space' && <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-4 h-4 bg-stone-400 rounded-full" />}
                             </div>
-                            <div className="text-[10px] font-bold text-stone-700">{lyt.label}</div>
+                            <div className="text-[10px] font-medium">{lyt.label}</div>
                           </button>
                         ))}
                       </div>
@@ -4214,7 +4214,7 @@ const App: React.FC = () => {
                       <label className="text-[14px] font-black text-stone-800 mb-3 flex items-center gap-2">
                         🎯 目标投放平台 (视觉算法预设)
                       </label>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 p-1 bg-[#f5f5f7] rounded-xl">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 p-1.5 bg-[#f5f5f7] rounded-xl">
                         {[
                           { id: '通用电商', label: '🛒 通用电商', sub: 'General' },
                           { id: '亚马逊爆款', label: '📦 亚马逊', sub: 'Amazon' },
@@ -4226,11 +4226,11 @@ const App: React.FC = () => {
                             onClick={() => setTargetPlatform(platform.id)}
                             className={`flex flex-col items-center justify-center p-3 rounded-lg transition-all ${
                               targetPlatform === platform.id 
-                                ? 'bg-white text-stone-900 shadow-sm' 
-                                : 'text-stone-600 hover:text-stone-900'
+                                ? 'bg-white text-gray-900 font-medium shadow-sm' 
+                                : 'text-gray-500 hover:text-gray-700'
                             }`}
                           >
-                            <span className="text-[11px] font-black">{platform.label}</span>
+                            <span className="text-[11px] font-medium">{platform.label}</span>
                             <span className={`text-[8px] font-bold uppercase tracking-tighter ${targetPlatform === platform.id ? 'text-stone-500' : 'text-stone-400'}`}>{platform.sub}</span>
                           </button>
                         ))}
@@ -4241,7 +4241,7 @@ const App: React.FC = () => {
 
                 <section ref={posterRef} className={`apple-reveal-base ${isPosterVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}>
                   <div className="flex items-center justify-between mb-6">
-                    <label className="text-[14px] font-black text-stone-800 flex items-center gap-3">
+                    <label className="text-xl md:text-2xl font-semibold text-[#1d1d1f] tracking-tight flex items-center gap-3">
                       🔤 第四步：海报文字设计 (选填)
                     </label>
                   </div>
@@ -4258,7 +4258,7 @@ const App: React.FC = () => {
                           value={textConfig.title} 
                           onChange={e => setTextConfig({...textConfig, title: e.target.value})} 
                           rows={2}
-                          className="w-full font-serif text-[18px] font-extrabold leading-tight pr-24 min-h-[84px] resize-y transition-all duration-500 text-stone-800 placeholder:text-stone-400" 
+                          className="w-full rounded-2xl bg-[#f5f5f7] px-4 py-3 font-serif text-[18px] font-extrabold leading-tight pr-24 min-h-[84px] resize-y text-stone-800 placeholder:text-stone-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-purple-500/20 transition-colors duration-300" 
                         />
                         <MorphingAiButton
                           onClick={handleExtractCopy}
@@ -4290,7 +4290,7 @@ const App: React.FC = () => {
                           value={textConfig.detail} 
                           onChange={e => setTextConfig({...textConfig, detail: e.target.value})} 
                           rows={2}
-                          className="w-full font-sans text-sm min-h-[78px] resize-y transition-all duration-500 text-stone-700 placeholder:text-stone-400" 
+                          className="w-full rounded-2xl bg-[#f5f5f7] px-4 py-3 font-sans text-sm min-h-[78px] resize-y text-stone-700 placeholder:text-stone-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-purple-500/20 transition-colors duration-300" 
                         />
                       </div>
                     </div>
@@ -4318,7 +4318,7 @@ const App: React.FC = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                       <div>
                         <label className="text-[10px] text-stone-500 font-bold mb-2 block">字体风格</label>
-                        <select value={textConfig.fontStyle} onChange={e => setTextConfig({...textConfig, fontStyle: e.target.value as FontStyle})} className="w-full bg-white border border-stone-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#002FA7]">
+                        <select value={textConfig.fontStyle} onChange={e => setTextConfig({...textConfig, fontStyle: e.target.value as FontStyle})} className="w-full bg-[#f5f5f7] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:bg-white focus:ring-2 focus:ring-purple-500/20 transition-colors duration-300">
                           {FONT_STYLE_OPTIONS.map(option => (
                             <option key={option.id} value={option.id}>{option.label}</option>
                           ))}
@@ -4419,7 +4419,7 @@ const App: React.FC = () => {
                   className={`glass-panel p-5 md:p-10 space-y-12 rounded-[48px] apple-reveal-base ${isRefStyleVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}
                 >
                    <section>
-                    <label className="text-[14px] font-black text-stone-800 mb-8 flex items-center gap-4">🎨 第五步：上传参考风格 (仅提取光影与氛围)</label>
+                    <label className="text-xl md:text-2xl font-semibold text-[#1d1d1f] tracking-tight mb-8 flex items-center gap-4">🎨 第五步：上传参考风格 (仅提取光影与氛围)</label>
                     
                     <section className="mb-8 border-b border-stone-100 pb-8">
                       <div className="flex flex-col sm:flex-row gap-4 items-center">
