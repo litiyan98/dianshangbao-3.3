@@ -1,0 +1,9 @@
+name = "dianshangbao-3-3"
+pages_build_output_dir = "dist"
+compatibility_date = "2024-03-05"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "dianshangbaodatabase01"
+database_id = "5f70c979-5f6d-42b7-af09-d0031fe3fed3"
