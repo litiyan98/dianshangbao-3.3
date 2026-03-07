@@ -4468,70 +4468,51 @@ const App: React.FC = () => {
         ) : (
           <div className="w-full max-w-5xl reveal-up">
             {!isSuiteMode && isProcessing && resultImages.length === 0 ? (
-              <div className="glass-panel p-5 md:p-12 rounded-[40px] flex flex-col items-center justify-center min-h-[500px] border border-stone-100 bg-white/60 w-full col-span-full relative overflow-hidden">
-                {/* 顶级克莱因蓝艺术背景 */}
-                <div className="absolute top-0 left-0 w-full h-full opacity-10">
-                  <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#002FA7] rounded-full blur-[120px] animate-pulse" />
-                  <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#002FA7] rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '1s' }} />
-                </div>
-                
-                <div className="relative mb-16 flex items-center justify-center">
-                  {/* 核心艺术 Loading: 嵌套旋转环 */}
-                  <div className="w-32 h-32 rounded-full border-[0.5px] border-[#002FA7]/20 flex items-center justify-center">
-                    <div className="absolute inset-0 border-t-2 border-[#002FA7] rounded-full animate-[spin_3s_linear_infinite]" />
-                    <div className="w-24 h-24 rounded-full border-[0.5px] border-[#002FA7]/10 flex items-center justify-center">
-                      <div className="absolute inset-2 border-b-2 border-[#002FA7]/40 rounded-full animate-[spin_2s_linear_infinite_reverse]" />
-                      <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#002FA7] to-[#001A5E] shadow-[0_0_30px_rgba(0,47,167,0.4)] flex items-center justify-center">
-                        <Sparkles className="text-white w-6 h-6 animate-pulse" />
-                      </div>
-                    </div>
+              <div className="w-full space-y-12">
+                <div className="flex flex-col items-center justify-center mb-16 mt-8 w-full max-w-2xl mx-auto">
+                  <h2 className="text-xl md:text-2xl font-bold text-[#1d1d1f] tracking-tight mb-6 flex items-center gap-3">
+                    <span className="relative flex h-3 w-3">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-3 w-3 bg-violet-500"></span>
+                    </span>
+                    正在冲印神级大片...
+                  </h2>
+                  <div className="w-full h-[2px] bg-gray-100 rounded-full overflow-hidden relative">
+                    <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 shadow-[0_0_10px_rgba(168,85,247,0.5)] transition-all duration-300 ease-out" style={{ width: `${progress}%` }}></div>
                   </div>
-                  
-                  {/* 轨道粒子 */}
-                  <div className="absolute w-40 h-40 animate-[spin_10s_linear_infinite]">
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-[#002FA7] rounded-full shadow-[0_0_10px_#002FA7]" />
-                  </div>
-                </div>
-                
-                {/* 极简主义进度指示 */}
-                <div className="w-full max-w-xs space-y-8 relative z-10">
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-end">
-                      <span className="text-[10px] font-black text-[#002FA7] uppercase tracking-[0.3em]">Processing</span>
-                      <span className="text-[24px] font-serif italic text-stone-900 leading-none">{Math.floor(progress)}%</span>
-                    </div>
-                    <div className="w-full h-[1px] bg-stone-100 relative overflow-hidden">
-                      <div className="absolute top-0 left-0 h-full bg-[#002FA7] transition-all duration-500 ease-out" style={{ width: `${progress}%` }} />
-                    </div>
-                  </div>
-
-                  <div className="text-center space-y-4">
-                    <p className="text-[11px] font-black text-stone-400 uppercase tracking-[0.2em] animate-pulse">
-                      {generationProgress || progressText}
-                    </p>
-                    <p className="text-[10px] text-[#002FA7]/75 font-bold tracking-wide">{MODEL_HINT_IMAGE}</p>
-                    <div className="h-px w-4 bg-stone-200 mx-auto" />
-                    <p className="text-[12px] text-stone-600 font-medium tracking-wide italic max-w-xs mx-auto leading-relaxed">
-                      “ {loadingHeadline} ”
-                    </p>
-                  </div>
+                  <p className="mt-4 text-[13px] text-gray-400 font-mono tracking-widest uppercase">
+                    Render Engine Active / {Math.floor(progress)}%
+                  </p>
                 </div>
 
-                {/* 底部品牌标识 */}
-                <div className="absolute bottom-10 flex flex-col items-center gap-2">
-                  <div className="w-px h-8 bg-gradient-to-b from-transparent to-stone-200" />
-                  <div className="text-[9px] font-black text-stone-300 tracking-[0.5em] uppercase">
-                    Klein Blue Vision Engine v2.5
+                <div className="w-full max-w-3xl mx-auto">
+                  <div className="relative w-full rounded-[2rem] overflow-hidden bg-white border border-gray-100 shadow-sm flex items-center justify-center" style={{ aspectRatio: currentAspectRatio, minHeight: 320 }}>
+                    <div className="absolute inset-0 bg-gradient-to-br from-violet-50/50 to-fuchsia-50/50 animate-pulse" style={{ animationDuration: '3s' }}></div>
+                    <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/80 to-transparent"></div>
+                    <span className="relative z-10 text-[11px] font-mono text-gray-400 tracking-[0.2em] uppercase">
+                      Rendering
+                    </span>
                   </div>
                 </div>
               </div>
             ) : (
               <div className="space-y-12">
-                <div className="flex justify-between items-end border-b border-stone-100 pb-8">
-                  <h2 className="text-5xl font-serif italic text-stone-900 tracking-tighter leading-none">
-                    {isSuiteMode ? "Your Masterpiece Suite." : "Your Masterpiece."}
-                    <span className="text-[#002FA7]">.</span>
-                  </h2>
+                <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 border-b border-stone-100 pb-8">
+                  <div className="flex flex-col items-start justify-center w-full max-w-2xl">
+                    <h2 className="text-xl md:text-2xl font-bold text-[#1d1d1f] tracking-tight mb-6 flex items-center gap-3">
+                      <span className="relative flex h-3 w-3">
+                        {isProcessing ? <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75"></span> : null}
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-violet-500"></span>
+                      </span>
+                      {isProcessing ? '正在冲印神级大片...' : '神级大片已冲印完成'}
+                    </h2>
+                    <div className="w-full h-[2px] bg-gray-100 rounded-full overflow-hidden relative">
+                      <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 shadow-[0_0_10px_rgba(168,85,247,0.5)] transition-all duration-300 ease-out" style={{ width: `${isProcessing ? progress : 100}%` }}></div>
+                    </div>
+                    <p className="mt-4 text-[13px] text-gray-400 font-mono tracking-widest uppercase">
+                      {isProcessing ? `Render Engine Active / ${Math.floor(progress)}%` : 'Render Engine Complete / 100%'}
+                    </p>
+                  </div>
                   <div className="flex flex-col sm:flex-row gap-4">
                     {resultImages.length === 1 && (
                       <button 
@@ -4567,41 +4548,6 @@ const App: React.FC = () => {
                   </div>
                 </div>
 
-                {/* 套图模式下的顶级 Loading 动画 (紧凑型) */}
-                {isSuiteMode && isProcessing && (
-                  <div className="glass-panel p-8 rounded-[40px] border border-stone-100 bg-white/60 relative overflow-hidden mb-8">
-                    <div className="absolute top-0 left-0 w-full h-full opacity-5">
-                      <div className="absolute top-[-20%] left-[-10%] w-[30%] h-[60%] bg-[#002FA7] rounded-full blur-[80px] animate-pulse" />
-                    </div>
-                    
-                    <div className="flex flex-col md:flex-row items-center gap-10 relative z-10">
-                      <div className="relative flex items-center justify-center">
-                        <div className="w-20 h-20 rounded-full border-[0.5px] border-[#002FA7]/20 flex items-center justify-center">
-                          <div className="absolute inset-0 border-t-2 border-[#002FA7] rounded-full animate-[spin_3s_linear_infinite]" />
-                          <div className="w-14 h-14 rounded-full bg-[#002FA7] flex items-center justify-center shadow-lg shadow-[#002FA7]/20">
-                            <Sparkles className="text-white w-5 h-5 animate-pulse" />
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex-1 w-full space-y-6">
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-end">
-                            <span className="text-[10px] font-black text-[#002FA7] uppercase tracking-[0.3em]">Suite Generation In Progress</span>
-                            <span className="text-[20px] font-serif italic text-stone-900 leading-none">{Math.floor(progress)}%</span>
-                          </div>
-                          <div className="text-[10px] text-[#002FA7]/75 font-bold tracking-wide">{MODEL_HINT_IMAGE}</div>
-                          <div className="w-full h-[1px] bg-stone-100 relative overflow-hidden">
-                            <div className="absolute top-0 left-0 h-full bg-[#002FA7] transition-all duration-500 ease-out" style={{ width: `${progress}%` }} />
-                          </div>
-                        </div>
-                        <p className="text-[12px] text-stone-500 font-medium tracking-wide italic leading-relaxed">
-                          “ {loadingHeadline} ”
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
 
                 {isSuiteMode ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -4610,7 +4556,12 @@ const App: React.FC = () => {
                       const labels = ['🔥 高转化主图', '🛋️ 沉浸生活感', '✨ 极简高级感'];
                       
                       return (
-                        <div key={index} ref={el => suiteRefs.current[index] = el} className="glass-panel p-4 rounded-[32px] space-y-4 reveal-up relative group bg-white/60 border border-stone-100 shadow-sm overflow-hidden">
+                        <div
+                          key={index}
+                          ref={el => suiteRefs.current[index] = el}
+                          className={`glass-panel p-4 rounded-[32px] space-y-4 relative group bg-white/60 border border-stone-100 shadow-sm overflow-hidden ${img ? 'opacity-0 animate-fade-in-up' : ''}`}
+                          style={img ? { animationDelay: `${index * 0.3 + 0.1}s` } : undefined}
+                        >
                           <div className="absolute top-6 left-6 z-10 flex flex-col gap-2">
                             <div className="bg-black/60 backdrop-blur-md text-white text-[9px] font-black px-3 py-1 rounded-full border border-white/10">
                               {labels[index]}
@@ -4640,9 +4591,12 @@ const App: React.FC = () => {
                                 {renderLiveTextOverlay(true)}
                               </>
                             ) : (
-                              <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#002FA7]/5 animate-pulse">
-                                <div className="w-8 h-8 rounded-full border border-[#002FA7]/20 border-t-[#002FA7] animate-spin mb-3" />
-                                <span className="text-[#002FA7]/40 text-[9px] font-black tracking-[0.2em] uppercase">Rendering...</span>
+                              <div className="absolute inset-0 rounded-[24px] overflow-hidden bg-white border border-gray-100 shadow-sm flex items-center justify-center">
+                                <div className="absolute inset-0 bg-gradient-to-br from-violet-50/50 to-fuchsia-50/50 animate-pulse" style={{ animationDuration: '3s' }}></div>
+                                <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/80 to-transparent"></div>
+                                <span className="relative z-10 text-[11px] font-mono text-gray-400 tracking-[0.2em] uppercase">
+                                  Rendering
+                                </span>
                               </div>
                             )}
                           </div>
