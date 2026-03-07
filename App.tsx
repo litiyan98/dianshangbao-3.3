@@ -3891,6 +3891,9 @@ const App: React.FC = () => {
   };
 
   const currentAspectRatio = aspectRatio.replace(':', ' / ');
+  const isMatrixGenerating = isProcessing && activeGenerateCount === 3;
+  const isMatrixRainbow = isMatrixGenerating || buttonDoneFlash.genMatrix;
+  const matrixButtonText = isMatrixGenerating ? '正在渲染神级大片...' : (buttonDoneFlash.genMatrix ? '神级大片已完成' : '生成大师级主图');
 
   return (
     <div className="relative min-h-screen w-full flex flex-col items-center justify-center overflow-hidden">
@@ -4373,7 +4376,7 @@ const App: React.FC = () => {
                   <StepHaloTitle step="05" title="海报文字设计" />
                   <div className="space-y-5 bg-white/60 backdrop-blur-2xl border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-[2rem] p-8 md:p-10 relative overflow-hidden z-20">
                     <div className="relative w-full z-20 mt-8 flex flex-col gap-6">
-                      <div className="absolute -inset-6 bg-gradient-to-r from-violet-500/15 via-fuchsia-500/10 to-blue-500/15 blur-3xl rounded-[3rem] animate-pulse pointer-events-none z-0" style={{ animationDuration: '4s' }}></div>
+                      <div className="absolute -inset-8 bg-gradient-to-r from-violet-500/10 via-fuchsia-500/10 to-blue-500/10 blur-2xl rounded-[3rem] animate-pulse pointer-events-none z-0" style={{ animationDuration: '4s' }}></div>
 
                       <input
                         type="text"
@@ -4420,21 +4423,19 @@ const App: React.FC = () => {
                   ref={generateRef}
                   className={`apple-reveal-base flex flex-col sm:flex-row items-center justify-center gap-8 mt-16 mb-12 w-full ${isGenerateVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}
                 >
-                  <div className="relative group cursor-pointer flex flex-col items-center">
-                    <div className="absolute -inset-[1px] bg-gradient-to-r from-violet-500 via-fuchsia-500 to-blue-500 rounded-2xl opacity-0 group-hover:opacity-100 blur-[3px] transition-opacity duration-500 z-0"></div>
+                  <div className="relative group flex flex-col items-center">
                     <button
                       type="button"
                       onClick={handleGenerateSuite}
                       disabled={isProcessing || sourceImages.length === 0}
-                      className="relative z-10 flex items-center justify-center gap-3 w-[300px] py-4 bg-[#111827] hover:bg-[#1a2333] text-white rounded-2xl font-medium text-lg overflow-hidden transition-colors duration-300 shadow-xl disabled:opacity-60 disabled:cursor-not-allowed"
+                      className={`relative z-10 flex items-center justify-center gap-3 w-[300px] py-4 rounded-2xl font-medium text-lg overflow-hidden transition-all duration-300 ${isMatrixRainbow ? 'bg-gradient-to-r from-violet-600 via-fuchsia-500 to-blue-600 bg-[length:200%_auto] animate-rainbow text-white border-none shadow-[0_0_20px_rgba(168,85,247,0.4)]' : 'bg-[#111827] hover:bg-[#1a2333] text-white shadow-xl hover:shadow-2xl'} disabled:opacity-60 disabled:cursor-not-allowed`}
                     >
                       <span className="relative z-20 flex items-center gap-2">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-violet-400 group-hover:animate-pulse">
                            <path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z" fill="currentColor"/>
                         </svg>
-                        生成大师级主图
+                        {matrixButtonText}
                       </span>
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-[1200ms] ease-in-out z-10"></div>
                     </button>
                     <span className="mt-4 text-[13px] text-gray-400 font-mono tracking-widest">
                       ⚡️ - 3 TOKENS
