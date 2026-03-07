@@ -15,6 +15,7 @@ import PaymentModal from './components/PaymentModal';
 import MorphingAiButton from './components/MorphingAiButton';
 import { removeBackground as imglyRemoveBackground } from '@imgly/background-removal';
 import { useAppleReveal } from './hooks/useAppleReveal';
+import LiquidMetalBackground from './components/LiquidMetalBackground';
 
 const BARRAGE_TEXTS = [
   '影棚级光影 ✦',
@@ -3878,15 +3879,7 @@ const App: React.FC = () => {
           WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, transparent 50vh, black 85vh)',
         }}
       >
-        <div
-          className="absolute inset-0 w-full h-full animate-liquid-flow"
-          style={{
-            background: 'linear-gradient(-45deg, #f1f2f4, #f6f7f9, #e9eaed, #f8f9fb, #f1f2f4)',
-            backgroundSize: '400% 400%',
-            opacity: 0.72,
-            animation: 'liquidFlow 32s ease-in-out infinite',
-          }}
-        ></div>
+        <LiquidMetalBackground />
       </div>
       {/* 组件内联注入 CSS，100% 保证动效渲染 */}
       <style>{`
