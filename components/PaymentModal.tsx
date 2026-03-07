@@ -29,18 +29,17 @@ const POLLING_TIMEOUT_MS = 5 * 60 * 1000;
 const TONAL_PLAN_META: Record<string, TonalPlanMeta> = {
   starter_15_quota_7d_vip: {
     title: 'Starter / 探索版',
-    features: ['7 张极速渲染阵列', '3 天基础文案引擎'],
+    features: ['6 张极速渲染阵列', '3 天基础文案引擎'],
     cta: '获取额度',
   },
   standard_80_quota_30d_vip: {
     title: 'Advanced / 专业版',
-    features: ['70 张极速渲染阵列', '30 天无缝文案引擎 (解开冷却锁)'],
+    features: ['70 张极速渲染阵列', '30 天无缝文案引擎'],
     cta: '升级算力',
-    featured: true,
   },
   enterprise_400_quota_90d_vip: {
     title: 'Ultra / 尊享版',
-    features: ['250 张极速渲染阵列', '90 天无缝文案引擎 (高优调度)'],
+    features: ['150 张极速渲染阵列', '90 天无缝文案引擎'],
     cta: '获取额度',
   },
 };
@@ -54,6 +53,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
   onToast
 }) => {
   const [step, setStep] = useState<PaymentStep>('select');
+  const [activeTab, setActiveTab] = useState<'standard' | 'pro'>('standard');
   const [activePackage, setActivePackage] = useState<RechargePackage | null>(null);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [outTradeNo, setOutTradeNo] = useState<string | null>(null);
@@ -83,6 +83,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
     clearPolling();
     resetPayState();
     setStep('select');
+    setActiveTab('standard');
     setActivePackage(null);
   }, [clearPolling, resetPayState]);
 
@@ -154,6 +155,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
     const preferred = selectedPackage || RECHARGE_PACKAGES.find(pkg => pkg.recommended) || RECHARGE_PACKAGES[0] || null;
     setActivePackage(preferred);
     setStep('select');
+    setActiveTab('standard');
     resetPayState();
   }, [open, selectedPackage, resetAllState, resetPayState]);
 
@@ -209,6 +211,12 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
   const advancedPackage = RECHARGE_PACKAGES.find(pkg => pkg.packageType === 'standard_80_quota_30d_vip') || null;
   const ultraPackage = RECHARGE_PACKAGES.find(pkg => pkg.packageType === 'enterprise_400_quota_90d_vip') || null;
 
+  const handleProPlanAction = (plan: 'monthly' | 'yearly') => {
+    if (onToast) {
+      onToast(plan === 'monthly' ? '工作室包月方案需人工开通，请联系客服升级' : '企业包年方案需人工开通，请联系客服升级');
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 md:p-6">
       <div className="absolute inset-0 bg-white/30 backdrop-blur-xl" onClick={handleClose} />
@@ -223,73 +231,146 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
 
         {step === 'select' ? (
           <>
-            <div className="text-center mb-12">
+            <div className="text-center mb-8">
               <h2 className="text-2xl md:text-3xl font-bold text-[#1d1d1f] tracking-tight mb-3">解锁更强大的视觉大模型</h2>
               <p className="text-[15px] text-gray-500 font-medium">扩展算力边界，持续稳定输出工业级视觉资产</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch w-full max-w-5xl mx-auto">
-              <div className="group relative bg-white rounded-[2rem] p-8 border border-gray-100 shadow-sm transition-all duration-500 hover:-translate-y-1 hover:border-blue-200 hover:shadow-[0_12px_40px_rgba(59,130,246,0.12)] flex flex-col overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-50/0 to-blue-50/0 group-hover:to-blue-50/50 transition-colors duration-500 pointer-events-none"></div>
-                <div className="mb-8 relative z-10">
-                  <h3 className="text-lg font-bold text-gray-800 mb-2 font-mono uppercase tracking-wider group-hover:text-blue-500 transition-colors">Starter / 探索版</h3>
-                  <div className="flex items-baseline gap-1"><span className="text-2xl font-semibold">¥</span><span className="text-4xl font-black text-[#1d1d1f]">9.9</span></div>
-                </div>
-                <ul className="space-y-4 text-[14px] text-gray-600 font-medium flex-1 relative z-10">
-                  <li className="flex items-center gap-3">✦ 7 张极速渲染阵列</li>
-                  <li className="flex items-center gap-3">✦ 3 天基础文案引擎</li>
-                </ul>
+            <div className="flex justify-center mb-10 select-none">
+              <div className="bg-gray-100/80 p-1.5 rounded-full flex items-center shadow-inner">
                 <button
                   type="button"
-                  onClick={() => starterPackage && handleSelectPackage(starterPackage)}
-                  disabled={!starterPackage}
-                  className="relative z-10 mt-8 w-full py-3.5 bg-gray-50 text-gray-700 group-hover:bg-blue-500 group-hover:text-white rounded-xl font-bold text-[15px] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={() => setActiveTab('standard')}
+                  className={`px-8 py-2.5 rounded-full text-[14px] font-bold transition-all duration-300 ${
+                    activeTab === 'standard'
+                      ? 'bg-white text-[#1d1d1f] shadow-sm'
+                      : 'text-gray-400 hover:text-gray-600'
+                  }`}
                 >
-                  获取额度
+                  标准方案
                 </button>
-              </div>
-
-              <div className="group relative bg-white rounded-[2rem] p-8 border border-gray-100 shadow-sm transition-all duration-500 hover:-translate-y-1 hover:border-violet-300 hover:shadow-[0_12px_40px_rgba(139,92,246,0.15)] flex flex-col overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-violet-400 to-fuchsia-400 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                <div className="absolute inset-0 bg-gradient-to-br from-violet-50/0 to-violet-50/0 group-hover:to-violet-50/50 transition-colors duration-500 pointer-events-none"></div>
-
-                <div className="mb-8 relative z-10">
-                  <h3 className="text-lg font-bold text-gray-800 mb-2 font-mono uppercase tracking-wider group-hover:text-violet-600 transition-colors">Advanced / 专业版</h3>
-                  <div className="flex items-baseline gap-1"><span className="text-2xl font-semibold">¥</span><span className="text-4xl font-black text-[#1d1d1f]">89.0</span></div>
-                </div>
-                <ul className="space-y-4 text-[14px] text-gray-600 font-medium flex-1 relative z-10">
-                  <li className="flex items-center gap-3">✦ 70 张极速渲染阵列</li>
-                  <li className="flex items-center gap-3">✦ 30 天无缝文案引擎</li>
-                </ul>
                 <button
                   type="button"
-                  onClick={() => advancedPackage && handleSelectPackage(advancedPackage)}
-                  disabled={!advancedPackage}
-                  className="relative z-10 mt-8 w-full py-3.5 bg-[#111827] text-white group-hover:shadow-lg group-hover:shadow-violet-500/25 rounded-xl font-bold text-[15px] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={() => setActiveTab('pro')}
+                  className={`px-8 py-2.5 rounded-full text-[14px] font-bold transition-all duration-300 ${
+                    activeTab === 'pro'
+                      ? 'bg-[#111827] text-white shadow-md'
+                      : 'text-gray-400 hover:text-gray-600'
+                  }`}
                 >
-                  升级算力
+                  专业版本
                 </button>
               </div>
+            </div>
 
-              <div className="group relative bg-white rounded-[2rem] p-8 border border-gray-100 shadow-sm transition-all duration-500 hover:-translate-y-1 hover:border-gray-800 hover:shadow-[0_12px_40px_rgba(17,24,39,0.12)] flex flex-col overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-gray-50/0 to-gray-50/0 group-hover:to-gray-100/50 transition-colors duration-500 pointer-events-none"></div>
-                <div className="mb-8 relative z-10">
-                  <h3 className="text-lg font-bold text-gray-800 mb-2 font-mono uppercase tracking-wider group-hover:text-gray-900 transition-colors">Ultra / 尊享版</h3>
-                  <div className="flex items-baseline gap-1"><span className="text-2xl font-semibold">¥</span><span className="text-4xl font-black text-[#1d1d1f]">299</span></div>
+            <div className="w-full max-w-5xl mx-auto transition-all duration-500">
+              {activeTab === 'standard' && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch animate-[fadeIn_0.4s_ease-out]">
+                  <div className="group relative bg-white rounded-[2rem] p-8 border border-gray-100 shadow-sm transition-all duration-500 hover:-translate-y-1 hover:border-blue-200 hover:shadow-[0_12px_40px_rgba(59,130,246,0.12)] flex flex-col overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-50/0 to-blue-50/0 group-hover:to-blue-50/50 transition-colors duration-500 pointer-events-none"></div>
+                    <div className="mb-8 relative z-10">
+                      <h3 className="text-lg font-bold text-gray-800 mb-2 font-mono uppercase tracking-wider group-hover:text-blue-500 transition-colors">Starter / 探索版</h3>
+                      <div className="flex items-baseline gap-1"><span className="text-2xl font-semibold">¥</span><span className="text-4xl font-black text-[#1d1d1f]">9.9</span></div>
+                    </div>
+                    <ul className="space-y-4 text-[14px] text-gray-600 font-medium flex-1 relative z-10">
+                      <li className="flex items-center gap-3">✦ 6 张极速渲染阵列</li>
+                      <li className="flex items-center gap-3">✦ 3 天基础文案引擎</li>
+                    </ul>
+                    <button
+                      type="button"
+                      onClick={() => starterPackage && handleSelectPackage(starterPackage)}
+                      disabled={!starterPackage}
+                      className="relative z-10 mt-8 w-full py-3.5 bg-gray-50 text-gray-700 group-hover:bg-blue-500 group-hover:text-white rounded-xl font-bold text-[15px] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      获取额度
+                    </button>
+                  </div>
+
+                  <div className="group relative bg-white rounded-[2rem] p-8 border border-gray-100 shadow-sm transition-all duration-500 hover:-translate-y-1 hover:border-violet-300 hover:shadow-[0_12px_40px_rgba(139,92,246,0.15)] flex flex-col overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-violet-50/0 to-violet-50/0 group-hover:to-violet-50/50 transition-colors duration-500 pointer-events-none"></div>
+                    <div className="mb-8 relative z-10">
+                      <h3 className="text-lg font-bold text-gray-800 mb-2 font-mono uppercase tracking-wider group-hover:text-violet-600 transition-colors">Advanced / 专业版</h3>
+                      <div className="flex items-baseline gap-1"><span className="text-2xl font-semibold">¥</span><span className="text-4xl font-black text-[#1d1d1f]">99</span></div>
+                    </div>
+                    <ul className="space-y-4 text-[14px] text-gray-600 font-medium flex-1 relative z-10">
+                      <li className="flex items-center gap-3">✦ 70 张极速渲染阵列</li>
+                      <li className="flex items-center gap-3">✦ 30 天无缝文案引擎</li>
+                    </ul>
+                    <button
+                      type="button"
+                      onClick={() => advancedPackage && handleSelectPackage(advancedPackage)}
+                      disabled={!advancedPackage}
+                      className="relative z-10 mt-8 w-full py-3.5 bg-[#111827] text-white group-hover:shadow-lg group-hover:shadow-violet-500/25 rounded-xl font-bold text-[15px] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      升级算力
+                    </button>
+                  </div>
+
+                  <div className="group relative bg-white rounded-[2rem] p-8 border border-gray-100 shadow-sm transition-all duration-500 hover:-translate-y-1 hover:border-gray-800 hover:shadow-[0_12px_40px_rgba(17,24,39,0.12)] flex flex-col overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-gray-50/0 to-gray-50/0 group-hover:to-gray-100/50 transition-colors duration-500 pointer-events-none"></div>
+                    <div className="mb-8 relative z-10">
+                      <h3 className="text-lg font-bold text-gray-800 mb-2 font-mono uppercase tracking-wider group-hover:text-gray-900 transition-colors">Ultra / 尊享版</h3>
+                      <div className="flex items-baseline gap-1"><span className="text-2xl font-semibold">¥</span><span className="text-4xl font-black text-[#1d1d1f]">199</span></div>
+                    </div>
+                    <ul className="space-y-4 text-[14px] text-gray-600 font-medium flex-1 relative z-10">
+                      <li className="flex items-center gap-3">✦ 150 张极速渲染阵列</li>
+                      <li className="flex items-center gap-3">✦ 90 天无缝文案引擎</li>
+                    </ul>
+                    <button
+                      type="button"
+                      onClick={() => ultraPackage && handleSelectPackage(ultraPackage)}
+                      disabled={!ultraPackage}
+                      className="relative z-10 mt-8 w-full py-3.5 bg-gray-50 text-gray-700 group-hover:bg-gray-900 group-hover:text-white rounded-xl font-bold text-[15px] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      获取额度
+                    </button>
+                  </div>
                 </div>
-                <ul className="space-y-4 text-[14px] text-gray-600 font-medium flex-1 relative z-10">
-                  <li className="flex items-center gap-3">✦ 250 张极速渲染阵列</li>
-                  <li className="flex items-center gap-3">✦ 90 天无缝文案引擎</li>
-                </ul>
-                <button
-                  type="button"
-                  onClick={() => ultraPackage && handleSelectPackage(ultraPackage)}
-                  disabled={!ultraPackage}
-                  className="relative z-10 mt-8 w-full py-3.5 bg-gray-50 text-gray-700 group-hover:bg-gray-900 group-hover:text-white rounded-xl font-bold text-[15px] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  获取额度
-                </button>
-              </div>
+              )}
+
+              {activeTab === 'pro' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch max-w-4xl mx-auto animate-[fadeIn_0.4s_ease-out]">
+                  <div className="group relative bg-white rounded-[2rem] p-10 border border-gray-100 shadow-sm transition-all duration-500 hover:-translate-y-1 hover:border-gray-800 hover:shadow-[0_12px_50px_rgba(17,24,39,0.15)] flex flex-col overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-gray-50/0 to-gray-50/0 group-hover:to-gray-100/50 transition-colors duration-500 pointer-events-none"></div>
+                    <div className="mb-8 relative z-10">
+                      <h3 className="text-xl font-bold text-gray-800 mb-2 font-mono uppercase tracking-wider group-hover:text-gray-900 transition-colors">Pro / 工作室包月</h3>
+                      <div className="flex items-baseline gap-1"><span className="text-2xl font-semibold">¥</span><span className="text-5xl font-black text-[#1d1d1f]">599</span><span className="text-gray-400 font-medium text-lg ml-1">/ 月</span></div>
+                    </div>
+                    <ul className="space-y-5 text-[15px] text-gray-600 font-medium flex-1 relative z-10">
+                      <li className="flex items-center gap-3">✦ 每月 1000 组极速渲染阵列</li>
+                      <li className="flex items-center gap-3">✦ 包月无缝文案引擎网络</li>
+                      <li className="flex items-center gap-3">✦ 商业授权与免责保护</li>
+                    </ul>
+                    <button
+                      type="button"
+                      onClick={() => handleProPlanAction('monthly')}
+                      className="relative z-10 mt-10 w-full py-4 bg-[#111827] text-white hover:bg-black rounded-xl font-bold text-[16px] transition-all duration-300 shadow-lg"
+                    >
+                      订阅包月
+                    </button>
+                  </div>
+
+                  <div className="group relative bg-white rounded-[2rem] p-10 border border-gray-100 shadow-sm transition-all duration-500 hover:-translate-y-1 hover:border-[#B8860B] hover:shadow-[0_12px_50px_rgba(184,134,11,0.15)] flex flex-col overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-yellow-50/0 to-yellow-50/0 group-hover:to-yellow-50/50 transition-colors duration-500 pointer-events-none"></div>
+                    <div className="mb-8 relative z-10">
+                      <h3 className="text-xl font-bold text-gray-800 mb-2 font-mono uppercase tracking-wider group-hover:text-[#B8860B] transition-colors">Max / 企业包年</h3>
+                      <div className="flex items-baseline gap-1"><span className="text-2xl font-semibold">¥</span><span className="text-5xl font-black text-[#1d1d1f]">6888</span><span className="text-gray-400 font-medium text-lg ml-1">/ 年</span></div>
+                    </div>
+                    <ul className="space-y-5 text-[15px] text-gray-600 font-medium flex-1 relative z-10">
+                      <li className="flex items-center gap-3">✦ 全年无限组满血渲染阵列</li>
+                      <li className="flex items-center gap-3">✦ 专属企业级 API 调度通道</li>
+                      <li className="flex items-center gap-3">✦ 1V1 专属架构师运维支持</li>
+                    </ul>
+                    <button
+                      type="button"
+                      onClick={() => handleProPlanAction('yearly')}
+                      className="relative z-10 mt-10 w-full py-4 bg-[#B8860B] text-white hover:bg-[#9A7B00] rounded-xl font-bold text-[16px] transition-all duration-300 shadow-lg shadow-yellow-600/20"
+                    >
+                      联系客服升级
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </>
         ) : (
