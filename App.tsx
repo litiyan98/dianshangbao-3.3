@@ -160,22 +160,22 @@ type TextGlowState = 'idle' | 'generating' | 'success';
 type StepHaloTitleProps = {
   step: string;
   title: string;
-  badge?: string;
 };
 
-const StepHaloTitle: React.FC<StepHaloTitleProps> = ({ step, title, badge }) => (
-  <div className="flex items-center gap-3.5 mb-8 select-none">
-    <div className="relative flex items-center justify-center w-10 h-10 rounded-full bg-white border border-gray-100 shadow-sm z-10">
-      <div className="absolute -inset-1.5 rounded-full bg-gradient-to-r from-violet-200/40 to-fuchsia-200/40 blur-[4px] animate-pulse" style={{ animationDuration: '3s' }}></div>
-      <div className="absolute inset-0 rounded-full border border-violet-100/50"></div>
-      <span className="relative z-10 text-[13px] font-extrabold tracking-widest bg-clip-text text-transparent bg-gradient-to-br from-gray-600 to-gray-400">
-        {step}
-      </span>
-    </div>
-    <div className="flex items-end gap-3">
-      <h2 className="text-xl md:text-2xl font-bold text-[#1d1d1f] tracking-tight">{title}</h2>
-      {badge ? <span className="text-xs font-normal text-gray-400 tracking-normal mb-0.5">{badge}</span> : null}
-    </div>
+const StepHaloTitle: React.FC<StepHaloTitleProps> = ({ step, title }) => (
+  <div className="flex items-center gap-3 mb-8 select-none">
+    <span className="font-mono text-xl font-medium text-gray-400 tracking-wider">
+      {step}
+    </span>
+    <span
+      className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-violet-500 to-fuchsia-500 animate-pulse"
+      style={{ animationDuration: '3s' }}
+    >
+      /
+    </span>
+    <h2 className="text-2xl font-bold text-[#1d1d1f] tracking-tight">
+      {title}
+    </h2>
   </div>
 );
 
@@ -4140,7 +4140,7 @@ const App: React.FC = () => {
                   className={`bg-white rounded-[2rem] p-8 md:p-10 mb-8 mx-auto max-w-4xl border border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.03)] transition-shadow duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.06)] apple-reveal-base ${isRefStyleVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}
                 >
                    <section>
-                    <StepHaloTitle step="02" title="风格参考" badge="可选" />
+                    <StepHaloTitle step="02" title="风格参考" />
 
                     <section className="mb-8 border-b border-stone-100 pb-8">
                       <div className="flex flex-col sm:flex-row gap-4 items-center">
@@ -4372,7 +4372,7 @@ const App: React.FC = () => {
                 </section>
 
                 <section ref={posterRef} className={`bg-white rounded-[2rem] p-8 md:p-10 mb-8 mx-auto max-w-4xl border border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.03)] transition-shadow duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.06)] apple-reveal-base ${isPosterVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}>
-                  <StepHaloTitle step="05" title="海报文字设计" badge="可选" />
+                  <StepHaloTitle step="05" title="海报文字设计" />
                   <div className="space-y-5 bg-white/60 backdrop-blur-2xl border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-[2rem] p-8 md:p-10 relative overflow-hidden z-20">
                     <div className={`poster-copy-shell max-w-3xl mx-auto flex flex-col gap-5 w-full ${
                       isExtractingCopy ? 'is-generating' : copyGlowState === 'success' ? 'is-success' : ''
