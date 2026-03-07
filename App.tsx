@@ -59,6 +59,14 @@ const BRIEF_STEPS = [
   "🎨 正在使用虚幻引擎 5 (UE5) 级画质进行最终相片级渲染..."
 ];
 
+const logMessages = [
+  "⚡️ 引擎握手成功，Nano Banana Pro 算力已满载...",
+  "👁️ 正在解析空间深度，重构三维光影场...",
+  "✨ 融合风格特征，注入电影级胶片质感...",
+  "🔮 细节超分辨率重绘，重塑材质微观表现...",
+  "🪄 正在进行最终的视网膜级色彩与高光校准..."
+];
+
 const FONT_STYLE_OPTIONS: Array<{ id: FontStyle; label: string }> = [
   { id: 'modern_sans', label: '现代无衬线 (通用电商)' },
   { id: 'elegant_serif', label: '优雅衬线 (高端审美)' },
@@ -281,6 +289,7 @@ const App: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [progressText, setProgressText] = useState("");
+  const [logIndex, setLogIndex] = useState(0);
   const [analysis, setAnalysis] = useState<MarketAnalysis | null>(null);
   
   const [resultImages, setResultImages] = useState<string[]>([]);
@@ -2075,6 +2084,19 @@ const App: React.FC = () => {
       setLoadingBrief('');
     }
     return () => clearInterval(intervalId);
+  }, [isProcessing]);
+
+  useEffect(() => {
+    let interval: number | undefined;
+    if (isProcessing) {
+      setLogIndex(0);
+      interval = window.setInterval(() => {
+        setLogIndex((prev) => (prev + 1) % logMessages.length);
+      }, 2500);
+    }
+    return () => {
+      if (interval) window.clearInterval(interval);
+    };
   }, [isProcessing]);
 
   // 全局禁用浏览器文件拖拽打开页面，防止误拖导致整页跳转丢失状态
@@ -3895,6 +3917,30 @@ const App: React.FC = () => {
   const isMatrixRainbow = isMatrixGenerating || buttonDoneFlash.genMatrix;
   const matrixButtonText = isMatrixGenerating ? '正在渲染神级大片...' : (buttonDoneFlash.genMatrix ? '神级大片已完成' : '生成大师级主图');
 
+  const renderLoadingMonitor = () => (
+    <div className="flex flex-col items-center justify-center mb-12 mt-8 w-full max-w-3xl mx-auto min-h-[100px]">
+      <div className="flex items-center gap-4 mb-6 select-none">
+        <div className="relative flex items-center justify-center">
+          <div className="absolute inset-0 bg-violet-400 blur-md opacity-40 animate-pulse" style={{ animationDuration: '2s' }}></div>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="relative z-10 text-violet-500 animate-pulse" style={{ animationDuration: '2s' }}>
+            <path d="M10 2L11.5 7.5L17 9L11.5 10.5L10 16L8.5 10.5L3 9L8.5 7.5L10 2Z" fill="currentColor"/>
+            <path d="M19 14L19.75 16.25L22 17L19.75 17.75L19 20L18.25 17.75L16 17L18.25 16.25L19 14Z" fill="currentColor"/>
+          </svg>
+        </div>
+        <span className="text-[13px] font-bold text-[#1d1d1f] tracking-[0.2em] uppercase font-mono flex items-center gap-3">
+          Nano Banana Pro
+          <span className="text-gray-300 font-light">/</span>
+          <span className="text-gray-400 font-medium tracking-widest">Vision Engine</span>
+        </span>
+      </div>
+      <div className="relative h-6 w-full flex justify-center items-center overflow-hidden">
+        <p key={logIndex} className="absolute text-[14px] md:text-[15px] text-gray-500 font-medium tracking-wide animate-[fadeInUp_0.5s_ease-out_forwards]">
+          {logMessages[logIndex]}
+        </p>
+      </div>
+    </div>
+  );
+
   return (
     <div className="relative min-h-screen w-full flex flex-col items-center justify-center overflow-hidden">
       <div
@@ -4469,21 +4515,7 @@ const App: React.FC = () => {
           <div className="w-full max-w-5xl reveal-up">
             {!isSuiteMode && isProcessing && resultImages.length === 0 ? (
               <div className="w-full space-y-12">
-                <div className="flex flex-col items-center justify-center mb-16 mt-8 w-full max-w-2xl mx-auto">
-                  <h2 className="text-xl md:text-2xl font-bold text-[#1d1d1f] tracking-tight mb-6 flex items-center gap-3">
-                    <span className="relative flex h-3 w-3">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-3 w-3 bg-violet-500"></span>
-                    </span>
-                    正在冲印神级大片...
-                  </h2>
-                  <div className="w-full h-[2px] bg-gray-100 rounded-full overflow-hidden relative">
-                    <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 shadow-[0_0_10px_rgba(168,85,247,0.5)] transition-all duration-300 ease-out" style={{ width: `${progress}%` }}></div>
-                  </div>
-                  <p className="mt-4 text-[13px] text-gray-400 font-mono tracking-widest uppercase">
-                    Render Engine Active / {Math.floor(progress)}%
-                  </p>
-                </div>
+                {renderLoadingMonitor()}
 
                 <div className="w-full max-w-3xl mx-auto">
                   <div className="relative w-full rounded-[2rem] overflow-hidden bg-white border border-gray-100 shadow-sm flex items-center justify-center" style={{ aspectRatio: currentAspectRatio, minHeight: 320 }}>
@@ -4498,20 +4530,18 @@ const App: React.FC = () => {
             ) : (
               <div className="space-y-12">
                 <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 border-b border-stone-100 pb-8">
-                  <div className="flex flex-col items-start justify-center w-full max-w-2xl">
-                    <h2 className="text-xl md:text-2xl font-bold text-[#1d1d1f] tracking-tight mb-6 flex items-center gap-3">
-                      <span className="relative flex h-3 w-3">
-                        {isProcessing ? <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75"></span> : null}
-                        <span className="relative inline-flex rounded-full h-3 w-3 bg-violet-500"></span>
-                      </span>
-                      {isProcessing ? '正在冲印神级大片...' : '神级大片已冲印完成'}
-                    </h2>
-                    <div className="w-full h-[2px] bg-gray-100 rounded-full overflow-hidden relative">
-                      <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 shadow-[0_0_10px_rgba(168,85,247,0.5)] transition-all duration-300 ease-out" style={{ width: `${isProcessing ? progress : 100}%` }}></div>
-                    </div>
-                    <p className="mt-4 text-[13px] text-gray-400 font-mono tracking-widest uppercase">
-                      {isProcessing ? `Render Engine Active / ${Math.floor(progress)}%` : 'Render Engine Complete / 100%'}
-                    </p>
+                  <div className="w-full max-w-3xl">
+                    {isProcessing ? renderLoadingMonitor() : (
+                      <div className="flex flex-col items-start justify-center min-h-[100px]">
+                        <h2 className="text-xl md:text-2xl font-bold text-[#1d1d1f] tracking-tight mb-3 flex items-center gap-3">
+                          <span className="relative inline-flex rounded-full h-3 w-3 bg-violet-500"></span>
+                          神级大片已冲印完成
+                        </h2>
+                        <p className="text-[13px] text-gray-400 font-mono tracking-widest uppercase">
+                          Nano Banana Pro / Vision Engine
+                        </p>
+                      </div>
+                    )}
                   </div>
                   <div className="flex flex-col sm:flex-row gap-4">
                     {resultImages.length === 1 && (
