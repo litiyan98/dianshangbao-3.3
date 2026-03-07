@@ -163,20 +163,20 @@ type StepHaloTitleProps = {
 };
 
 const StepHaloTitle: React.FC<StepHaloTitleProps> = ({ step, title }) => (
-  <div className="flex items-center gap-3 mb-8 select-none">
-    <span className="font-mono text-xl font-medium text-gray-400 tracking-wider">
+  <h2 className="flex items-center gap-2.5 mb-8 select-none text-xl md:text-2xl">
+    <span className="font-medium text-gray-300 tracking-wide">
       {step}
     </span>
     <span
-      className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-violet-500 to-fuchsia-500 animate-pulse"
+      className="font-light text-violet-400 animate-pulse"
       style={{ animationDuration: '3s' }}
     >
       /
     </span>
-    <h2 className="text-2xl font-bold text-[#1d1d1f] tracking-tight">
+    <span className="font-bold text-[#1d1d1f] tracking-tight">
       {title}
-    </h2>
-  </div>
+    </span>
+  </h2>
 );
 
 const TEXT_PRESETS: Array<{
@@ -3897,8 +3897,8 @@ const App: React.FC = () => {
       <div
         className="fixed inset-0 -z-10 w-full h-screen pointer-events-none select-none bg-transparent"
         style={{
-          maskImage: 'linear-gradient(to bottom, transparent 0%, transparent 50vh, black 85vh)',
-          WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, transparent 50vh, black 85vh)',
+          maskImage: 'linear-gradient(to bottom, transparent 0%, transparent 20vh, black 50vh)',
+          WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, transparent 20vh, black 50vh)',
         }}
       >
         <LiquidMetalBackground />

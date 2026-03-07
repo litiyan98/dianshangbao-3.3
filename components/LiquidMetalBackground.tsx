@@ -49,10 +49,10 @@ const fragmentShader = `
     float noiseDetail = snoise(uv * 2.0 - vec2(t * 0.3, t * 0.5));
     float finalNoise = (noiseBase * 0.7 + noiseDetail * 0.3);
 
-    vec3 matteBase = vec3(0.88, 0.89, 0.91);
+    vec3 matteBase = vec3(0.85, 0.86, 0.88);
     vec3 matteHighlight = vec3(1.0, 1.0, 1.0);
 
-    float mixFactor = smoothstep(-0.8, 0.8, finalNoise);
+    float mixFactor = smoothstep(-0.6, 0.6, finalNoise);
     vec3 finalColor = mix(matteBase, matteHighlight, mixFactor);
 
     gl_FragColor = vec4(finalColor, 1.0);
