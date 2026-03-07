@@ -4415,7 +4415,7 @@ const App: React.FC = () => {
                       ></textarea>
 
                       <div className={`prompt-status-widget ${isExtractingCopy ? 'is-generating' : ''}`}>
-                        <div className={`holo-ticker max-w-[280px] ml-auto ${isExtractingCopy ? 'is-visible' : ''}`}>
+                        <div className={`holo-ticker max-w-[360px] ml-auto ${isExtractingCopy ? 'is-visible' : ''}`}>
                           <div className="holo-ticker-track">
                             <span className="holo-ticker-line">{MODEL_HINT_COPY}</span>
                             <span className="holo-ticker-line">最长 60 秒，首次慢响应自动重试 1 次</span>
