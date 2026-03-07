@@ -3872,17 +3872,19 @@ const App: React.FC = () => {
   return (
     <div className="relative min-h-screen w-full flex flex-col items-center justify-center overflow-hidden">
       <div
-        className="fixed inset-0 -z-10 w-full h-screen pointer-events-none"
+        className="fixed inset-0 -z-10 w-full h-screen pointer-events-none select-none bg-transparent"
         style={{
-          maskImage: 'linear-gradient(to bottom, transparent 0%, black 150px)',
-          WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 150px)',
+          maskImage: 'linear-gradient(to bottom, transparent 0%, transparent 50vh, black 85vh)',
+          WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, transparent 50vh, black 85vh)',
         }}
       >
         <div
-          className="absolute inset-0 w-full h-full opacity-90 animate-liquid-flow"
+          className="absolute inset-0 w-full h-full animate-liquid-flow"
           style={{
-            background: 'linear-gradient(-45deg, #e8e9eb, #f5f7fa, #c4c6ca, #ffffff, #e8e9eb)',
-            backgroundSize: '400% 400%'
+            background: 'linear-gradient(-45deg, #f1f2f4, #f6f7f9, #e9eaed, #f8f9fb, #f1f2f4)',
+            backgroundSize: '400% 400%',
+            opacity: 0.72,
+            animation: 'liquidFlow 32s ease-in-out infinite',
           }}
         ></div>
       </div>
