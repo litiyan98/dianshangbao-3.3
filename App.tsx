@@ -4086,11 +4086,6 @@ const App: React.FC = () => {
             </div>
 
             <div className="relative w-full pb-24 mt-8 bg-transparent">
-               <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden flex justify-center items-center">
-                 <div className="absolute -top-16 left-[-10%] h-[45%] w-[45%] bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.85),transparent_70%)] blur-3xl" />
-                 <div className="absolute top-[22%] right-[-12%] h-[38%] w-[42%] bg-[radial-gradient(circle_at_center,rgba(167,139,250,0.18),transparent_72%)] blur-3xl" />
-                 <div className="absolute bottom-[-12%] left-[12%] h-[40%] w-[52%] rounded-[48px] border border-white/30 bg-gradient-to-br from-white/60 via-white/15 to-transparent blur-[1px]" />
-               </div>
                <div className="relative z-10 max-w-4xl mx-auto">
                 <section className="bg-white rounded-[2rem] p-8 md:p-10 mb-8 mx-auto max-w-4xl border border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.03)] transition-shadow duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.06)]">
                   <div className="flex items-end gap-4 mb-8 select-none">
