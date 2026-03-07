@@ -4240,13 +4240,11 @@ const App: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="max-w-xl mx-auto flex flex-col gap-4 w-full relative z-20 mt-6">
-                    <div className={`prompt-container-wrapper text-state-shell ${
-                      isAnalyzingPrompt ? 'is-generating' : promptGlowState === 'success' ? 'is-success' : ''
-                    }`}>
+                  <div className="w-full relative z-20 flex flex-col gap-4">
+                    <div className="w-full mt-6 relative z-10">
                       <textarea 
                         value={userPrompt} onChange={(e) => setUserPrompt(e.target.value)}
-                        className="w-full min-h-[120px] resize-none rounded-sm bg-white/40 backdrop-blur-md border border-stone-200/60 px-4 py-3 text-sm text-stone-800 placeholder:text-stone-400 focus:bg-white/80 transition-all outline-none"
+                        className="w-full h-32 resize-none bg-gray-50/50 hover:bg-white focus:bg-white focus:ring-1 focus:ring-violet-200 border border-gray-100 rounded-2xl px-6 py-5 text-[15px] text-[#1d1d1f] transition-all shadow-sm placeholder-gray-400"
                         placeholder={"// 导演指令：请描述您期望的画面细节与氛围...\n例如：清晨柔和的阳光透过百叶窗，商品放置在带有水滴的黑大理石台面上。"}
                       />
                     </div>
