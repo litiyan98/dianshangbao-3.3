@@ -15,7 +15,6 @@ import PaymentModal from './components/PaymentModal';
 import MorphingAiButton from './components/MorphingAiButton';
 import { removeBackground as imglyRemoveBackground } from '@imgly/background-removal';
 import { useAppleReveal } from './hooks/useAppleReveal';
-import LiquidMetalBackground from './components/LiquidMetalBackground';
 
 const BARRAGE_TEXTS = [
   '影棚级光影 ✦',
@@ -3873,13 +3872,19 @@ const App: React.FC = () => {
   return (
     <div className="relative min-h-screen w-full flex flex-col items-center justify-center overflow-hidden">
       <div
-        className="fixed inset-0 -z-10 w-full h-screen pointer-events-none select-none bg-transparent"
+        className="fixed inset-0 -z-10 w-full h-screen pointer-events-none"
         style={{
-          maskImage: 'linear-gradient(to bottom, transparent 0%, transparent 50vh, black 85vh)',
-          WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, transparent 50vh, black 85vh)',
+          maskImage: 'linear-gradient(to bottom, transparent 0%, black 150px)',
+          WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 150px)',
         }}
       >
-        <LiquidMetalBackground />
+        <div
+          className="absolute inset-0 w-full h-full opacity-90 animate-liquid-flow"
+          style={{
+            background: 'linear-gradient(-45deg, #e8e9eb, #f5f7fa, #c4c6ca, #ffffff, #e8e9eb)',
+            backgroundSize: '400% 400%'
+          }}
+        ></div>
       </div>
       {/* 组件内联注入 CSS，100% 保证动效渲染 */}
       <style>{`
@@ -4085,50 +4090,7 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex items-center justify-center gap-4 w-full relative z-20 my-2">
-              <div className="w-full overflow-hidden relative py-4 opacity-90 pointer-events-none fade-edges">
-                <div className="inline-marquee gap-6 pointer-events-none">
-                  {[...BARRAGE_TEXTS, ...BARRAGE_TEXTS].map((text, i) => (
-                    <span key={i} className="text-[#002FA7] bg-[#002FA7]/5 px-6 py-2.5 rounded-full text-[12px] font-black tracking-widest border border-[#002FA7]/10 backdrop-blur-sm shadow-sm ml-6">
-                      {text}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <div className="shrink-0 pointer-events-none">
-                <span className="nebula-diamond-shell">
-                  <svg
-                    className="nebula-diamond-svg"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                    aria-hidden="true"
-                  >
-                    <defs>
-                      <linearGradient id="hero-nebula-full-spectrum" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="#ff4d4d" />
-                        <stop offset="35%" stopColor="#f9cb28" />
-                        <stop offset="65%" stopColor="#78e08f" />
-                        <stop offset="100%" stopColor="#3c40c6" />
-                        <animateTransform
-                          attributeName="gradientTransform"
-                          type="translate"
-                          values="-0.45 -0.45;0.45 0.45;-0.45 -0.45"
-                          dur="4.8s"
-                          repeatCount="indefinite"
-                        />
-                      </linearGradient>
-                    </defs>
-                    <path
-                      d="M12 0C12 6.62742 6.62742 12 0 12C6.62742 12 12 17.3726 12 24C12 17.3726 17.3726 12 24 12C17.3726 12 12 6.62742 12 0Z"
-                      fill="url(#hero-nebula-full-spectrum)"
-                    />
-                  </svg>
-                </span>
-              </div>
-            </div>
-
-            <div className="relative w-full pb-24 mt-8 bg-transparent overflow-hidden">
+            <div className="relative w-full pb-24 mt-8 bg-transparent">
                <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden flex justify-center items-center">
                  <div className="absolute -top-16 left-[-10%] h-[45%] w-[45%] bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.85),transparent_70%)] blur-3xl" />
                  <div className="absolute top-[22%] right-[-12%] h-[38%] w-[42%] bg-[radial-gradient(circle_at_center,rgba(167,139,250,0.18),transparent_72%)] blur-3xl" />
@@ -4452,21 +4414,6 @@ const App: React.FC = () => {
                         onChange={e => setTextConfig({ ...textConfig, detail: e.target.value })}
                         className="w-full h-24 resize-none bg-gray-50/80 hover:bg-white focus:bg-white focus:ring-2 focus:ring-gray-200 border-none rounded-2xl px-6 py-4 text-[#1d1d1f] transition-all shadow-sm"
                       ></textarea>
-
-                      <div className="flex justify-end mt-2">
-                        <MorphingAiButton
-                          onClick={handleExtractCopy}
-                          loading={isExtractingCopy}
-                          disabled={isExtractingCopy}
-                          icon={<Sparkles size={12} />}
-                          idleText="爆款文案制作"
-                          loadingText={`爆款文案制作中 ${copywritingCountdown ?? 60}s`}
-                          doneText="✨ 文案已完成"
-                          showDone={buttonDoneFlash.copy}
-                          size="sm"
-                          variant="primary"
-                        />
-                      </div>
                     </div>
                   </div>
                 </section>
