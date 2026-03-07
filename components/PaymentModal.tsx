@@ -29,18 +29,18 @@ const POLLING_TIMEOUT_MS = 5 * 60 * 1000;
 const TONAL_PLAN_META: Record<string, TonalPlanMeta> = {
   starter_15_quota_7d_vip: {
     title: 'Starter / 探索版',
-    features: ['15 组极速渲染阵列', '7 天基础文案引擎网络'],
+    features: ['7 张极速渲染阵列', '3 天基础文案引擎'],
     cta: '获取额度',
   },
   standard_80_quota_30d_vip: {
     title: 'Advanced / 专业版',
-    features: ['80 组极速渲染阵列', '30 天无缝文案引擎', '解开冷却锁'],
+    features: ['70 张极速渲染阵列', '30 天无缝文案引擎 (解开冷却锁)'],
     cta: '升级算力',
     featured: true,
   },
   enterprise_400_quota_90d_vip: {
     title: 'Ultra / 尊享版',
-    features: ['400 组极速渲染阵列', '90 天无缝文案引擎 (高优调度)'],
+    features: ['250 张极速渲染阵列', '90 天无缝文案引擎 (高优调度)'],
     cta: '获取额度',
   },
 };
