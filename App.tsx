@@ -3891,6 +3891,11 @@ const App: React.FC = () => {
   };
 
   const currentAspectRatio = aspectRatio.replace(':', ' / ');
+  const isSuiteGenerating = isProcessing && activeGenerateCount === 3;
+  const isSingleGenerating = isProcessing && activeGenerateCount === 1;
+  const isGenerateDisabled = isProcessing || sourceImages.length === 0;
+  const suiteButtonLabel = isSuiteGenerating ? '正在生成大师级主图' : (buttonDoneFlash.genMatrix ? '已生成完成' : '生成大师级主图');
+  const singleButtonLabel = isSingleGenerating ? '正在生成单张精修' : (buttonDoneFlash.genSingle ? '已生成完成' : '生成单张精修');
 
   return (
     <div className="relative min-h-screen w-full flex flex-col items-center justify-center overflow-hidden">
@@ -4374,27 +4379,27 @@ const App: React.FC = () => {
                 <section ref={posterRef} className={`bg-white rounded-[2rem] p-8 md:p-10 mb-8 mx-auto max-w-4xl border border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.03)] transition-shadow duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.06)] apple-reveal-base ${isPosterVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}>
                   <StepHaloTitle step="05" title="海报文字设计" />
                   <div className="space-y-5 bg-white/60 backdrop-blur-2xl border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-[2rem] p-8 md:p-10 relative overflow-hidden z-20">
-                    <div className={`poster-copy-shell max-w-3xl mx-auto flex flex-col gap-5 w-full ${
+                    <div className={`poster-copy-shell w-full z-20 mt-8 flex flex-col gap-6 ${
                       isExtractingCopy ? 'is-generating' : copyGlowState === 'success' ? 'is-success' : ''
                     }`}>
-                      <div className="poster-copy-ambient poster-copy-ambient--left" />
-                      <div className="poster-copy-ambient poster-copy-ambient--right" />
+                      <div className="poster-copy-cabin-glow absolute -inset-6 bg-gradient-to-r from-violet-500/15 via-fuchsia-500/10 to-blue-500/15 blur-3xl rounded-[3rem] animate-pulse pointer-events-none z-0" style={{ animationDuration: '4s' }}></div>
+
                       <input
                         type="text"
-                        placeholder="主标题..."
+                        placeholder="输入主标题..."
                         value={textConfig.title}
                         onChange={e => setTextConfig({ ...textConfig, title: e.target.value })}
-                        className="w-full bg-gray-50/80 hover:bg-white focus:bg-white focus:ring-2 focus:ring-gray-200 border-none rounded-2xl px-6 py-4 text-[#1d1d1f] transition-all shadow-sm"
+                        className="relative z-10 w-full bg-white/70 backdrop-blur-md hover:bg-white focus:bg-white focus:ring-1 focus:ring-violet-200 border border-gray-100 rounded-2xl px-6 py-5 text-lg font-medium text-[#1d1d1f] transition-all shadow-sm placeholder:text-gray-400"
                       />
 
                       <textarea
-                        placeholder="副标题/正文..."
+                        placeholder="输入副标题或正文描述..."
                         value={textConfig.detail}
                         onChange={e => setTextConfig({ ...textConfig, detail: e.target.value })}
-                        className="w-full h-24 resize-none bg-gray-50/80 hover:bg-white focus:bg-white focus:ring-2 focus:ring-gray-200 border-none rounded-2xl px-6 py-4 text-[#1d1d1f] transition-all shadow-sm"
+                        className="relative z-10 w-full h-36 resize-none bg-white/70 backdrop-blur-md hover:bg-white focus:bg-white focus:ring-1 focus:ring-violet-200 border border-gray-100 rounded-2xl px-6 py-5 text-lg text-[#1d1d1f] transition-all shadow-sm placeholder:text-gray-400"
                       ></textarea>
 
-                      <div className={`prompt-status-widget ${isExtractingCopy ? 'is-generating' : ''}`}>
+                      <div className={`prompt-status-widget relative z-10 ${isExtractingCopy ? 'is-generating' : ''}`}>
                         <div className={`holo-ticker max-w-[360px] ml-auto ${isExtractingCopy ? 'is-visible' : ''}`}>
                           <div className="holo-ticker-track">
                             <span className="holo-ticker-line">{MODEL_HINT_COPY}</span>
@@ -4422,47 +4427,53 @@ const App: React.FC = () => {
 
                 <div
                   ref={generateRef}
-                    className={`apple-reveal-base mt-8 pt-6 border-t border-white/20 grid grid-cols-1 sm:grid-cols-2 gap-4 w-full ${isGenerateVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}
-                  >
-                    <div className="space-y-2">
-                      <div className="rounded-2xl transition-all duration-500 ease-out shadow-[0_8px_24px_rgba(168,85,247,0.35)] hover:scale-[1.02] hover:shadow-[0_12px_32px_rgba(168,85,247,0.5)]">
-                        <MorphingAiButton
-                          onClick={handleGenerateSuite}
-                          loading={isProcessing && activeGenerateCount === 3}
-                          disabled={isProcessing || sourceImages.length === 0}
-                          icon={<Sparkles size={18} />}
-                          idleText="✨ 生成 3 款大师级主图"
-                          loadingText="🚀 正在并发渲染：高转化主图 / 沉浸场景 / 极简海报..."
-                          doneText="✨ 渲染完成"
-                          showDone={buttonDoneFlash.genMatrix}
-                          variant="primary"
-                          size="lg"
-                          className="text-base font-semibold tracking-wide text-white"
-                          block
-                        />
-                      </div>
-                      <p className="text-xs text-gray-400 mt-2 text-center">本次操作消耗 3 额度</p>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="rounded-2xl transition-all duration-500 ease-out shadow-[0_6px_20px_rgba(168,85,247,0.14)] hover:scale-[1.02] hover:shadow-[0_10px_30px_rgba(168,85,247,0.3)]">
-                        <MorphingAiButton
-                          onClick={handleGenerate}
-                          loading={isProcessing && activeGenerateCount === 1}
-                          disabled={isProcessing || sourceImages.length === 0}
-                          icon={<Zap size={18} />}
-                          idleText="⚡️ 生成单张精修"
-                          loadingText="✨ AI 视觉神经元正在为您注入顶级商业摄影参数..."
-                          doneText="✨ 渲染完成"
-                          showDone={buttonDoneFlash.genSingle}
-                          variant="secondary"
-                          size="lg"
-                          block
-                        />
-                      </div>
-                      <p className="text-xs text-gray-400 mt-2 text-center">本次操作消耗 1 额度</p>
-                    </div>
+                  className={`apple-reveal-base flex flex-col sm:flex-row items-center justify-center gap-8 mt-16 mb-12 w-full ${isGenerateVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}
+                >
+                  <div className={`relative group flex flex-col items-center w-full sm:w-auto ${isGenerateDisabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+                    <div className={`absolute -inset-[1px] bg-gradient-to-r from-violet-500 via-fuchsia-500 to-blue-500 rounded-2xl opacity-0 group-hover:opacity-100 blur-[3px] transition-opacity duration-500 z-0 ${isSuiteGenerating ? 'opacity-100' : ''}`}></div>
+
+                    <button
+                      type="button"
+                      onClick={handleGenerateSuite}
+                      disabled={isGenerateDisabled}
+                      className={`relative z-10 flex items-center justify-center gap-3 w-full sm:w-[300px] py-4 rounded-2xl font-medium text-lg overflow-hidden transition-colors duration-300 shadow-xl ${
+                        isSuiteGenerating
+                          ? 'bg-[length:200%_auto] bg-gradient-to-r from-violet-600 via-fuchsia-600 to-blue-600 text-white animate-rainbow border-none'
+                          : 'bg-[#111827] hover:bg-[#1a2333] text-white'
+                      } ${isGenerateDisabled ? 'opacity-60 cursor-not-allowed' : ''}`}
+                    >
+                      <span className="relative z-20 flex items-center gap-2">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className={`transition-colors duration-300 ${isSuiteGenerating ? 'text-white' : 'text-violet-400'}`}>
+                          <path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z" fill="currentColor"/>
+                        </svg>
+                        {suiteButtonLabel}
+                      </span>
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-[1200ms] ease-in-out z-10"></div>
+                    </button>
+                    <span className="mt-4 text-[13px] text-gray-400 font-mono tracking-widest">
+                      ⚡️ - 3 TOKENS
+                    </span>
                   </div>
-              </div>
+
+                  <div className={`relative group flex flex-col items-center w-full sm:w-auto ${isGenerateDisabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+                    <button
+                      type="button"
+                      onClick={handleGenerate}
+                      disabled={isGenerateDisabled}
+                      className={`relative z-10 flex items-center justify-center gap-2 w-full sm:w-[300px] py-4 bg-transparent border rounded-2xl font-medium text-lg transition-all duration-300 ${
+                        isSingleGenerating
+                          ? 'bg-gray-900 text-white border-gray-900'
+                          : 'border-gray-200 hover:border-gray-300 text-gray-600 hover:text-gray-900 hover:bg-gray-50/50'
+                      } ${isGenerateDisabled ? 'opacity-60 cursor-not-allowed' : ''}`}
+                    >
+                      <Zap size={18} className={`${isSingleGenerating ? 'text-white' : 'text-gray-400'} transition-colors duration-300`} />
+                      {singleButtonLabel}
+                    </button>
+                    <span className="mt-4 text-[13px] text-gray-400 font-mono tracking-widest">
+                      ⚡️ - 1 TOKEN
+                    </span>
+                  </div>
+                </div>              </div>
             </div>
 
           </div>

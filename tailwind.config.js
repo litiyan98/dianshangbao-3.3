@@ -26,6 +26,7 @@ export default {
         'pulse-glow': 'pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         float: 'float 3s ease-in-out infinite',
         'liquid-flow': 'liquidFlow 20s ease infinite',
+        'rainbow': 'rainbowSweep 2s linear infinite',
       },
       keyframes: {
         'gradient-x': {
@@ -61,6 +62,10 @@ export default {
             backgroundSize: '400% 400%',
             backgroundPosition: '100% 50%',
           },
+        },
+        rainbowSweep: {
+          '0%': { backgroundPosition: '0% 50%' },
+          '100%': { backgroundPosition: '200% 50%' },
         },
       },
     },
