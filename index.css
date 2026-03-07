@@ -487,8 +487,8 @@
   }
 
   .prompt-status-widget.is-generating .holo-ticker {
-    width: 360px;
-    max-width: 360px;
+    width: 320px;
+    max-width: 320px;
     text-align: center;
   }
 
@@ -501,7 +501,7 @@
     overflow: hidden;
     height: 20px;
     text-align: center;
-    max-width: 360px;
+    max-width: 320px;
     opacity: 0;
     max-height: 0;
     transform: translateY(-6px);
