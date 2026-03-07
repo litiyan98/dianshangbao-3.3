@@ -4394,7 +4394,11 @@ const App: React.FC = () => {
                     </div>
                   </div>
                   <div className="space-y-5 bg-white/60 backdrop-blur-2xl border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-[2rem] p-8 md:p-10 relative overflow-hidden z-20">
-                    <div className="max-w-xl mx-auto flex flex-col gap-5 w-full">
+                    <div className={`poster-copy-shell max-w-3xl mx-auto flex flex-col gap-5 w-full ${
+                      isExtractingCopy ? 'is-generating' : copyGlowState === 'success' ? 'is-success' : ''
+                    }`}>
+                      <div className="poster-copy-ambient poster-copy-ambient--left" />
+                      <div className="poster-copy-ambient poster-copy-ambient--right" />
                       <input
                         type="text"
                         placeholder="主标题..."
