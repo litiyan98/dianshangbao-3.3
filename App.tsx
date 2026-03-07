@@ -3891,11 +3891,6 @@ const App: React.FC = () => {
   };
 
   const currentAspectRatio = aspectRatio.replace(':', ' / ');
-  const isSuiteGenerating = isProcessing && activeGenerateCount === 3;
-  const isSingleGenerating = isProcessing && activeGenerateCount === 1;
-  const isGenerateDisabled = isProcessing || sourceImages.length === 0;
-  const suiteButtonLabel = isSuiteGenerating ? '正在生成大师级主图' : (buttonDoneFlash.genMatrix ? '已生成完成' : '生成大师级主图');
-  const singleButtonLabel = isSingleGenerating ? '正在生成单张精修' : (buttonDoneFlash.genSingle ? '已生成完成' : '生成单张精修');
 
   return (
     <div className="relative min-h-screen w-full flex flex-col items-center justify-center overflow-hidden">
@@ -4379,24 +4374,22 @@ const App: React.FC = () => {
                 <section ref={posterRef} className={`bg-white rounded-[2rem] p-8 md:p-10 mb-8 mx-auto max-w-4xl border border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.03)] transition-shadow duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.06)] apple-reveal-base ${isPosterVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}>
                   <StepHaloTitle step="05" title="海报文字设计" />
                   <div className="space-y-5 bg-white/60 backdrop-blur-2xl border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-[2rem] p-8 md:p-10 relative overflow-hidden z-20">
-                    <div className={`poster-copy-shell w-full z-20 mt-8 flex flex-col gap-6 ${
-                      isExtractingCopy ? 'is-generating' : copyGlowState === 'success' ? 'is-success' : ''
-                    }`}>
-                      <div className="poster-copy-cabin-glow absolute -inset-6 bg-gradient-to-r from-violet-500/15 via-fuchsia-500/10 to-blue-500/15 blur-3xl rounded-[3rem] animate-pulse pointer-events-none z-0" style={{ animationDuration: '4s' }}></div>
+                    <div className="relative w-full z-20 mt-8 flex flex-col gap-6">
+                      <div className="absolute -inset-6 bg-gradient-to-r from-violet-500/15 via-fuchsia-500/10 to-blue-500/15 blur-3xl rounded-[3rem] animate-pulse pointer-events-none z-0" style={{ animationDuration: '4s' }}></div>
 
                       <input
                         type="text"
                         placeholder="输入主标题..."
                         value={textConfig.title}
                         onChange={e => setTextConfig({ ...textConfig, title: e.target.value })}
-                        className="relative z-10 w-full bg-white/70 backdrop-blur-md hover:bg-white focus:bg-white focus:ring-1 focus:ring-violet-200 border border-gray-100 rounded-2xl px-6 py-5 text-lg font-medium text-[#1d1d1f] transition-all shadow-sm placeholder:text-gray-400"
+                        className="relative z-10 w-full bg-white/70 backdrop-blur-md hover:bg-white focus:bg-white focus:ring-1 focus:ring-violet-200 border border-gray-100 rounded-2xl px-6 py-5 text-lg font-medium text-[#1d1d1f] transition-all shadow-sm placeholder-gray-400"
                       />
 
                       <textarea
                         placeholder="输入副标题或正文描述..."
                         value={textConfig.detail}
                         onChange={e => setTextConfig({ ...textConfig, detail: e.target.value })}
-                        className="relative z-10 w-full h-36 resize-none bg-white/70 backdrop-blur-md hover:bg-white focus:bg-white focus:ring-1 focus:ring-violet-200 border border-gray-100 rounded-2xl px-6 py-5 text-lg text-[#1d1d1f] transition-all shadow-sm placeholder:text-gray-400"
+                        className="relative z-10 w-full h-36 resize-none bg-white/70 backdrop-blur-md hover:bg-white focus:bg-white focus:ring-1 focus:ring-violet-200 border border-gray-100 rounded-2xl px-6 py-5 text-lg text-[#1d1d1f] transition-all shadow-sm placeholder-gray-400"
                       ></textarea>
 
                       <div className={`prompt-status-widget relative z-10 ${isExtractingCopy ? 'is-generating' : ''}`}>
@@ -4429,24 +4422,19 @@ const App: React.FC = () => {
                   ref={generateRef}
                   className={`apple-reveal-base flex flex-col sm:flex-row items-center justify-center gap-8 mt-16 mb-12 w-full ${isGenerateVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}
                 >
-                  <div className={`relative group flex flex-col items-center w-full sm:w-auto ${isGenerateDisabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
-                    <div className={`absolute -inset-[1px] bg-gradient-to-r from-violet-500 via-fuchsia-500 to-blue-500 rounded-2xl opacity-0 group-hover:opacity-100 blur-[3px] transition-opacity duration-500 z-0 ${isSuiteGenerating ? 'opacity-100' : ''}`}></div>
-
+                  <div className="relative group cursor-pointer flex flex-col items-center">
+                    <div className="absolute -inset-[1px] bg-gradient-to-r from-violet-500 via-fuchsia-500 to-blue-500 rounded-2xl opacity-0 group-hover:opacity-100 blur-[3px] transition-opacity duration-500 z-0"></div>
                     <button
                       type="button"
                       onClick={handleGenerateSuite}
-                      disabled={isGenerateDisabled}
-                      className={`relative z-10 flex items-center justify-center gap-3 w-full sm:w-[300px] py-4 rounded-2xl font-medium text-lg overflow-hidden transition-colors duration-300 shadow-xl ${
-                        isSuiteGenerating
-                          ? 'bg-[length:200%_auto] bg-gradient-to-r from-violet-600 via-fuchsia-600 to-blue-600 text-white animate-rainbow border-none'
-                          : 'bg-[#111827] hover:bg-[#1a2333] text-white'
-                      } ${isGenerateDisabled ? 'opacity-60 cursor-not-allowed' : ''}`}
+                      disabled={isProcessing || sourceImages.length === 0}
+                      className="relative z-10 flex items-center justify-center gap-3 w-[300px] py-4 bg-[#111827] hover:bg-[#1a2333] text-white rounded-2xl font-medium text-lg overflow-hidden transition-colors duration-300 shadow-xl disabled:opacity-60 disabled:cursor-not-allowed"
                     >
                       <span className="relative z-20 flex items-center gap-2">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className={`transition-colors duration-300 ${isSuiteGenerating ? 'text-white' : 'text-violet-400'}`}>
-                          <path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z" fill="currentColor"/>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-violet-400 group-hover:animate-pulse">
+                           <path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z" fill="currentColor"/>
                         </svg>
-                        {suiteButtonLabel}
+                        生成大师级主图
                       </span>
                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-[1200ms] ease-in-out z-10"></div>
                     </button>
@@ -4455,19 +4443,14 @@ const App: React.FC = () => {
                     </span>
                   </div>
 
-                  <div className={`relative group flex flex-col items-center w-full sm:w-auto ${isGenerateDisabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+                  <div className="relative group cursor-pointer flex flex-col items-center">
                     <button
                       type="button"
                       onClick={handleGenerate}
-                      disabled={isGenerateDisabled}
-                      className={`relative z-10 flex items-center justify-center gap-2 w-full sm:w-[300px] py-4 bg-transparent border rounded-2xl font-medium text-lg transition-all duration-300 ${
-                        isSingleGenerating
-                          ? 'bg-gray-900 text-white border-gray-900'
-                          : 'border-gray-200 hover:border-gray-300 text-gray-600 hover:text-gray-900 hover:bg-gray-50/50'
-                      } ${isGenerateDisabled ? 'opacity-60 cursor-not-allowed' : ''}`}
+                      disabled={isProcessing || sourceImages.length === 0}
+                      className="relative z-10 flex items-center justify-center gap-2 w-[300px] py-4 bg-transparent border border-gray-200 hover:border-gray-300 text-gray-600 hover:text-gray-900 rounded-2xl font-medium text-lg transition-all duration-300 hover:bg-gray-50/50 disabled:opacity-60 disabled:cursor-not-allowed"
                     >
-                      <Zap size={18} className={`${isSingleGenerating ? 'text-white' : 'text-gray-400'} transition-colors duration-300`} />
-                      {singleButtonLabel}
+                      生成单张精修
                     </button>
                     <span className="mt-4 text-[13px] text-gray-400 font-mono tracking-widest">
                       ⚡️ - 1 TOKEN
