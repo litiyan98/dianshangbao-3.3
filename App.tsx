@@ -4292,36 +4292,20 @@ const App: React.FC = () => {
                     <div className="poster-copy-ambient poster-copy-ambient--left" />
                     <div className="poster-copy-ambient poster-copy-ambient--right" />
                     <div className="relative w-full mt-6 group">
-                      <div className={`absolute -inset-2 bg-gradient-to-r from-violet-500/20 via-fuchsia-500/20 to-blue-500/20 rounded-[2.5rem] pointer-events-none z-0 transition-all duration-700 ease-in-out ${isGeneratingPrompt ? 'opacity-100 scale-105 blur-2xl' : 'opacity-0 scale-100 blur-xl'}`}></div>
-                      <div className={`relative z-10 w-full transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] rounded-2xl ${isGeneratingPrompt ? 'p-0 bg-transparent' : 'p-2.5 bg-violet-50/40 border border-violet-100/50'}`}>
-                        <div className={`relative flex flex-col w-full h-full transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] overflow-hidden bg-white/95 backdrop-blur-xl ${isGeneratingPrompt ? 'rounded-2xl border border-violet-400 shadow-[0_0_30px_rgba(139,92,246,0.2)]' : 'rounded-xl border border-gray-200 shadow-sm'}`}>
-                          <textarea
-                            value={userPrompt}
-                            onChange={(e) => setUserPrompt(e.target.value)}
-                            className="w-full h-32 resize-none bg-transparent pt-6 px-6 text-[15px] text-[#1d1d1f] focus:outline-none placeholder-gray-400 transition-opacity duration-300 relative z-20"
-                            placeholder="// 导演指令：请描述您期望的画面细节与氛围..."
-                            disabled={isGeneratingPrompt}
-                            style={{ opacity: isGeneratingPrompt ? 0.6 : 1 }}
-                          ></textarea>
-                          <div className="flex items-center justify-end gap-2 px-6 pb-4 select-none pointer-events-none relative z-20">
-                            <span className={`text-[12px] font-mono font-medium tracking-wide transition-colors duration-500 mt-[2px] ${isGeneratingPrompt ? 'text-violet-500' : 'text-gray-400'}`}>
-                              Nano Banana Pro Prompt Pilot
-                            </span>
-                            <div className="relative flex items-center justify-center w-5 h-5">
-                              <div className={`absolute inset-0 bg-violet-400 blur-[6px] transition-opacity duration-500 animate-pulse ${isGeneratingPrompt ? 'opacity-100' : 'opacity-40'}`} style={{ animationDuration: '2s' }}></div>
-                              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="relative z-10 w-full h-full text-violet-500 animate-pulse" style={{ animationDuration: '2s' }}>
-                                <path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z" fill="url(#diamond-gradient-03)"/>
-                                <defs>
-                                  <linearGradient id="diamond-gradient-03" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
-                                    <stop stopColor="#8B5CF6" />
-                                    <stop offset="1" stopColor="#3B82F6" />
-                                  </linearGradient>
-                                </defs>
-                              </svg>
-                            </div>
-                          </div>
-                          <div className={`absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-violet-100/40 to-transparent z-10 pointer-events-none transition-opacity duration-500 ${isGeneratingPrompt ? 'opacity-100 animate-[shimmer_1.5s_infinite]' : 'opacity-0'}`}></div>
-                        </div>
+                      <div className={`absolute -inset-2 bg-gradient-to-r from-violet-500/15 via-fuchsia-500/15 to-blue-500/15 blur-xl rounded-[2rem] pointer-events-none z-0 transition-opacity duration-500 ${isGeneratingPrompt ? 'opacity-100' : 'opacity-70'}`} style={{ animationDuration: '4s' }}></div>
+                      <div className={`relative z-10 w-full flex flex-col overflow-hidden backdrop-blur-md transition-all duration-500 ease-out rounded-2xl ${
+                        isGeneratingPrompt
+                          ? 'bg-white/95 shadow-[0_12px_40px_rgba(139,92,246,0.25)] -translate-y-1 ring-1 ring-violet-400/50 border-transparent'
+                          : 'bg-white/80 shadow-sm translate-y-0 border border-violet-100 focus-within:ring-1 focus-within:ring-violet-300'
+                      }`}>
+                        <div className={`absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-violet-200/40 to-transparent pointer-events-none z-10 transition-opacity duration-500 ${isGeneratingPrompt ? 'opacity-100 animate-[shimmer_1.5s_infinite]' : 'opacity-0'}`}></div>
+                        <textarea
+                          value={userPrompt}
+                          onChange={(e) => setUserPrompt(e.target.value)}
+                          className={`w-full h-32 resize-none bg-transparent pt-6 px-6 pb-6 text-[15px] text-[#1d1d1f] focus:outline-none placeholder-gray-400 relative z-20 transition-opacity duration-500 ${isGeneratingPrompt ? 'opacity-60' : 'opacity-100'}`}
+                          placeholder={"// 导演指令：请描述您期望的画面细节与氛围...\n例如：清晨柔和的阳光透过百叶窗，商品放置在带有水滴的黑大理石台面上。"}
+                          disabled={isGeneratingPrompt}
+                        ></textarea>
                       </div>
                     </div>
 
