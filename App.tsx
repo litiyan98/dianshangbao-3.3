@@ -157,6 +157,28 @@ const MODEL_HINT_COPY = 'Nano Banana Pro · Gemini Flash 文案引擎';
 const UNSUPPORTED_COLOR_FN_RE = /\b(oklch|oklab)\(/i;
 type TextGlowState = 'idle' | 'generating' | 'success';
 
+type StepHaloTitleProps = {
+  step: string;
+  title: string;
+  badge?: string;
+};
+
+const StepHaloTitle: React.FC<StepHaloTitleProps> = ({ step, title, badge }) => (
+  <div className="flex items-center gap-3.5 mb-8 select-none">
+    <div className="relative flex items-center justify-center w-10 h-10 rounded-full bg-white border border-gray-100 shadow-sm z-10">
+      <div className="absolute -inset-1.5 rounded-full bg-gradient-to-r from-violet-200/40 to-fuchsia-200/40 blur-[4px] animate-pulse" style={{ animationDuration: '3s' }}></div>
+      <div className="absolute inset-0 rounded-full border border-violet-100/50"></div>
+      <span className="relative z-10 text-[13px] font-extrabold tracking-widest bg-clip-text text-transparent bg-gradient-to-br from-gray-600 to-gray-400">
+        {step}
+      </span>
+    </div>
+    <div className="flex items-end gap-3">
+      <h2 className="text-xl md:text-2xl font-bold text-[#1d1d1f] tracking-tight">{title}</h2>
+      {badge ? <span className="text-xs font-normal text-gray-400 tracking-normal mb-0.5">{badge}</span> : null}
+    </div>
+  </div>
+);
+
 const TEXT_PRESETS: Array<{
   id: TextPresetId;
   name: string;
@@ -4088,14 +4110,7 @@ const App: React.FC = () => {
             <div className="relative w-full pb-24 mt-8 bg-transparent">
                <div className="relative z-10 max-w-4xl mx-auto">
                 <section className="bg-white rounded-[2rem] p-8 md:p-10 mb-8 mx-auto max-w-4xl border border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.03)] transition-shadow duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.06)]">
-                  <div className="flex items-end gap-4 mb-8 select-none">
-                    <span className="text-5xl md:text-6xl font-black tracking-tighter leading-none bg-clip-text text-transparent bg-gradient-to-br from-gray-400 via-gray-200 to-gray-400 drop-shadow-[0_1px_1px_rgba(255,255,255,0.8)]">
-                      01
-                    </span>
-                    <h2 className="text-2xl md:text-3xl font-bold text-[#1d1d1f] tracking-tight pb-1">
-                      商品原图
-                    </h2>
-                  </div>
+                  <StepHaloTitle step="01" title="商品原图" />
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
                     {sourceImages.map((img, i) => (
                       <div key={i} className="aspect-square relative group bg-white rounded-[24px] overflow-hidden border border-stone-50 shadow-sm transition-all duration-500 ease-out hover:scale-[1.01] hover:shadow-[0_20px_40px_rgba(0,0,0,0.06)]">
@@ -4125,15 +4140,7 @@ const App: React.FC = () => {
                   className={`bg-white rounded-[2rem] p-8 md:p-10 mb-8 mx-auto max-w-4xl border border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.03)] transition-shadow duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.06)] apple-reveal-base ${isRefStyleVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}
                 >
                    <section>
-                    <div className="flex items-end gap-4 mb-8 select-none">
-                      <span className="text-5xl md:text-6xl font-black tracking-tighter leading-none bg-clip-text text-transparent bg-gradient-to-br from-gray-400 via-gray-200 to-gray-400 drop-shadow-[0_1px_1px_rgba(255,255,255,0.8)]">
-                        02
-                      </span>
-                      <div className="flex items-end gap-3 pb-1">
-                        <h2 className="text-2xl md:text-3xl font-bold text-[#1d1d1f] tracking-tight">风格参考</h2>
-                        <span className="text-xs font-normal text-gray-400 tracking-normal mb-1">可选</span>
-                      </div>
-                    </div>
+                    <StepHaloTitle step="02" title="风格参考" badge="可选" />
 
                     <section className="mb-8 border-b border-stone-100 pb-8">
                       <div className="flex flex-col sm:flex-row gap-4 items-center">
@@ -4192,14 +4199,7 @@ const App: React.FC = () => {
                 </div>
 
                 <section ref={sceneRef} className={`bg-white rounded-[2rem] p-8 md:p-10 mb-8 mx-auto max-w-4xl border border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.03)] transition-shadow duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.06)] apple-reveal-base ${isSceneVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}>
-                  <div className="flex items-end gap-4 mb-8 select-none">
-                    <span className="text-5xl md:text-6xl font-black tracking-tighter leading-none bg-clip-text text-transparent bg-gradient-to-br from-gray-400 via-gray-200 to-gray-400 drop-shadow-[0_1px_1px_rgba(255,255,255,0.8)]">
-                      03
-                    </span>
-                    <h2 className="text-2xl md:text-3xl font-bold text-[#1d1d1f] tracking-tight pb-1">
-                      场景与光影
-                    </h2>
-                  </div>
+                  <StepHaloTitle step="03" title="场景与光影" />
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                     <div className="space-y-2">
@@ -4280,14 +4280,7 @@ const App: React.FC = () => {
 
                 {/* [ 03.5 ] 构图控制中心 (尺寸与排版整合版) */}
                 <section ref={outputRef} className={`bg-white rounded-[2rem] p-8 md:p-10 mb-8 mx-auto max-w-4xl border border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.03)] transition-shadow duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.06)] apple-reveal-base ${isOutputVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}>
-                  <div className="flex items-end gap-4 mb-8 select-none">
-                    <span className="text-5xl md:text-6xl font-black tracking-tighter leading-none bg-clip-text text-transparent bg-gradient-to-br from-gray-400 via-gray-200 to-gray-400 drop-shadow-[0_1px_1px_rgba(255,255,255,0.8)]">
-                      04
-                    </span>
-                    <h2 className="text-2xl md:text-3xl font-bold text-[#1d1d1f] tracking-tight pb-1">
-                      尺寸与构图
-                    </h2>
-                  </div>
+                  <StepHaloTitle step="04" title="尺寸与构图" />
                   <div className="bg-white/40 p-6 rounded-[24px] border border-stone-100 space-y-6">
                     
                     {/* 1. 画布比例选择 */}
@@ -4379,15 +4372,7 @@ const App: React.FC = () => {
                 </section>
 
                 <section ref={posterRef} className={`bg-white rounded-[2rem] p-8 md:p-10 mb-8 mx-auto max-w-4xl border border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.03)] transition-shadow duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.06)] apple-reveal-base ${isPosterVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}>
-                  <div className="flex items-end gap-4 mb-8 select-none">
-                    <span className="text-5xl md:text-6xl font-black tracking-tighter leading-none bg-clip-text text-transparent bg-gradient-to-br from-gray-400 via-gray-200 to-gray-400 drop-shadow-[0_1px_1px_rgba(255,255,255,0.8)]">
-                      05
-                    </span>
-                    <div className="flex items-end gap-3 pb-1">
-                      <h2 className="text-2xl md:text-3xl font-bold text-[#1d1d1f] tracking-tight">海报文字设计</h2>
-                      <span className="text-xs font-normal text-gray-400 tracking-normal mb-1">可选</span>
-                    </div>
-                  </div>
+                  <StepHaloTitle step="05" title="海报文字设计" badge="可选" />
                   <div className="space-y-5 bg-white/60 backdrop-blur-2xl border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-[2rem] p-8 md:p-10 relative overflow-hidden z-20">
                     <div className={`poster-copy-shell max-w-3xl mx-auto flex flex-col gap-5 w-full ${
                       isExtractingCopy ? 'is-generating' : copyGlowState === 'success' ? 'is-success' : ''

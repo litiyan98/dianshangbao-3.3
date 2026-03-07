@@ -43,19 +43,18 @@ const fragmentShader = `
     vec2 uv = vUv;
     uv.x *= uResolution.x / uResolution.y;
 
-    // 极慢速呼吸，低频率大波浪，禁止剧烈抖动
-    float t = uTime * 0.025;
-    float noiseBase = snoise(uv * 0.8 + vec2(t * 0.5, t * 0.3));
-    float noiseDetail = snoise(uv * 1.5 - vec2(t * 0.2, t * 0.4));
+    float t = uTime * 0.03;
+
+    float noiseBase = snoise(uv * 1.2 + vec2(t * 0.6, t * 0.4));
+    float noiseDetail = snoise(uv * 2.0 - vec2(t * 0.3, t * 0.5));
     float finalNoise = (noiseBase * 0.7 + noiseDetail * 0.3);
 
-    // 苹果级极低反差的微霜银色调
-    vec3 matteBase = vec3(0.89, 0.90, 0.92);
+    vec3 matteBase = vec3(0.88, 0.89, 0.91);
     vec3 matteHighlight = vec3(1.0, 1.0, 1.0);
 
-    float mixFactor = smoothstep(-1.2, 1.2, finalNoise);
+    float mixFactor = smoothstep(-0.8, 0.8, finalNoise);
     vec3 finalColor = mix(matteBase, matteHighlight, mixFactor);
-    
+
     gl_FragColor = vec4(finalColor, 1.0);
   }
 `;
