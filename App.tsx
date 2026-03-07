@@ -4108,7 +4108,7 @@ const App: React.FC = () => {
             </div>
 
             <div className="relative w-full pb-24 mt-8 bg-transparent">
-               <div className="relative z-10 max-w-4xl mx-auto">
+               <div className="relative z-10 max-w-5xl mx-auto">
                 <section className="bg-white rounded-[2rem] p-8 md:p-10 mb-8 mx-auto max-w-4xl border border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.03)] transition-shadow duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.06)]">
                   <StepHaloTitle step="01" title="商品原图" />
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
@@ -4371,7 +4371,7 @@ const App: React.FC = () => {
                   </div>
                 </section>
 
-                <section ref={posterRef} className={`bg-white rounded-[2rem] p-8 md:p-10 mb-8 mx-auto max-w-4xl border border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.03)] transition-shadow duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.06)] apple-reveal-base ${isPosterVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}>
+                <section ref={posterRef} className={`bg-white rounded-[2rem] p-8 md:p-10 mb-8 mx-auto max-w-5xl border border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.03)] transition-shadow duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.06)] apple-reveal-base ${isPosterVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}>
                   <StepHaloTitle step="05" title="海报文字设计" />
                   <div className="space-y-5 bg-white/60 backdrop-blur-2xl border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-[2rem] p-8 md:p-10 relative overflow-hidden z-20">
                     <div className="relative w-full z-20 mt-8 flex flex-col gap-6">
@@ -4422,13 +4422,13 @@ const App: React.FC = () => {
                   ref={generateRef}
                   className={`apple-reveal-base flex flex-col sm:flex-row items-center justify-center gap-8 mt-16 mb-12 w-full ${isGenerateVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}
                 >
-                  <div className="relative group cursor-pointer flex flex-col items-center">
+                  <div className="relative group cursor-pointer flex flex-col items-center w-full sm:w-auto">
                     <div className="absolute -inset-[1px] bg-gradient-to-r from-violet-500 via-fuchsia-500 to-blue-500 rounded-2xl opacity-0 group-hover:opacity-100 blur-[3px] transition-opacity duration-500 z-0"></div>
                     <button
                       type="button"
                       onClick={handleGenerateSuite}
                       disabled={isProcessing || sourceImages.length === 0}
-                      className="relative z-10 flex items-center justify-center gap-3 w-[300px] py-4 bg-[#111827] hover:bg-[#1a2333] text-white rounded-2xl font-medium text-lg overflow-hidden transition-colors duration-300 shadow-xl disabled:opacity-60 disabled:cursor-not-allowed"
+                      className="relative z-10 flex items-center justify-center gap-3 w-[300px] py-4 bg-[#111827] hover:bg-[#1a2333] text-white rounded-2xl font-medium text-lg overflow-hidden transition-colors duration-300 shadow-xl disabled:opacity-60 disabled:cursor-not-allowed sm:w-[300px]"
                     >
                       <span className="relative z-20 flex items-center gap-2">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-violet-400 group-hover:animate-pulse">
@@ -4443,12 +4443,12 @@ const App: React.FC = () => {
                     </span>
                   </div>
 
-                  <div className="relative group cursor-pointer flex flex-col items-center">
+                  <div className="relative group cursor-pointer flex flex-col items-center w-full sm:w-auto">
                     <button
                       type="button"
                       onClick={handleGenerate}
                       disabled={isProcessing || sourceImages.length === 0}
-                      className="relative z-10 flex items-center justify-center gap-2 w-[300px] py-4 bg-transparent border border-gray-200 hover:border-gray-300 text-gray-600 hover:text-gray-900 rounded-2xl font-medium text-lg transition-all duration-300 hover:bg-gray-50/50 disabled:opacity-60 disabled:cursor-not-allowed"
+                      className="relative z-10 flex items-center justify-center gap-2 w-[300px] py-4 bg-transparent border border-gray-200 hover:border-gray-300 text-gray-600 hover:text-gray-900 rounded-2xl font-medium text-lg transition-all duration-300 hover:bg-gray-50/50 disabled:opacity-60 disabled:cursor-not-allowed sm:w-[300px]"
                     >
                       生成单张精修
                     </button>
