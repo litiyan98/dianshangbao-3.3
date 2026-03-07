@@ -4292,49 +4292,37 @@ const App: React.FC = () => {
                   }`}>
                     <div className="poster-copy-ambient poster-copy-ambient--left" />
                     <div className="poster-copy-ambient poster-copy-ambient--right" />
-                    <div className="relative w-full mt-6">
-                      <div className="absolute -inset-2 bg-gradient-to-r from-violet-500/15 via-fuchsia-500/15 to-blue-500/15 blur-xl rounded-[2rem] pointer-events-none z-0" style={{ animationDuration: '4s' }}></div>
-                      <div className="relative z-10 w-full bg-white/80 backdrop-blur-md border border-violet-100 rounded-2xl overflow-hidden flex flex-col focus-within:ring-1 focus-within:ring-violet-300 transition-all shadow-sm">
-                        <textarea
-                          value={userPrompt}
-                          onChange={(e) => setUserPrompt(e.target.value)}
-                          className="w-full h-32 resize-none bg-transparent pt-6 px-6 text-[15px] text-[#1d1d1f] focus:outline-none placeholder-gray-400"
-                          placeholder={"// 导演指令：请描述您期望的画面细节与氛围...\n例如：清晨柔和的阳光透过百叶窗，商品放置在带有水滴的黑大理石台面上。"}
-                        ></textarea>
-                        <div className="flex items-center justify-end gap-2 px-6 pb-4 select-none pointer-events-none">
-                          <span className="text-[12px] font-mono font-medium text-gray-400 tracking-wide mt-[2px]">
-                            Nano Banana Pro Prompt Pilot
-                          </span>
-                          <div className="relative flex items-center justify-center w-5 h-5">
-                            <div className="absolute inset-0 bg-violet-400 blur-[6px] opacity-40 animate-pulse" style={{ animationDuration: '2s' }}></div>
-                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="relative z-10 w-full h-full text-violet-500 animate-pulse" style={{ animationDuration: '2s' }}>
-                              <path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z" fill="url(#diamond-gradient-03)"/>
-                              <defs>
-                                <linearGradient id="diamond-gradient-03" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
-                                  <stop stopColor="#8B5CF6" />
-                                  <stop offset="1" stopColor="#3B82F6" />
-                                </linearGradient>
-                              </defs>
-                            </svg>
-                          </div>
-                        </div>
-                      </div>
+                    <div className="w-full mt-6 relative z-10">
+                      <textarea 
+                        value={userPrompt} onChange={(e) => setUserPrompt(e.target.value)}
+                        className="w-full h-32 resize-none bg-gray-50/50 hover:bg-white focus:bg-white focus:ring-1 focus:ring-violet-200 border border-gray-100 rounded-2xl px-6 py-5 text-[15px] text-[#1d1d1f] transition-all shadow-sm placeholder-gray-400"
+                        placeholder={"// 导演指令：请描述您期望的画面细节与氛围...\n例如：清晨柔和的阳光透过百叶窗，商品放置在带有水滴的黑大理石台面上。"}
+                      />
                     </div>
 
                     <div className="flex justify-end w-full">
-                      <MorphingAiButton
-                        onClick={handleSmartPrompt}
-                        loading={isAnalyzingPrompt}
-                        disabled={isAnalyzingPrompt}
-                        icon={<Wand2 size={16} />}
-                        idleText={userPrompt ? '重新生成灵感' : 'AI 帮我写神级提示词'}
-                        loadingText={`✨ 灵感引擎思考中 ${promptCountdown ?? 60}s`}
-                        doneText="✨ 灵感已注入"
-                        showDone={buttonDoneFlash.prompt}
-                        size="sm"
-                        variant="secondary"
-                        className="btn-secondary-purple"
-                      />
+                      <div className={`prompt-status-widget ${isAnalyzingPrompt ? 'is-generating' : ''}`}>
+                        <div className={`holo-ticker ${isAnalyzingPrompt ? 'is-visible' : ''}`}>
+                          <div className="holo-ticker-track">
+                            <span className="holo-ticker-line">Nano Banana Pro Prompt Pilot</span>
+                            <span className="holo-ticker-line">最长 60 秒，首次慢响应自动重试 1 次</span>
+                            <span className="holo-ticker-line">Nano Banana Pro Prompt Pilot</span>
+                          </div>
+                        </div>
+                        <MorphingAiButton
+                          onClick={handleSmartPrompt}
+                          loading={isAnalyzingPrompt}
+                          disabled={isAnalyzingPrompt}
+                          icon={<Wand2 size={16} />}
+                          idleText={userPrompt ? '重新生成灵感' : 'AI 帮我写神级提示词'}
+                          loadingText={`✨ 灵感引擎思考中 ${promptCountdown ?? 60}s`}
+                          doneText="✨ 灵感已注入"
+                          showDone={buttonDoneFlash.prompt}
+                          size="sm"
+                          variant="secondary"
+                          className="btn-secondary-purple"
+                        />
+                      </div>
                     </div>
                   </div>
                 </section>
