@@ -205,6 +205,9 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
 
   const activeMeta = activePackage ? TONAL_PLAN_META[activePackage.packageType] : null;
   const shellWidthClass = step === 'select' ? 'max-w-5xl' : 'max-w-3xl';
+  const starterPackage = RECHARGE_PACKAGES.find(pkg => pkg.packageType === 'starter_15_quota_7d_vip') || null;
+  const advancedPackage = RECHARGE_PACKAGES.find(pkg => pkg.packageType === 'standard_80_quota_30d_vip') || null;
+  const ultraPackage = RECHARGE_PACKAGES.find(pkg => pkg.packageType === 'enterprise_400_quota_90d_vip') || null;
 
   return (
     <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 md:p-6">
@@ -225,80 +228,68 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
               <p className="text-[15px] text-gray-500 font-medium">扩展算力边界，持续稳定输出工业级视觉资产</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
-              {RECHARGE_PACKAGES.map((pkg) => {
-                const meta = TONAL_PLAN_META[pkg.packageType] || {
-                  title: pkg.label,
-                  features: [`${pkg.imageQuota} 组极速渲染阵列`, `${pkg.vipDays} 天文案引擎网络`],
-                  cta: '获取额度',
-                };
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch w-full max-w-5xl mx-auto">
+              <div className="group relative bg-white rounded-[2rem] p-8 border border-gray-100 shadow-sm transition-all duration-500 hover:-translate-y-1 hover:border-blue-200 hover:shadow-[0_12px_40px_rgba(59,130,246,0.12)] flex flex-col overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-50/0 to-blue-50/0 group-hover:to-blue-50/50 transition-colors duration-500 pointer-events-none"></div>
+                <div className="mb-8 relative z-10">
+                  <h3 className="text-lg font-bold text-gray-800 mb-2 font-mono uppercase tracking-wider group-hover:text-blue-500 transition-colors">Starter / 探索版</h3>
+                  <div className="flex items-baseline gap-1"><span className="text-2xl font-semibold">¥</span><span className="text-4xl font-black text-[#1d1d1f]">9.9</span></div>
+                </div>
+                <ul className="space-y-4 text-[14px] text-gray-600 font-medium flex-1 relative z-10">
+                  <li className="flex items-center gap-3">✦ 7 张极速渲染阵列</li>
+                  <li className="flex items-center gap-3">✦ 3 天基础文案引擎</li>
+                </ul>
+                <button
+                  type="button"
+                  onClick={() => starterPackage && handleSelectPackage(starterPackage)}
+                  disabled={!starterPackage}
+                  className="relative z-10 mt-8 w-full py-3.5 bg-gray-50 text-gray-700 group-hover:bg-blue-500 group-hover:text-white rounded-xl font-bold text-[15px] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  获取额度
+                </button>
+              </div>
 
-                if (meta.featured) {
-                  return (
-                    <div
-                      key={pkg.packageType}
-                      className="relative bg-white rounded-[2rem] p-8 shadow-[0_12px_40px_rgba(139,92,246,0.15)] border border-violet-100 scale-100 md:scale-105 z-10 flex flex-col h-full overflow-hidden"
-                    >
-                      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-violet-400 to-fuchsia-400"></div>
-                      <div className="absolute inset-0 bg-gradient-to-b from-violet-500/5 to-transparent pointer-events-none"></div>
+              <div className="group relative bg-white rounded-[2rem] p-8 border border-gray-100 shadow-sm transition-all duration-500 hover:-translate-y-1 hover:border-violet-300 hover:shadow-[0_12px_40px_rgba(139,92,246,0.15)] flex flex-col overflow-hidden">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-violet-400 to-fuchsia-400 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                <div className="absolute inset-0 bg-gradient-to-br from-violet-50/0 to-violet-50/0 group-hover:to-violet-50/50 transition-colors duration-500 pointer-events-none"></div>
 
-                      <div className="mb-8 relative z-10">
-                        <h3 className="text-lg font-bold text-violet-600 mb-2 font-mono uppercase tracking-wider flex items-center gap-2">
-                          {meta.title}
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="text-violet-500">
-                            <path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z" fill="currentColor"/>
-                          </svg>
-                        </h3>
-                        <div className="flex items-baseline gap-1">
-                          <span className="text-2xl font-semibold text-violet-600">¥</span>
-                          <span className="text-5xl font-black text-[#1d1d1f]">{pkg.amount}</span>
-                        </div>
-                      </div>
+                <div className="mb-8 relative z-10">
+                  <h3 className="text-lg font-bold text-gray-800 mb-2 font-mono uppercase tracking-wider group-hover:text-violet-600 transition-colors">Advanced / 专业版</h3>
+                  <div className="flex items-baseline gap-1"><span className="text-2xl font-semibold">¥</span><span className="text-4xl font-black text-[#1d1d1f]">89.0</span></div>
+                </div>
+                <ul className="space-y-4 text-[14px] text-gray-600 font-medium flex-1 relative z-10">
+                  <li className="flex items-center gap-3">✦ 70 张极速渲染阵列</li>
+                  <li className="flex items-center gap-3">✦ 30 天无缝文案引擎</li>
+                </ul>
+                <button
+                  type="button"
+                  onClick={() => advancedPackage && handleSelectPackage(advancedPackage)}
+                  disabled={!advancedPackage}
+                  className="relative z-10 mt-8 w-full py-3.5 bg-[#111827] text-white group-hover:shadow-lg group-hover:shadow-violet-500/25 rounded-xl font-bold text-[15px] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  升级算力
+                </button>
+              </div>
 
-                      <ul className="space-y-4 text-[15px] text-[#1d1d1f] font-medium flex-1 relative z-10">
-                        <li className="flex items-center gap-3"><span className="text-violet-500">✦</span>{meta.features[0]}</li>
-                        <li className="flex items-center gap-3 flex-wrap">
-                          <span className="text-violet-500">✦</span>
-                          <span>{meta.features[1]}</span>
-                          <span className="text-[12px] text-gray-400 font-normal border border-gray-200 px-1.5 py-0.5 rounded-md">解开冷却锁</span>
-                        </li>
-                      </ul>
-
-                      <button
-                        type="button"
-                        onClick={() => handleSelectPackage(pkg)}
-                        className="relative mt-8 w-full py-4 bg-[#111827] hover:bg-[#1a2333] text-white rounded-xl font-bold text-[16px] transition-all shadow-lg hover:shadow-[0_12px_30px_rgba(139,92,246,0.18)] z-10"
-                      >
-                        {meta.cta}
-                      </button>
-                    </div>
-                  );
-                }
-
-                return (
-                  <div key={pkg.packageType} className="bg-white rounded-[2rem] p-8 border border-gray-100 flex flex-col h-full md:h-[90%]">
-                    <div className="mb-8">
-                      <h3 className="text-lg font-bold text-gray-800 mb-2 font-mono uppercase tracking-wider">{meta.title}</h3>
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-2xl font-semibold">¥</span>
-                        <span className="text-4xl font-black text-[#1d1d1f]">{pkg.amount}</span>
-                      </div>
-                    </div>
-                    <ul className="space-y-4 text-[14px] text-gray-600 font-medium flex-1">
-                      {meta.features.map(feature => (
-                        <li key={feature} className="flex items-center gap-3">✓ {feature}</li>
-                      ))}
-                    </ul>
-                    <button
-                      type="button"
-                      onClick={() => handleSelectPackage(pkg)}
-                      className="mt-8 w-full py-3.5 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-xl font-bold text-[15px] transition-colors"
-                    >
-                      {meta.cta}
-                    </button>
-                  </div>
-                );
-              })}
+              <div className="group relative bg-white rounded-[2rem] p-8 border border-gray-100 shadow-sm transition-all duration-500 hover:-translate-y-1 hover:border-gray-800 hover:shadow-[0_12px_40px_rgba(17,24,39,0.12)] flex flex-col overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-gray-50/0 to-gray-50/0 group-hover:to-gray-100/50 transition-colors duration-500 pointer-events-none"></div>
+                <div className="mb-8 relative z-10">
+                  <h3 className="text-lg font-bold text-gray-800 mb-2 font-mono uppercase tracking-wider group-hover:text-gray-900 transition-colors">Ultra / 尊享版</h3>
+                  <div className="flex items-baseline gap-1"><span className="text-2xl font-semibold">¥</span><span className="text-4xl font-black text-[#1d1d1f]">299</span></div>
+                </div>
+                <ul className="space-y-4 text-[14px] text-gray-600 font-medium flex-1 relative z-10">
+                  <li className="flex items-center gap-3">✦ 250 张极速渲染阵列</li>
+                  <li className="flex items-center gap-3">✦ 90 天无缝文案引擎</li>
+                </ul>
+                <button
+                  type="button"
+                  onClick={() => ultraPackage && handleSelectPackage(ultraPackage)}
+                  disabled={!ultraPackage}
+                  className="relative z-10 mt-8 w-full py-3.5 bg-gray-50 text-gray-700 group-hover:bg-gray-900 group-hover:text-white rounded-xl font-bold text-[15px] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  获取额度
+                </button>
+              </div>
             </div>
           </>
         ) : (
