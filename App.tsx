@@ -4559,7 +4559,7 @@ const App: React.FC = () => {
                         <div
                           key={index}
                           ref={el => suiteRefs.current[index] = el}
-                          className={`glass-panel p-4 rounded-[32px] space-y-4 relative group bg-white/60 border border-stone-100 shadow-sm overflow-hidden ${img ? 'opacity-0 animate-fade-in-up' : ''}`}
+                          className={`glass-panel p-4 rounded-[32px] space-y-4 relative group bg-white/60 border border-stone-100 shadow-sm overflow-hidden ${img ? 'animate-fade-in-up' : ''}`}
                           style={img ? { animationDelay: `${index * 0.3 + 0.1}s` } : undefined}
                         >
                           <div className="absolute top-6 left-6 z-10 flex flex-col gap-2">
