@@ -4286,13 +4286,8 @@ const App: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className={`poster-copy-shell w-full flex flex-col gap-4 ${
-                    isAnalyzingPrompt ? 'is-generating' : promptGlowState === 'success' ? 'is-success' : ''
-                  }`}>
-                    <div className="poster-copy-ambient poster-copy-ambient--left" />
-                    <div className="poster-copy-ambient poster-copy-ambient--right" />
+                  <div className="w-full flex flex-col gap-4">
                     <div className="relative w-full mt-6 group">
-                      <div className={`absolute -inset-2 bg-gradient-to-r from-violet-500/15 via-fuchsia-500/15 to-blue-500/15 blur-xl rounded-[2rem] pointer-events-none z-0 transition-opacity duration-500 ${isGeneratingPrompt ? 'opacity-100' : 'opacity-70'}`} style={{ animationDuration: '4s' }}></div>
                       <div className={`relative z-10 w-full flex flex-col overflow-hidden backdrop-blur-md transition-all duration-500 ease-out rounded-2xl ${
                         isGeneratingPrompt
                           ? 'bg-white/95 shadow-[0_12px_40px_rgba(139,92,246,0.25)] -translate-y-1 ring-1 ring-violet-400/50 border-transparent'
@@ -4309,7 +4304,14 @@ const App: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="flex justify-end w-full">
+                    <div className={`prompt-status-widget ${isAnalyzingPrompt || promptGlowState === 'success' ? 'is-generating' : ''}`}>
+                      <div className={`holo-ticker max-w-[320px] ml-auto ${isAnalyzingPrompt || promptGlowState === 'success' ? 'is-visible' : ''}`}>
+                        <div className="holo-ticker-track">
+                          <span className="holo-ticker-line">{MODEL_HINT_IMAGE}</span>
+                          <span className="holo-ticker-line">最长 60 秒，首次慢响应自动重试 1 次</span>
+                          <span className="holo-ticker-line">{MODEL_HINT_IMAGE}</span>
+                        </div>
+                      </div>
                       <MorphingAiButton
                         onClick={handleSmartPrompt}
                         loading={isAnalyzingPrompt}
