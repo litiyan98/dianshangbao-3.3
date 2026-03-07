@@ -12,7 +12,7 @@ import { motion } from 'framer-motion';
 import { Rnd } from 'react-rnd';
 import CreditModal, { RECHARGE_PACKAGES, type CreditTab, type RechargePackage } from './components/CreditModal';
 import PaymentModal from './components/PaymentModal';
-import MorphingAiButton from './components/MorphingAiButton';
+import MorphingAiButton, { NebulaDiamondIcon } from './components/MorphingAiButton';
 import { removeBackground as imglyRemoveBackground } from '@imgly/background-removal';
 import { useAppleReveal } from './hooks/useAppleReveal';
 import LiquidMetalBackground from './components/LiquidMetalBackground';
@@ -3921,18 +3921,9 @@ const App: React.FC = () => {
   const renderLoadingMonitor = () => (
     <div className="flex flex-col items-center justify-center mb-12 mt-8 w-full max-w-3xl mx-auto min-h-[100px]">
       <div className="flex items-center justify-center gap-4 mb-6 w-full select-none">
-        <div className="relative flex items-center justify-center w-6 h-6">
-          <div className="absolute inset-0 bg-violet-400 blur-[6px] opacity-40 animate-pulse" style={{ animationDuration: '2s' }}></div>
-          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="relative z-10 w-full h-full text-violet-500 animate-pulse" style={{ animationDuration: '2s' }}>
-            <path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z" fill="url(#diamond-gradient-loading)"/>
-            <defs>
-              <linearGradient id="diamond-gradient-loading" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
-                <stop stopColor="#8B5CF6" />
-                <stop offset="1" stopColor="#3B82F6" />
-              </linearGradient>
-            </defs>
-          </svg>
-        </div>
+        <span className="nebula-diamond-shell">
+          <NebulaDiamondIcon />
+        </span>
         <span className="text-[14px] md:text-[15px] font-bold text-[#1d1d1f] tracking-[0.2em] uppercase font-mono flex items-center mt-[2px]">
           NANO BANANA PRO
           <span className="text-gray-300 font-light mx-3">/</span>
