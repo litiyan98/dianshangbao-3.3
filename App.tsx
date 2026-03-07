@@ -4374,23 +4374,23 @@ const App: React.FC = () => {
 
                 <section ref={posterRef} className={`bg-white rounded-[2rem] p-8 md:p-10 mb-8 mx-auto max-w-4xl border border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.03)] transition-shadow duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.06)] apple-reveal-base ${isPosterVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}>
                   <StepHaloTitle step="05" title="海报文字设计" />
-                  <div className="space-y-5 bg-white/60 backdrop-blur-2xl border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-[2rem] p-8 md:p-10 relative overflow-hidden z-20">
+                  <div className="space-y-5 bg-white/60 backdrop-blur-2xl border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-[2rem] p-8 md:p-10 relative z-20">
                     <div className="relative w-full z-20 mt-8 flex flex-col gap-6">
-                      <div className="absolute -inset-8 bg-gradient-to-r from-violet-500/10 via-fuchsia-500/10 to-blue-500/10 blur-2xl rounded-[3rem] animate-pulse pointer-events-none z-0" style={{ animationDuration: '4s' }}></div>
+                      <div className="absolute -inset-4 bg-gradient-to-r from-violet-500/25 via-fuchsia-500/25 to-blue-500/25 blur-2xl rounded-[3rem] animate-pulse pointer-events-none z-0" style={{ animationDuration: '4s' }}></div>
 
                       <input
                         type="text"
                         placeholder="输入主标题..."
                         value={textConfig.title}
                         onChange={e => setTextConfig({ ...textConfig, title: e.target.value })}
-                        className="relative z-10 w-full bg-white/70 backdrop-blur-md hover:bg-white focus:bg-white focus:ring-1 focus:ring-violet-200 border border-gray-100 rounded-2xl px-6 py-5 text-lg font-medium text-[#1d1d1f] transition-all shadow-sm placeholder-gray-400"
+                        className="relative z-10 w-full bg-white/80 backdrop-blur-xl hover:bg-white focus:bg-white border border-gray-100 rounded-2xl px-6 py-5 text-lg font-medium text-[#1d1d1f] shadow-sm placeholder-gray-400"
                       />
 
                       <textarea
                         placeholder="输入副标题或正文描述..."
                         value={textConfig.detail}
                         onChange={e => setTextConfig({ ...textConfig, detail: e.target.value })}
-                        className="relative z-10 w-full h-36 resize-none bg-white/70 backdrop-blur-md hover:bg-white focus:bg-white focus:ring-1 focus:ring-violet-200 border border-gray-100 rounded-2xl px-6 py-5 text-lg text-[#1d1d1f] transition-all shadow-sm placeholder-gray-400"
+                        className="relative z-10 w-full h-36 resize-none bg-white/80 backdrop-blur-xl hover:bg-white focus:bg-white border border-gray-100 rounded-2xl px-6 py-5 text-lg text-[#1d1d1f] shadow-sm placeholder-gray-400"
                       ></textarea>
 
                       <div className={`prompt-status-widget relative z-10 ${isExtractingCopy ? 'is-generating' : ''}`}>
@@ -4423,15 +4423,15 @@ const App: React.FC = () => {
                   ref={generateRef}
                   className={`apple-reveal-base flex flex-col sm:flex-row items-center justify-center gap-8 mt-16 mb-12 w-full ${isGenerateVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}
                 >
-                  <div className="relative group flex flex-col items-center">
+                  <div className="relative flex flex-col items-center">
                     <button
                       type="button"
                       onClick={handleGenerateSuite}
                       disabled={isProcessing || sourceImages.length === 0}
-                      className={`relative z-10 flex items-center justify-center gap-3 w-[300px] py-4 rounded-2xl font-medium text-lg overflow-hidden transition-all duration-300 ${isMatrixRainbow ? 'bg-gradient-to-r from-violet-600 via-fuchsia-500 to-blue-600 bg-[length:200%_auto] animate-rainbow text-white border-none shadow-[0_0_20px_rgba(168,85,247,0.4)]' : 'bg-[#111827] hover:bg-[#1a2333] text-white shadow-xl hover:shadow-2xl'} disabled:opacity-60 disabled:cursor-not-allowed`}
+                      className={`flex items-center justify-center gap-3 w-[300px] py-4 rounded-2xl font-medium text-lg transition-all duration-300 border-none ${isMatrixRainbow ? 'bg-gradient-to-r from-violet-600 via-fuchsia-500 to-blue-600 bg-[length:200%_auto] animate-rainbow text-white shadow-[0_0_20px_rgba(168,85,247,0.4)]' : 'bg-[#111827] hover:bg-[#1a2333] text-white shadow-xl hover:shadow-2xl'} disabled:opacity-60 disabled:cursor-not-allowed`}
                     >
-                      <span className="relative z-20 flex items-center gap-2">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-violet-400 group-hover:animate-pulse">
+                      <span className="flex items-center gap-2">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-violet-400">
                            <path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z" fill="currentColor"/>
                         </svg>
                         {matrixButtonText}
