@@ -18,7 +18,7 @@ interface MorphingAiButtonProps {
   block?: boolean;
 }
 
-const NebulaDiamondIcon: React.FC = () => {
+export const NebulaDiamondIcon: React.FC = () => {
   const gradientId = useId().replace(/:/g, '');
   const gradRef = `${gradientId}-nebula-full-spectrum`;
 
