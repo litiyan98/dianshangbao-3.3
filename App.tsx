@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useId } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   X, Plus, Download, Sparkles, Wand2, Palette, Zap, Loader2, Lightbulb, ZoomIn, Trash2
 } from 'lucide-react';
@@ -3917,47 +3917,15 @@ const App: React.FC = () => {
   const isMatrixRainbow = isMatrixGenerating || buttonDoneFlash.genMatrix;
   const matrixButtonText = isMatrixGenerating ? '正在渲染神级大片...' : (buttonDoneFlash.genMatrix ? '神级大片已完成' : '生成大师级主图');
 
-  const nebulaDiamondGradientId = useId().replace(/:/g, '');
-  const nebulaDiamondGradRef = `${nebulaDiamondGradientId}-nebula-full-spectrum`;
-
-  const renderNebulaDiamond = (sizeClass = 'w-5 h-5') => (
-    <div className={`relative flex items-center justify-center ${sizeClass}`}>
-      <span className="nebula-diamond-shell">
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          className="nebula-diamond-svg w-full h-full"
-          aria-hidden="true"
-        >
-          <defs>
-            <linearGradient id={nebulaDiamondGradRef} x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#ff4d4d" />
-              <stop offset="35%" stopColor="#f9cb28" />
-              <stop offset="65%" stopColor="#78e08f" />
-              <stop offset="100%" stopColor="#3c40c6" />
-              <animateTransform
-                attributeName="gradientTransform"
-                type="translate"
-                values="-0.45 -0.45;0.45 0.45;-0.45 -0.45"
-                dur="4.8s"
-                repeatCount="indefinite"
-              />
-            </linearGradient>
-          </defs>
-          <path
-            d="M12 0C12 6.62742 6.62742 12 0 12C6.62742 12 12 17.3726 12 24C12 17.3726 17.3726 12 24 12C17.3726 12 12 6.62742 12 0Z"
-            fill={`url(#${nebulaDiamondGradRef})`}
-          />
-        </svg>
-      </span>
-    </div>
-  );
-
   const renderLoadingMonitor = () => (
     <div className="flex flex-col items-center justify-center mb-12 mt-8 w-full max-w-3xl mx-auto min-h-[100px]">
       <div className="flex items-center gap-4 mb-6 select-none">
-        {renderNebulaDiamond()}
+        <div className="relative flex items-center justify-center w-5 h-5 mr-3">
+          <div className="absolute inset-0 bg-violet-400 blur-[6px] opacity-40 animate-pulse" style={{ animationDuration: '2s' }}></div>
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="relative z-10 w-full h-full text-violet-500 animate-pulse" style={{ animationDuration: '2s' }}>
+            <path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z" fill="currentColor"/>
+          </svg>
+        </div>
         <span className="text-[13px] font-bold text-[#1d1d1f] tracking-[0.2em] uppercase font-mono flex items-center gap-3">
           Nano Banana Pro
           <span className="text-gray-300 font-light">/</span>
@@ -4475,13 +4443,21 @@ const App: React.FC = () => {
                           placeholder="输入副标题或正文描述..."
                           value={textConfig.detail}
                           onChange={e => setTextConfig({ ...textConfig, detail: e.target.value })}
-                          className="w-full h-36 resize-none bg-transparent px-8 pt-4 pb-8 text-lg text-[#1d1d1f] focus:outline-none placeholder-gray-400"
+                          className="w-full h-36 resize-none bg-transparent px-8 pt-4 pb-14 text-lg text-[#1d1d1f] focus:outline-none placeholder-gray-400"
                         ></textarea>
-                        <div className="flex items-center justify-end gap-3 px-8 pb-6 select-none pointer-events-none">
-                          <span className="text-[12px] font-mono font-medium text-gray-400 tracking-widest uppercase">
-                            Nano Banana Pro <span className="mx-1 font-light text-gray-300">|</span> Vision Engine
+                        <div className="absolute bottom-4 right-6 flex items-center gap-3 select-none pointer-events-none z-20">
+                          <span className="text-[12px] text-gray-400 font-medium tracking-wide">
+                            最长 60 秒，首次慢响应自动重试 1 次
                           </span>
-                          {renderNebulaDiamond('w-[22px] h-[22px]')}
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="animate-pulse" style={{ animationDuration: '2s' }}>
+                            <path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z" fill="url(#diamond-gradient)"/>
+                            <defs>
+                              <linearGradient id="diamond-gradient" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+                                <stop stopColor="#8B5CF6" />
+                                <stop offset="1" stopColor="#3B82F6" />
+                              </linearGradient>
+                            </defs>
+                          </svg>
                         </div>
                       </div>
                     </div>
