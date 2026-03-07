@@ -60,11 +60,11 @@ const BRIEF_STEPS = [
 ];
 
 const logMessages = [
-  "⚡️ 引擎握手成功，Nano Banana Pro 算力已满载...",
-  "👁️ 正在解析空间深度，重构三维光影场...",
-  "✨ 融合风格特征，注入电影级胶片质感...",
-  "🔮 细节超分辨率重绘，重塑材质微观表现...",
-  "🪄 正在进行最终的视网膜级色彩与高光校准..."
+  "正在初始化视觉神经元提取...",
+  "分析全局光影与环境遮蔽...",
+  "生成多尺度潜在空间细节...",
+  "深度融合风格特征与物理材质...",
+  "正在进行视网膜级色彩与高光校准..."
 ];
 
 const FONT_STYLE_OPTIONS: Array<{ id: FontStyle; label: string }> = [
@@ -161,7 +161,6 @@ interface LayerState {
 }
 
 const MODEL_HINT_IMAGE = 'Nano Banana Pro · Gemini 2.5 Flash Image';
-const MODEL_HINT_COPY = 'Nano Banana Pro · Gemini Flash 文案引擎';
 const UNSUPPORTED_COLOR_FN_RE = /\b(oklch|oklab)\(/i;
 type TextGlowState = 'idle' | 'generating' | 'success';
 
@@ -4424,48 +4423,55 @@ const App: React.FC = () => {
 
                 <section ref={posterRef} className={`bg-white rounded-[2rem] p-8 md:p-10 mb-8 mx-auto max-w-4xl border border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.03)] transition-shadow duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.06)] apple-reveal-base ${isPosterVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}>
                   <StepHaloTitle step="05" title="海报文字设计" />
-                  <div className="space-y-5 bg-white/60 backdrop-blur-2xl border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] rounded-[2rem] p-8 md:p-10 relative overflow-hidden z-20">
-                    <div className={`poster-copy-shell w-full flex flex-col gap-6 ${
-                      isExtractingCopy ? 'is-generating' : copyGlowState === 'success' ? 'is-success' : ''
-                    }`}>
-                      <div className="poster-copy-ambient poster-copy-ambient--left" />
-                      <div className="poster-copy-ambient poster-copy-ambient--right" />
-                      <input
-                        type="text"
-                        placeholder="输入主标题..."
-                        value={textConfig.title}
-                        onChange={e => setTextConfig({ ...textConfig, title: e.target.value })}
-                        className="w-full bg-white/80 backdrop-blur-xl hover:bg-white focus:bg-white border border-gray-100 rounded-2xl px-6 py-5 text-lg font-medium text-[#1d1d1f] shadow-sm placeholder-gray-400"
-                      />
-
-                      <textarea
-                        placeholder="输入副标题或正文描述..."
-                        value={textConfig.detail}
-                        onChange={e => setTextConfig({ ...textConfig, detail: e.target.value })}
-                        className="w-full h-36 resize-none bg-white/80 backdrop-blur-xl hover:bg-white focus:bg-white border border-gray-100 rounded-2xl px-6 py-5 text-lg text-[#1d1d1f] shadow-sm placeholder-gray-400"
-                      ></textarea>
-
-                      <div className={`prompt-status-widget ${isExtractingCopy ? 'is-generating' : ''}`}>
-                        <div className={`holo-ticker max-w-[320px] ml-auto ${isExtractingCopy ? 'is-visible' : ''}`}>
-                          <div className="holo-ticker-track">
-                            <span className="holo-ticker-line">{MODEL_HINT_COPY}</span>
-                            <span className="holo-ticker-line">最长 60 秒，首次慢响应自动重试 1 次</span>
-                            <span className="holo-ticker-line">{MODEL_HINT_COPY}</span>
+                  <div className={`poster-copy-shell w-full mt-8 flex flex-col gap-4 ${
+                    isExtractingCopy ? 'is-generating' : copyGlowState === 'success' ? 'is-success' : ''
+                  }`}>
+                    <div className="poster-copy-ambient poster-copy-ambient--left" />
+                    <div className="poster-copy-ambient poster-copy-ambient--right" />
+                    <div className="relative w-full">
+                      <div className="absolute -inset-2 bg-gradient-to-r from-violet-500/15 via-fuchsia-500/10 to-blue-500/15 blur-3xl rounded-[3rem] animate-pulse pointer-events-none z-0" style={{ animationDuration: '4s' }}></div>
+                      <div className="relative z-10 w-full bg-white/70 backdrop-blur-xl border border-gray-100 rounded-[2rem] overflow-hidden shadow-sm flex flex-col transition-all duration-300 focus-within:ring-1 focus-within:ring-violet-200 focus-within:bg-white/90">
+                        <input
+                          type="text"
+                          placeholder="输入主标题..."
+                          value={textConfig.title}
+                          onChange={e => setTextConfig({ ...textConfig, title: e.target.value })}
+                          className="w-full bg-transparent px-8 pt-8 pb-4 text-lg font-medium text-[#1d1d1f] focus:outline-none placeholder-gray-400"
+                        />
+                        <div className="h-[1px] w-[calc(100%-4rem)] mx-auto bg-gradient-to-r from-transparent via-gray-100 to-transparent"></div>
+                        <textarea
+                          placeholder="输入副标题或正文描述..."
+                          value={textConfig.detail}
+                          onChange={e => setTextConfig({ ...textConfig, detail: e.target.value })}
+                          className="w-full h-36 resize-none bg-transparent px-8 pt-4 pb-8 text-lg text-[#1d1d1f] focus:outline-none placeholder-gray-400"
+                        ></textarea>
+                        <div className="flex items-center justify-end gap-3 px-8 pb-6 select-none pointer-events-none">
+                          <span className="text-[12px] font-mono font-medium text-gray-400 tracking-widest uppercase">
+                            Nano Banana Pro <span className="mx-1 font-light text-gray-300">|</span> Vision Engine
+                          </span>
+                          <div className="relative flex items-center justify-center">
+                            <div className="absolute inset-0 bg-violet-400 blur-md opacity-40 animate-pulse" style={{ animationDuration: '2s' }}></div>
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="relative z-10 text-violet-500 animate-pulse" style={{ animationDuration: '2s' }}>
+                              <path d="M10 2L11.5 7.5L17 9L11.5 10.5L10 16L8.5 10.5L3 9L8.5 7.5L10 2Z" fill="currentColor"/>
+                              <path d="M19 14L19.75 16.25L22 17L19.75 17.75L19 20L18.25 17.75L16 17L18.25 16.25L19 14Z" fill="currentColor"/>
+                            </svg>
                           </div>
                         </div>
-                        <MorphingAiButton
-                          onClick={handleExtractCopy}
-                          loading={isExtractingCopy}
-                          disabled={isExtractingCopy}
-                          icon={<Sparkles size={12} />}
-                          idleText="爆款文案制作"
-                          loadingText={`爆款文案制作中 ${copywritingCountdown ?? 60}s`}
-                          doneText="✨ 文案已完成"
-                          showDone={buttonDoneFlash.copy}
-                          size="sm"
-                          variant="primary"
-                        />
                       </div>
+                    </div>
+                    <div className="flex justify-end">
+                      <MorphingAiButton
+                        onClick={handleExtractCopy}
+                        loading={isExtractingCopy}
+                        disabled={isExtractingCopy}
+                        icon={<Sparkles size={12} />}
+                        idleText="爆款文案制作"
+                        loadingText={`爆款文案制作中 ${copywritingCountdown ?? 60}s`}
+                        doneText="✨ 文案已完成"
+                        showDone={buttonDoneFlash.copy}
+                        size="sm"
+                        variant="primary"
+                      />
                     </div>
                   </div>
                 </section>
@@ -4533,12 +4539,15 @@ const App: React.FC = () => {
                   <div className="w-full max-w-3xl">
                     {isProcessing ? renderLoadingMonitor() : (
                       <div className="flex flex-col items-start justify-center min-h-[100px]">
-                        <h2 className="text-xl md:text-2xl font-bold text-[#1d1d1f] tracking-tight mb-3 flex items-center gap-3">
-                          <span className="relative inline-flex rounded-full h-3 w-3 bg-violet-500"></span>
-                          神级大片已冲印完成
+                        <h2 className="text-xl md:text-2xl font-bold text-[#1d1d1f] tracking-tight mb-6 flex items-center gap-3">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-violet-500">
+                            <path d="M10 2L11.5 7.5L17 9L11.5 10.5L10 16L8.5 10.5L3 9L8.5 7.5L10 2Z" fill="currentColor"/>
+                            <path d="M19 14L19.75 16.25L22 17L19.75 17.75L19 20L18.25 17.75L16 17L18.25 16.25L19 14Z" fill="currentColor"/>
+                          </svg>
+                          图像渲染与特征注入完成。
                         </h2>
                         <p className="text-[13px] text-gray-400 font-mono tracking-widest uppercase">
-                          Nano Banana Pro / Vision Engine
+                          RENDER ENGINE COMPLETE / 100%
                         </p>
                       </div>
                     )}
