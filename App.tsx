@@ -3919,9 +3919,9 @@ const App: React.FC = () => {
   const renderLoadingMonitor = () => (
     <div className="flex flex-col items-center justify-center mb-12 mt-8 w-full max-w-3xl mx-auto min-h-[100px]">
       <div className="flex items-center gap-4 mb-6 select-none">
-        <div className="relative flex items-center justify-center">
-          <div className="absolute inset-0 bg-violet-400 blur-md opacity-40 animate-pulse" style={{ animationDuration: '2s' }}></div>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="relative z-10 text-violet-500 animate-pulse" style={{ animationDuration: '2s' }}>
+        <div className="relative flex items-center justify-center w-5 h-5">
+          <div className="absolute inset-0 bg-violet-400 blur-[6px] opacity-40 animate-pulse" style={{ animationDuration: '2s' }}></div>
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="relative z-10 w-full h-full text-violet-500 animate-pulse" style={{ animationDuration: '2s' }}>
             <path d="M10 2L11.5 7.5L17 9L11.5 10.5L10 16L8.5 10.5L3 9L8.5 7.5L10 2Z" fill="currentColor"/>
             <path d="M19 14L19.75 16.25L22 17L19.75 17.75L19 20L18.25 17.75L16 17L18.25 16.25L19 14Z" fill="currentColor"/>
           </svg>
@@ -4524,50 +4524,43 @@ const App: React.FC = () => {
                 {renderLoadingMonitor()}
 
                 <div className="w-full max-w-3xl mx-auto">
-                  <div className="relative w-full rounded-[2rem] overflow-hidden bg-white border border-gray-100 shadow-sm flex items-center justify-center" style={{ aspectRatio: currentAspectRatio, minHeight: 320 }}>
-                    <div className="absolute inset-0 bg-gradient-to-br from-violet-50/50 to-fuchsia-50/50 animate-pulse" style={{ animationDuration: '3s' }}></div>
-                    <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/80 to-transparent"></div>
-                    <span className="relative z-10 text-[11px] font-mono text-gray-400 tracking-[0.2em] uppercase">
-                      Rendering
+                  <div className="relative w-full rounded-[2rem] overflow-hidden bg-[#fafafa] border border-gray-100 shadow-sm flex flex-col items-center justify-center group" style={{ aspectRatio: currentAspectRatio, minHeight: 320 }}>
+                    <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-transparent animate-pulse" style={{ animationDuration: '3s' }}></div>
+                    <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/80 to-transparent animate-[shimmer_1.5s_infinite] z-10"></div>
+                    <span className="relative z-20 text-[12px] font-mono text-gray-400 tracking-[0.2em] uppercase">
+                      Rendering...
                     </span>
                   </div>
                 </div>
               </div>
             ) : (
               <div className="space-y-12">
-                <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 border-b border-stone-100 pb-8">
-                  <div className="w-full max-w-3xl">
-                    {isProcessing ? renderLoadingMonitor() : (
-                      <div className="flex flex-col items-start justify-center min-h-[100px]">
-                        <h2 className="text-xl md:text-2xl font-bold text-[#1d1d1f] tracking-tight mb-6 flex items-center gap-3">
-                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-violet-500">
-                            <path d="M10 2L11.5 7.5L17 9L11.5 10.5L10 16L8.5 10.5L3 9L8.5 7.5L10 2Z" fill="currentColor"/>
-                            <path d="M19 14L19.75 16.25L22 17L19.75 17.75L19 20L18.25 17.75L16 17L18.25 16.25L19 14Z" fill="currentColor"/>
-                          </svg>
-                          图像渲染与特征注入完成。
-                        </h2>
-                        <p className="text-[13px] text-gray-400 font-mono tracking-widest uppercase">
-                          RENDER ENGINE COMPLETE / 100%
-                        </p>
-                      </div>
-                    )}
+                {isProcessing ? (
+                  <div className="w-full">
+                    {renderLoadingMonitor()}
                   </div>
-                  <div className="flex flex-col sm:flex-row gap-4">
-                    {resultImages.length === 1 && (
-                      <button 
-                        onClick={async () => {
-                          if (!resultImages[0]) return;
-                          const packed = await composeResultDownloadDataUrl(resultImages[0]);
-                          await triggerDownload(packed, buildDownloadFileName('单图'));
-                        }}
-                        className="px-8 py-4 bg-[#002FA7] text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-[#002FA7]/90 transition-all active:scale-95 shadow-lg shadow-[#002FA7]/20"
+                ) : (
+                  <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 w-full gap-4">
+                    <h2 className="flex items-center gap-2.5 select-none text-xl md:text-2xl">
+                      <span className="font-medium text-gray-300 tracking-wide">06</span>
+                      <span className="font-light text-violet-400">/</span>
+                      <span className="font-bold text-[#1d1d1f] tracking-tight">视觉资产已就绪</span>
+                    </h2>
+                    <div className="flex items-center gap-4 mt-4 md:mt-0">
+                      <button
+                        onClick={() => { setStep('upload'); setResultImages([]); }}
+                        className="px-6 py-2.5 bg-transparent border border-gray-200 hover:border-gray-300 text-gray-600 hover:text-[#1d1d1f] rounded-xl font-medium text-[14px] transition-all"
                       >
-                        下载单张大图
+                        返回重构
                       </button>
-                    )}
-                    {resultImages.length > 1 && (
-                      <button 
+                      <button
                         onClick={async () => {
+                          if (resultImages.length === 1) {
+                            const packed = await composeResultDownloadDataUrl(resultImages[0] || '');
+                            if (!packed) return;
+                            await triggerDownload(packed, buildDownloadFileName('单图'));
+                            return;
+                          }
                           for (let i = 0; i < resultImages.length; i++) {
                             const imageUrl = resultImages[i];
                             if (!imageUrl) continue;
@@ -4576,16 +4569,16 @@ const App: React.FC = () => {
                             await new Promise(r => setTimeout(r, 320));
                           }
                         }}
-                        className="px-8 py-4 bg-[#002FA7] text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-[#002FA7]/90 transition-all active:scale-95 shadow-lg shadow-[#002FA7]/20"
+                        className="px-6 py-2.5 bg-[#1d1d1f] hover:bg-[#2d2d2f] text-white rounded-xl font-medium text-[14px] shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
                       >
-                        一键打包下载全套
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-violet-400">
+                          <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                        {resultImages.length > 1 ? '一键打包全套' : '下载单张大图'}
                       </button>
-                    )}
-                    <button onClick={() => { setStep('upload'); setResultImages([]); }} className="px-8 py-4 bg-white border border-stone-200 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:border-stone-900 transition-all active:scale-95 text-stone-600">
-                      返回并重新配置
-                    </button>
+                    </div>
                   </div>
-                </div>
+                )}
 
 
                 {isSuiteMode ? (
@@ -4630,11 +4623,11 @@ const App: React.FC = () => {
                                 {renderLiveTextOverlay(true)}
                               </>
                             ) : (
-                              <div className="absolute inset-0 rounded-[24px] overflow-hidden bg-white border border-gray-100 shadow-sm flex items-center justify-center">
-                                <div className="absolute inset-0 bg-gradient-to-br from-violet-50/50 to-fuchsia-50/50 animate-pulse" style={{ animationDuration: '3s' }}></div>
-                                <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/80 to-transparent"></div>
-                                <span className="relative z-10 text-[11px] font-mono text-gray-400 tracking-[0.2em] uppercase">
-                                  Rendering
+                              <div className="relative w-full aspect-square rounded-[2rem] overflow-hidden bg-[#fafafa] border border-gray-100 shadow-sm flex flex-col items-center justify-center group">
+                                <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-transparent animate-pulse" style={{ animationDuration: '3s' }}></div>
+                                <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/80 to-transparent animate-[shimmer_1.5s_infinite] z-10"></div>
+                                <span className="relative z-20 text-[12px] font-mono text-gray-400 tracking-[0.2em] uppercase">
+                                  Rendering...
                                 </span>
                               </div>
                             )}
