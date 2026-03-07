@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useId } from 'react';
 import { 
   X, Plus, Download, Sparkles, Wand2, Palette, Zap, Loader2, Lightbulb, ZoomIn, Trash2
 } from 'lucide-react';
@@ -161,6 +161,7 @@ interface LayerState {
 }
 
 const MODEL_HINT_IMAGE = 'Nano Banana Pro · Gemini 2.5 Flash Image';
+const MODEL_HINT_COPY = 'Nano Banana Pro · Gemini Flash 文案引擎';
 const UNSUPPORTED_COLOR_FN_RE = /\b(oklch|oklab)\(/i;
 type TextGlowState = 'idle' | 'generating' | 'success';
 
@@ -3916,16 +3917,47 @@ const App: React.FC = () => {
   const isMatrixRainbow = isMatrixGenerating || buttonDoneFlash.genMatrix;
   const matrixButtonText = isMatrixGenerating ? '正在渲染神级大片...' : (buttonDoneFlash.genMatrix ? '神级大片已完成' : '生成大师级主图');
 
+  const nebulaDiamondGradientId = useId().replace(/:/g, '');
+  const nebulaDiamondGradRef = `${nebulaDiamondGradientId}-nebula-full-spectrum`;
+
+  const renderNebulaDiamond = (sizeClass = 'w-5 h-5') => (
+    <div className={`relative flex items-center justify-center ${sizeClass}`}>
+      <span className="nebula-diamond-shell">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          className="nebula-diamond-svg w-full h-full"
+          aria-hidden="true"
+        >
+          <defs>
+            <linearGradient id={nebulaDiamondGradRef} x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#ff4d4d" />
+              <stop offset="35%" stopColor="#f9cb28" />
+              <stop offset="65%" stopColor="#78e08f" />
+              <stop offset="100%" stopColor="#3c40c6" />
+              <animateTransform
+                attributeName="gradientTransform"
+                type="translate"
+                values="-0.45 -0.45;0.45 0.45;-0.45 -0.45"
+                dur="4.8s"
+                repeatCount="indefinite"
+              />
+            </linearGradient>
+          </defs>
+          <path
+            d="M12 0C12 6.62742 6.62742 12 0 12C6.62742 12 12 17.3726 12 24C12 17.3726 17.3726 12 24 12C17.3726 12 12 6.62742 12 0Z"
+            fill={`url(#${nebulaDiamondGradRef})`}
+          />
+        </svg>
+      </span>
+    </div>
+  );
+
   const renderLoadingMonitor = () => (
     <div className="flex flex-col items-center justify-center mb-12 mt-8 w-full max-w-3xl mx-auto min-h-[100px]">
       <div className="flex items-center gap-4 mb-6 select-none">
-        <div className="relative flex items-center justify-center w-5 h-5">
-          <div className="absolute inset-0 bg-violet-400 blur-[6px] opacity-40 animate-pulse" style={{ animationDuration: '2s' }}></div>
-          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="relative z-10 w-full h-full text-violet-500 animate-pulse" style={{ animationDuration: '2s' }}>
-            <path d="M10 2L11.5 7.5L17 9L11.5 10.5L10 16L8.5 10.5L3 9L8.5 7.5L10 2Z" fill="currentColor"/>
-            <path d="M19 14L19.75 16.25L22 17L19.75 17.75L19 20L18.25 17.75L16 17L18.25 16.25L19 14Z" fill="currentColor"/>
-          </svg>
-        </div>
+        {renderNebulaDiamond()}
         <span className="text-[13px] font-bold text-[#1d1d1f] tracking-[0.2em] uppercase font-mono flex items-center gap-3">
           Nano Banana Pro
           <span className="text-gray-300 font-light">/</span>
@@ -4449,17 +4481,18 @@ const App: React.FC = () => {
                           <span className="text-[12px] font-mono font-medium text-gray-400 tracking-widest uppercase">
                             Nano Banana Pro <span className="mx-1 font-light text-gray-300">|</span> Vision Engine
                           </span>
-                          <div className="relative flex items-center justify-center">
-                            <div className="absolute inset-0 bg-violet-400 blur-md opacity-40 animate-pulse" style={{ animationDuration: '2s' }}></div>
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="relative z-10 text-violet-500 animate-pulse" style={{ animationDuration: '2s' }}>
-                              <path d="M10 2L11.5 7.5L17 9L11.5 10.5L10 16L8.5 10.5L3 9L8.5 7.5L10 2Z" fill="currentColor"/>
-                              <path d="M19 14L19.75 16.25L22 17L19.75 17.75L19 20L18.25 17.75L16 17L18.25 16.25L19 14Z" fill="currentColor"/>
-                            </svg>
-                          </div>
+                          {renderNebulaDiamond('w-[22px] h-[22px]')}
                         </div>
                       </div>
                     </div>
-                    <div className="flex justify-end">
+                    <div className={`prompt-status-widget ${isExtractingCopy ? 'is-generating' : ''}`}>
+                      <div className={`holo-ticker max-w-[320px] ml-auto ${isExtractingCopy ? 'is-visible' : ''}`}>
+                        <div className="holo-ticker-track">
+                          <span className="holo-ticker-line">{MODEL_HINT_COPY}</span>
+                          <span className="holo-ticker-line">最长 60 秒，首次慢响应自动重试 1 次</span>
+                          <span className="holo-ticker-line">{MODEL_HINT_COPY}</span>
+                        </div>
+                      </div>
                       <MorphingAiButton
                         onClick={handleExtractCopy}
                         loading={isExtractingCopy}
@@ -4524,7 +4557,7 @@ const App: React.FC = () => {
                 {renderLoadingMonitor()}
 
                 <div className="w-full max-w-3xl mx-auto">
-                  <div className="relative w-full rounded-[2rem] overflow-hidden bg-[#fafafa] border border-gray-100 shadow-sm flex flex-col items-center justify-center group" style={{ aspectRatio: currentAspectRatio, minHeight: 320 }}>
+                  <div className="relative w-full rounded-[2rem] overflow-hidden bg-[#fafafa] shadow-sm flex flex-col items-center justify-center group" style={{ aspectRatio: currentAspectRatio, minHeight: 320 }}>
                     <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-transparent animate-pulse" style={{ animationDuration: '3s' }}></div>
                     <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/80 to-transparent animate-[shimmer_1.5s_infinite] z-10"></div>
                     <span className="relative z-20 text-[12px] font-mono text-gray-400 tracking-[0.2em] uppercase">
@@ -4601,7 +4634,7 @@ const App: React.FC = () => {
                           </div>
                           
                           <div
-                            className="relative rounded-[24px] overflow-hidden bg-stone-50 border border-stone-100 flex items-center justify-center"
+                            className="relative rounded-[24px] overflow-hidden bg-stone-50 flex items-center justify-center"
                             style={{ aspectRatio: currentAspectRatio, minHeight: 200 }}
                           >
                             {img ? (
@@ -4623,7 +4656,7 @@ const App: React.FC = () => {
                                 {renderLiveTextOverlay(true)}
                               </>
                             ) : (
-                              <div className="relative w-full aspect-square rounded-[2rem] overflow-hidden bg-[#fafafa] border border-gray-100 shadow-sm flex flex-col items-center justify-center group">
+                              <div className="relative w-full aspect-square rounded-[2rem] overflow-hidden bg-[#fafafa] shadow-sm flex flex-col items-center justify-center group">
                                 <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-transparent animate-pulse" style={{ animationDuration: '3s' }}></div>
                                 <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/80 to-transparent animate-[shimmer_1.5s_infinite] z-10"></div>
                                 <span className="relative z-20 text-[12px] font-mono text-gray-400 tracking-[0.2em] uppercase">
