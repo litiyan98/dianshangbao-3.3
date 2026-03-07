@@ -162,6 +162,8 @@ interface LayerState {
 
 const MODEL_HINT_IMAGE = 'Nano Banana Pro · Gemini 2.5 Flash Image';
 const MODEL_HINT_COPY = 'Nano Banana Pro · Gemini Flash 文案引擎';
+const TEXT_GEN_COUNT_KEY = 'visionEngine_textCount';
+const TEXT_GEN_LOCK_KEY = 'visionEngine_textLock';
 const UNSUPPORTED_COLOR_FN_RE = /\b(oklch|oklab)\(/i;
 type TextGlowState = 'idle' | 'generating' | 'success';
 
@@ -2482,12 +2484,62 @@ const App: React.FC = () => {
     return resolveCopyTargetImageUrl();
   };
 
+  const checkTextGenCapability = useCallback(() => {
+    if (typeof window === 'undefined') return true;
+
+    const now = Date.now();
+    const rawCount = Number(window.localStorage.getItem(TEXT_GEN_COUNT_KEY) || 0);
+    const rawLock = Number(window.localStorage.getItem(TEXT_GEN_LOCK_KEY) || 0);
+    let currentCount = Number.isFinite(rawCount) ? rawCount : 0;
+    let lockEndTime = Number.isFinite(rawLock) ? rawLock : 0;
+
+    if (lockEndTime && now >= lockEndTime) {
+      window.localStorage.removeItem(TEXT_GEN_COUNT_KEY);
+      window.localStorage.removeItem(TEXT_GEN_LOCK_KEY);
+      currentCount = 0;
+      lockEndTime = 0;
+    }
+
+    if (now < lockEndTime) {
+      const remainMins = Math.ceil((lockEndTime - now) / 60000);
+      setToastMessage(`⚡️ 文案神经元已达当前并发上限，系统将于 ${remainMins} 分钟后恢复。生成一张主图可立即释放算力锁。`);
+      return false;
+    }
+
+    if (currentCount >= 50) {
+      window.localStorage.setItem(TEXT_GEN_LOCK_KEY, String(now + 3600000));
+      setToastMessage('🔒 文案算力调度达到阶段阈值。为保障渲染队列，文案模块暂入冷却。立即生成一张视觉大片即可重置额度。');
+      return false;
+    }
+
+    window.localStorage.setItem(TEXT_GEN_COUNT_KEY, String(currentCount + 1));
+    return true;
+  }, []);
+
+  const resetTextGenCapability = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.removeItem(TEXT_GEN_COUNT_KEY);
+    window.localStorage.removeItem(TEXT_GEN_LOCK_KEY);
+    console.log('[Vision Engine] 文案算力锁已释放');
+  }, []);
+
   const handleSmartPrompt = async () => {
     if (isAnalyzingPrompt) return;
     if (!localUserId) {
       setToastMessage('用户身份初始化中，请稍后重试');
       return;
     }
+
+    const productImageUrl = resolvePromptProductImageUrl();
+    if (!productImageUrl) {
+      setToastMessage('请先上传商品图，再执行 AI 提示词生成');
+      return;
+    }
+
+    if (!checkTextGenCapability()) {
+      return;
+    }
+
     if (promptGlowTimeoutRef.current !== null) {
       window.clearTimeout(promptGlowTimeoutRef.current);
       promptGlowTimeoutRef.current = null;
@@ -2497,10 +2549,6 @@ const App: React.FC = () => {
     setToastMessage('🧠 正在融合商品与背景灵感，期间无需重复点击...');
     let smartPromptSucceeded = false;
     try {
-      const productImageUrl = resolvePromptProductImageUrl();
-      if (!productImageUrl) {
-        throw new Error('请先上传商品图，再执行 AI 提示词生成');
-      }
       const productBase64 = await fetchImageAsBase64(productImageUrl);
       const referenceBgBase64 = styleReferenceImage
         ? await fetchImageAsBase64(styleReferenceImage)
@@ -2780,6 +2828,7 @@ const App: React.FC = () => {
 
       const normalizedFinalUrl = await enforceAspectRatio(finalUrl, aspectRatio);
       setResultImages([normalizedFinalUrl]);
+      resetTextGenCapability();
       if (!syncAssetsFromGemini()) {
         void refreshUserCredits();
       }
@@ -2872,6 +2921,7 @@ const App: React.FC = () => {
       );
 
       setResultImages(composedResults);
+      resetTextGenCapability();
       if (!syncAssetsFromGemini()) {
         void refreshUserCredits();
       }
