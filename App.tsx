@@ -4129,10 +4129,7 @@ const App: React.FC = () => {
             </div>
 
             <div className="relative w-full pb-24 mt-8 bg-transparent overflow-hidden">
-               <div
-                 className="absolute inset-0 w-full h-full z-0 pointer-events-none"
-                 style={{ maskImage: 'linear-gradient(to bottom, transparent 0%, black 150px)', WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 150px)' }}
-               >
+               <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden flex justify-center items-center">
                  <div className="absolute -top-16 left-[-10%] h-[45%] w-[45%] bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.85),transparent_70%)] blur-3xl" />
                  <div className="absolute top-[22%] right-[-12%] h-[38%] w-[42%] bg-[radial-gradient(circle_at_center,rgba(167,139,250,0.18),transparent_72%)] blur-3xl" />
                  <div className="absolute bottom-[-12%] left-[12%] h-[40%] w-[52%] rounded-[48px] border border-white/30 bg-gradient-to-br from-white/60 via-white/15 to-transparent blur-[1px]" />
@@ -4291,37 +4288,41 @@ const App: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className={`prompt-container-wrapper text-state-shell ${
-                    isAnalyzingPrompt ? 'is-generating' : promptGlowState === 'success' ? 'is-success' : ''
-                  }`}>
-                    <textarea 
-                      value={userPrompt} onChange={(e) => setUserPrompt(e.target.value)}
-                      className="w-full min-h-[120px] resize-none rounded-2xl bg-[#f5f5f7] px-4 py-3 text-sm text-gray-700 leading-relaxed placeholder:text-gray-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-purple-500/20 transition-colors duration-300"
-                      placeholder={"描述你期望的画面细节。例如：清晨的阳光透过百叶窗，洒在带有水滴的黑大理石上。"}
-                    />
-                  </div>
+                  <div className="max-w-xl mx-auto flex flex-col gap-4 w-full relative z-20 mt-6">
+                    <div className={`prompt-container-wrapper text-state-shell ${
+                      isAnalyzingPrompt ? 'is-generating' : promptGlowState === 'success' ? 'is-success' : ''
+                    }`}>
+                      <textarea 
+                        value={userPrompt} onChange={(e) => setUserPrompt(e.target.value)}
+                        className="w-full min-h-[120px] resize-none rounded-sm bg-white/40 backdrop-blur-md border border-stone-200/60 px-4 py-3 text-sm text-stone-800 placeholder:text-stone-400 focus:bg-white/80 transition-all outline-none"
+                        placeholder={"// 导演指令：请描述您期望的画面细节与氛围...\n例如：清晨柔和的阳光透过百叶窗，商品放置在带有水滴的黑大理石台面上。"}
+                      />
+                    </div>
 
-                  <div className={`prompt-status-widget ${isAnalyzingPrompt ? 'is-generating' : ''}`}>
-                    <div className={`holo-ticker ${isAnalyzingPrompt ? 'is-visible' : ''}`}>
-                      <div className="holo-ticker-track">
-                        <span className="holo-ticker-line">Nano Banana Pro Prompt Pilot</span>
-                        <span className="holo-ticker-line">最长 60 秒，首次慢响应自动重试 1 次</span>
-                        <span className="holo-ticker-line">Nano Banana Pro Prompt Pilot</span>
+                    <div className="flex justify-end w-full">
+                      <div className={`prompt-status-widget ${isAnalyzingPrompt ? 'is-generating' : ''}`}>
+                        <div className={`holo-ticker ${isAnalyzingPrompt ? 'is-visible' : ''}`}>
+                          <div className="holo-ticker-track">
+                            <span className="holo-ticker-line">Nano Banana Pro Prompt Pilot</span>
+                            <span className="holo-ticker-line">最长 60 秒，首次慢响应自动重试 1 次</span>
+                            <span className="holo-ticker-line">Nano Banana Pro Prompt Pilot</span>
+                          </div>
+                        </div>
+                        <MorphingAiButton
+                          onClick={handleSmartPrompt}
+                          loading={isAnalyzingPrompt}
+                          disabled={isAnalyzingPrompt}
+                          icon={<Wand2 size={16} />}
+                          idleText={userPrompt ? '重新生成灵感' : 'AI 帮我写神级提示词'}
+                          loadingText={`✨ 灵感引擎思考中 ${promptCountdown ?? 60}s`}
+                          doneText="✨ 灵感已注入"
+                          showDone={buttonDoneFlash.prompt}
+                          size="sm"
+                          variant="secondary"
+                          className="btn-secondary-purple"
+                        />
                       </div>
                     </div>
-                    <MorphingAiButton
-                      onClick={handleSmartPrompt}
-                      loading={isAnalyzingPrompt}
-                      disabled={isAnalyzingPrompt}
-                      icon={<Wand2 size={16} />}
-                      idleText={userPrompt ? '✨ 重新优化描述' : '✨ 优化画面描述'}
-                      loadingText={`✨ 灵感引擎思考中 ${promptCountdown ?? 60}s`}
-                      doneText="✨ 灵感已注入"
-                      showDone={buttonDoneFlash.prompt}
-                      size="sm"
-                      variant="secondary"
-                      className="btn-secondary-purple"
-                    />
                   </div>
                 </section>
 
