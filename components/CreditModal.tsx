@@ -210,7 +210,7 @@ const CreditModal: React.FC<CreditModalProps> = ({
   return (
     <div className="fixed inset-0 z-[260] flex items-center justify-center p-4 md:p-6">
       <div className="absolute inset-0 bg-stone-900/70 backdrop-blur-sm" onClick={onClose} />
-      <div className={`relative w-full ${currentTab === 'invite' ? 'max-w-3xl' : 'max-w-5xl'} bg-white rounded-[2rem] shadow-2xl border border-stone-200 overflow-hidden`}>
+      <div className={`relative w-full ${currentTab === 'invite' ? 'max-w-2xl' : 'max-w-5xl'} bg-white rounded-[2rem] shadow-2xl border border-stone-200 overflow-hidden`}>
         <button onClick={onClose} className="absolute top-5 right-5 z-20 w-10 h-10 rounded-full border border-stone-200 bg-white/95 shadow-sm hover:bg-stone-50 hover:border-stone-300 transition-colors flex items-center justify-center">
           <X size={16} />
         </button>
@@ -242,9 +242,9 @@ const CreditModal: React.FC<CreditModalProps> = ({
           </div>
         </div>
 
-        <div className="px-6 md:px-8 py-6">
+        <div className="px-6 md:px-8 py-5">
           {currentTab === 'invite' ? (
-            <div className="space-y-6">
+            <div className="space-y-4">
               {isSummaryLoading ? (
                 <div className="rounded-[2rem] border border-stone-200 bg-stone-50 p-10 flex items-center justify-center text-stone-500 gap-3">
                   <Loader2 size={18} className="animate-spin" />
@@ -254,28 +254,29 @@ const CreditModal: React.FC<CreditModalProps> = ({
                 <div className="rounded-[2rem] border border-red-100 bg-red-50 p-6 text-[13px] text-red-500 font-semibold">{summaryError}</div>
               ) : (
                 <>
-                  <div className="rounded-[2rem] border border-stone-200 bg-[#fafafa] px-6 py-8 md:px-8 md:py-10 relative overflow-hidden">
-                    <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-violet-200 to-transparent" />
-                    <div className="flex flex-col items-center text-center">
-                      <div className="w-24 h-24 md:w-28 md:h-28 rounded-[2rem] bg-white shadow-sm border border-stone-200 flex items-center justify-center mb-6">
-                        <GloveIcon size={64} />
+                  <div className="rounded-[2rem] border border-stone-200 bg-[#fafafa] px-5 py-5 md:px-6 md:py-6">
+                    <div className="flex items-center gap-4 md:gap-5">
+                      <div className="w-20 h-20 md:w-24 md:h-24 shrink-0 rounded-[1.75rem] bg-white shadow-sm border border-stone-200 flex items-center justify-center">
+                        <GloveIcon size={58} />
                       </div>
-                      <h3 className="text-[24px] md:text-[30px] font-black tracking-tight text-[#1d1d1f]">分享视觉引擎，解锁更多算力</h3>
-                      <p className="text-[14px] text-gray-500 mt-3 max-w-xl">好友完成首充后，双方自动获得 Token。复制链接或直接系统分享即可。</p>
+                      <div className="min-w-0">
+                        <h3 className="text-[22px] md:text-[26px] font-black tracking-tight text-[#1d1d1f] leading-tight">邀请好友，双方得 Token</h3>
+                        <p className="text-[13px] text-gray-500 mt-2 leading-6">好友首充后自动到账。复制链接或系统分享即可。</p>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-[1.08fr_0.92fr] gap-5">
-                    <div className="rounded-[2rem] border border-stone-200 bg-white p-6 space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-[1.2fr_0.8fr] gap-4">
+                    <div className="rounded-[2rem] border border-stone-200 bg-white p-5 space-y-4">
                       <div>
-                        <p className="text-[12px] uppercase tracking-[0.16em] text-stone-400 font-mono">邀请码</p>
-                        <p className="text-[24px] font-black text-[#1d1d1f] mt-3">{summary?.invite_code || inviteCode || '--'}</p>
+                        <p className="text-[11px] uppercase tracking-[0.16em] text-stone-400 font-mono">邀请码</p>
+                        <p className="text-[22px] font-black text-[#1d1d1f] mt-2">{summary?.invite_code || inviteCode || '--'}</p>
                       </div>
                       <div>
-                        <p className="text-[12px] uppercase tracking-[0.16em] text-stone-400 font-mono">邀请链接</p>
-                        <p className="text-[13px] text-stone-700 break-all mt-3 leading-6">{inviteLink || '邀请码生成中...'}</p>
+                        <p className="text-[11px] uppercase tracking-[0.16em] text-stone-400 font-mono">邀请链接</p>
+                        <p className="text-[13px] text-stone-700 break-all mt-2 leading-6">{inviteLink || '邀请码生成中...'}</p>
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                         <button
                           onClick={handleCopy}
                           className="w-full h-11 rounded-xl bg-[#111827] text-white text-[13px] font-bold flex items-center justify-center gap-2 hover:bg-[#1a2333] transition-colors"
@@ -295,23 +296,23 @@ const CreditModal: React.FC<CreditModalProps> = ({
                       </div>
                     </div>
 
-                    <div className="rounded-[2rem] border border-stone-200 bg-[#fafafa] p-6 space-y-4">
+                    <div className="rounded-[2rem] border border-stone-200 bg-[#fafafa] p-5 space-y-4">
                       <div className="grid grid-cols-2 gap-3">
-                        <div className="rounded-[1.25rem] border border-stone-200 bg-white px-4 py-4">
+                        <div className="rounded-[1.25rem] border border-stone-200 bg-white px-4 py-3">
                           <p className="text-[11px] uppercase tracking-[0.16em] text-stone-400 font-mono">已邀请</p>
-                          <p className="text-[24px] font-black text-[#1d1d1f] mt-2">{stats.registered_count}</p>
+                          <p className="text-[22px] font-black text-[#1d1d1f] mt-2">{stats.registered_count}</p>
                         </div>
-                        <div className="rounded-[1.25rem] border border-stone-200 bg-white px-4 py-4">
-                          <p className="text-[11px] uppercase tracking-[0.16em] text-stone-400 font-mono">累计返还</p>
-                          <p className="text-[24px] font-black text-[#1d1d1f] mt-2">{stats.total_referrer_tokens}</p>
+                        <div className="rounded-[1.25rem] border border-stone-200 bg-white px-4 py-3">
+                          <p className="text-[11px] uppercase tracking-[0.16em] text-stone-400 font-mono">返还</p>
+                          <p className="text-[22px] font-black text-[#1d1d1f] mt-2">{stats.total_referrer_tokens}</p>
                         </div>
                       </div>
 
-                      <div className="rounded-[1.5rem] border border-stone-200 bg-white px-4 py-4">
-                        <p className="text-[12px] text-stone-400 font-mono uppercase tracking-[0.18em]">奖励说明</p>
-                        <div className="space-y-2 mt-3">
+                      <div className="rounded-[1.5rem] border border-stone-200 bg-white px-4 py-3">
+                        <p className="text-[11px] uppercase tracking-[0.16em] text-stone-400 font-mono">奖励</p>
+                        <div className="space-y-1.5 mt-2">
                           {rules.slice(0, 3).map((rule) => (
-                            <p key={rule.package_type} className="text-[13px] text-stone-600">
+                            <p key={rule.package_type} className="text-[12px] text-stone-600 leading-5">
                               <span className="font-semibold text-[#1d1d1f]">{rule.package_name}</span>
                               <span className="text-stone-400"> · </span>
                               新用户 +{rule.buyer_bonus_tokens} / 邀请人 +{rule.referrer_bonus_tokens}
@@ -319,8 +320,6 @@ const CreditModal: React.FC<CreditModalProps> = ({
                           ))}
                         </div>
                       </div>
-
-                      <p className="text-[12px] text-stone-500 leading-6">好友注册后可获得启动算力，完成首充后双方自动到账奖励。</p>
                     </div>
                   </div>
                 </>
