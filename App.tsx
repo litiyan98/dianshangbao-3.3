@@ -69,14 +69,14 @@ const logMessages = [
 ];
 
 const FONT_STYLE_OPTIONS: Array<{ id: FontStyle; label: string }> = [
-  { id: 'modern_sans', label: '现代无衬线 (通用电商)' },
-  { id: 'elegant_serif', label: '优雅衬线 (高端审美)' },
-  { id: 'bold_display', label: '高冲击标题 (大促爆款)' },
-  { id: 'handwritten_script', label: '手写氛围 (生活感)' },
-  { id: 'tech_mono', label: '科技等宽 (数码机能)' },
-  { id: 'playful_marker', label: '趣味海报 (年轻化)' },
-  { id: 'classic_song', label: '经典宋韵 (东方气质)' },
-  { id: 'artistic_brush', label: '艺术笔触 (品牌感)' },
+  { id: 'modern_sans', label: 'Noto Sans SC / 通用电商' },
+  { id: 'elegant_serif', label: 'Noto Serif SC / 高端质感' },
+  { id: 'bold_display', label: '站酷庆科黄油体 / 爆款标题' },
+  { id: 'handwritten_script', label: 'Source Sans 3 / 品牌副标题' },
+  { id: 'tech_mono', label: 'JetBrains Mono / 科技数字' },
+  { id: 'playful_marker', label: '站酷庆科黄油体 / 年轻海报' },
+  { id: 'classic_song', label: 'Noto Serif SC / 东方宋韵' },
+  { id: 'artistic_brush', label: 'Source Sans 3 / 极简英文' },
 ];
 
 // 临时开发开关：允许算力透支，不拦截单图/套图生成

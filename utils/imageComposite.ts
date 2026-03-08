@@ -5,12 +5,12 @@ import { TextConfig, MarketAnalysis, GenerationMode, FontStyle, AspectRatio, Sti
 export const FONT_REGISTRY: Record<FontStyle, { family: string; weight: string }> = {
   modern_sans: { family: '"Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif', weight: '900' },
   elegant_serif: { family: '"Noto Serif SC", "Songti SC", "STSong", serif', weight: '700' },
-  bold_display: { family: '"ZCOOL QingKe HuangYou", "Noto Sans SC", "Microsoft YaHei", sans-serif', weight: '900' },
-  handwritten_script: { family: '"Ma Shan Zheng", "Kaiti SC", "KaiTi", cursive', weight: '700' },
-  tech_mono: { family: '"JetBrains Mono", "Noto Sans SC", "Courier New", monospace', weight: '800' },
-  playful_marker: { family: '"ZCOOL QingKe HuangYou", "Noto Sans SC", "Microsoft YaHei", sans-serif', weight: '600' },
-  classic_song: { family: '"Noto Serif SC", "STZhongsong", "SimSun", serif', weight: '700' },
-  artistic_brush: { family: '"Ma Shan Zheng", "Kaiti SC", "STKaiti", serif', weight: '700' }
+  bold_display: { family: '"ZCOOL QingKe HuangYou", "Noto Sans SC", "Microsoft YaHei", sans-serif', weight: '400' },
+  handwritten_script: { family: '"Source Sans 3", "Noto Sans SC", "Microsoft YaHei", sans-serif', weight: '600' },
+  tech_mono: { family: '"JetBrains Mono", "Noto Sans SC", "Courier New", monospace', weight: '700' },
+  playful_marker: { family: '"ZCOOL QingKe HuangYou", "Noto Sans SC", "Microsoft YaHei", sans-serif', weight: '400' },
+  classic_song: { family: '"Noto Serif SC", "STZhongsong", "SimSun", serif', weight: '600' },
+  artistic_brush: { family: '"Source Sans 3", "Noto Sans SC", "Microsoft YaHei", sans-serif', weight: '700' }
 };
 
 export async function preloadFont(style: FontStyle): Promise<string> {
