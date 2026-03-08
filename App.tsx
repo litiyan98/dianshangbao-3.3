@@ -237,6 +237,7 @@ const App: React.FC = () => {
   const [isCreditsLoading, setIsCreditsLoading] = useState(false);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [authTokenReady, setAuthTokenReady] = useState(false);
+  const [scrollCueVisible, setScrollCueVisible] = useState(true);
   const [generationProgress, setGenerationProgress] = useState<string>("");
   const [loadingBrief, setLoadingBrief] = useState('');
 
@@ -345,6 +346,7 @@ const App: React.FC = () => {
   const logoDragOriginRef = useRef<{ x: number; y: number } | null>(null);
   const stickerDragOriginRef = useRef<{ x: number; y: number } | null>(null);
   const imageLayerInputRef = useRef<HTMLInputElement>(null);
+  const uploadSectionRef = useRef<HTMLElement>(null);
   const imageLayersRef = useRef<ImageLayer[]>([]);
   const globalLayerConfigRef = useRef<Record<string, LayerState>>({});
   const base64CacheRef = useRef<Map<string, string>>(new Map());
@@ -2080,6 +2082,23 @@ const App: React.FC = () => {
       alert(err.message || "登录跳转失败，请检查网络或联系管理员");
     }
   };
+
+  const handleScrollCueClick = useCallback(() => {
+    const target = uploadSectionRef.current;
+    if (!target) return;
+    const top = target.getBoundingClientRect().top + window.scrollY - 92;
+    window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+  }, []);
+
+  useEffect(() => {
+    const updateScrollCue = () => {
+      setScrollCueVisible(step === 'upload' && window.scrollY < 48);
+    };
+
+    updateScrollCue();
+    window.addEventListener('scroll', updateScrollCue, { passive: true });
+    return () => window.removeEventListener('scroll', updateScrollCue);
+  }, [step]);
 
   // 轮播电商锦囊逻辑 (每8秒切换一次)
   useEffect(() => {
@@ -4132,6 +4151,20 @@ const App: React.FC = () => {
         .animate-bounce-subtle {
           animation: bounce-subtle 3s ease-in-out infinite;
         }
+        @keyframes scroll-cue-float {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(4px); }
+        }
+        @keyframes scroll-cue-chevron {
+          0%, 100% { transform: translateY(0); opacity: 0.72; }
+          50% { transform: translateY(3px); opacity: 1; }
+        }
+        .scroll-cue-float {
+          animation: scroll-cue-float 2.8s ease-in-out infinite;
+        }
+        .scroll-cue-chevron {
+          animation: scroll-cue-chevron 2.4s ease-in-out infinite;
+        }
         .image-layer-rnd .react-resizable-handle {
           width: 10px;
           height: 10px;
@@ -4247,6 +4280,20 @@ const App: React.FC = () => {
         </div>
       </header>
 
+      {step === 'upload' && scrollCueVisible && (
+        <button
+          type="button"
+          onClick={handleScrollCueClick}
+          className="scroll-cue-float fixed left-1/2 bottom-[max(1.75rem,env(safe-area-inset-bottom))] -translate-x-1/2 z-[90] flex items-center gap-2 rounded-full border border-white/70 bg-white/65 px-4 py-2.5 text-[12px] font-medium tracking-[0.04em] text-gray-500 shadow-[0_12px_32px_rgba(15,23,42,0.08)] backdrop-blur-xl transition-all duration-300 hover:bg-white/80 hover:text-gray-700 hover:shadow-[0_16px_36px_rgba(15,23,42,0.12)]"
+          aria-label="向下进入工作台"
+        >
+          <span>继续，开始构图</span>
+          <svg className="scroll-cue-chevron h-3.5 w-3.5 text-gray-400" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+      )}
+
       {/* AI 引擎状态监视器（极简悬浮状态标） */}
       <div className="fixed right-3 md:right-6 bottom-[calc(env(safe-area-inset-bottom)+14px)] md:bottom-6 z-[110] group">
         <div className="ai-engine-pill">
@@ -4315,7 +4362,7 @@ const App: React.FC = () => {
 
             <div className="relative w-full pb-24 mt-8 bg-transparent">
                <div className="relative z-10 max-w-4xl mx-auto">
-                <section className="bg-white rounded-[2rem] p-8 md:p-10 mb-8 mx-auto max-w-4xl border border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.03)] transition-shadow duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.06)]">
+                <section ref={uploadSectionRef} className="bg-white rounded-[2rem] p-8 md:p-10 mb-8 mx-auto max-w-4xl border border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.03)] transition-shadow duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.06)]">
                   <StepHaloTitle step="01" title="商品原图" />
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
                     {sourceImages.map((img, i) => (
