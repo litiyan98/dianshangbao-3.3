@@ -4521,10 +4521,21 @@ const App: React.FC = () => {
 
                   <div className="w-full flex flex-col gap-4">
                     <div className="relative w-full mt-6 group">
+                      <div
+                        className={`absolute inset-x-8 -bottom-6 h-16 rounded-full blur-3xl pointer-events-none transition-all duration-500 ${
+                          promptGlowState === 'success'
+                            ? 'bg-gradient-to-r from-fuchsia-400/20 via-sky-300/18 to-violet-400/20 opacity-100'
+                            : isGeneratingPrompt
+                              ? 'bg-gradient-to-r from-violet-500/18 via-fuchsia-400/12 to-blue-400/16 opacity-100'
+                              : 'bg-gradient-to-r from-violet-500/8 via-fuchsia-400/6 to-blue-400/8 opacity-35'
+                        }`}
+                      />
                       <div className={`relative z-10 w-full flex flex-col overflow-hidden backdrop-blur-md transition-all duration-500 ease-out rounded-2xl ${
                         isGeneratingPrompt
-                          ? 'bg-white/95 shadow-[0_12px_40px_rgba(139,92,246,0.25)] -translate-y-1 ring-1 ring-violet-400/50 border-transparent'
-                          : 'bg-white/80 shadow-sm translate-y-0 border border-violet-100 focus-within:ring-1 focus-within:ring-violet-300'
+                          ? 'bg-white/96 shadow-[0_14px_40px_rgba(139,92,246,0.20)] -translate-y-1 ring-1 ring-violet-400/45 border-transparent'
+                          : promptGlowState === 'success'
+                            ? 'bg-white/92 shadow-[0_12px_34px_rgba(125,211,252,0.18),0_10px_28px_rgba(217,70,239,0.14)] translate-y-0 border border-violet-100/60'
+                            : 'bg-white/82 shadow-sm translate-y-0 border border-violet-100 focus-within:ring-1 focus-within:ring-violet-300'
                       }`}>
                         <div className={`absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-violet-200/40 to-transparent pointer-events-none z-10 transition-opacity duration-500 ${isGeneratingPrompt ? 'opacity-100 animate-[shimmer_1.5s_infinite]' : 'opacity-0'}`}></div>
                         <textarea
@@ -4660,15 +4671,21 @@ const App: React.FC = () => {
                   <div className="w-full mt-8 flex flex-col gap-4">
                     <div className="relative w-full">
                       <div
-                        className={`absolute inset-x-8 -bottom-6 h-20 rounded-full blur-3xl pointer-events-none transition-all duration-500 ${
+                        className={`absolute inset-x-6 -bottom-7 h-24 rounded-full blur-3xl pointer-events-none transition-all duration-500 ${
                           copyGlowState === 'success'
-                            ? 'bg-gradient-to-r from-fuchsia-400/18 via-sky-300/16 to-violet-400/18 opacity-100'
+                            ? 'bg-gradient-to-r from-fuchsia-400/22 via-sky-300/18 to-violet-400/22 opacity-100'
                             : isExtractingCopy
-                              ? 'bg-gradient-to-r from-violet-500/18 via-fuchsia-400/14 to-blue-400/18 opacity-100'
-                              : 'bg-gradient-to-r from-violet-500/10 via-fuchsia-400/8 to-blue-400/10 opacity-65'
+                              ? 'bg-gradient-to-r from-violet-500/20 via-fuchsia-400/14 to-blue-400/18 opacity-100'
+                              : 'bg-gradient-to-r from-violet-500/10 via-fuchsia-400/8 to-blue-400/10 opacity-55'
                         }`}
                       />
-                      <div className="relative z-10 w-full bg-white/78 backdrop-blur-xl border border-gray-100 rounded-[2rem] overflow-hidden shadow-sm flex flex-col transition-all duration-300 focus-within:ring-1 focus-within:ring-violet-200 focus-within:bg-white/92">
+                      <div className={`relative z-10 w-full border border-gray-100 rounded-[2rem] overflow-hidden flex flex-col transition-all duration-300 focus-within:ring-1 focus-within:ring-violet-200 focus-within:bg-white/92 ${
+                        copyGlowState === 'success'
+                          ? 'bg-white/88 backdrop-blur-xl shadow-[0_12px_34px_rgba(125,211,252,0.18),0_10px_28px_rgba(217,70,239,0.14)]'
+                          : isExtractingCopy
+                            ? 'bg-white/84 backdrop-blur-xl shadow-[0_14px_36px_rgba(139,92,246,0.18)]'
+                            : 'bg-white/78 backdrop-blur-xl shadow-sm'
+                      }`}>
                         <input
                           type="text"
                           placeholder="输入主标题..."
@@ -4685,8 +4702,8 @@ const App: React.FC = () => {
                         ></textarea>
                       </div>
                     </div>
-                    <div className={`prompt-status-widget ${isExtractingCopy ? 'is-generating' : ''}`}>
-                      <div className={`holo-ticker max-w-[320px] ml-auto ${isExtractingCopy ? 'is-visible' : ''}`}>
+                    <div className={`prompt-status-widget ${isExtractingCopy || copyGlowState === 'success' ? 'is-generating' : ''}`}>
+                      <div className={`holo-ticker max-w-[320px] ml-auto ${isExtractingCopy || copyGlowState === 'success' ? 'is-visible' : ''}`}>
                         <div className="holo-ticker-track">
                           <span className="holo-ticker-line">{MODEL_HINT_COPY}</span>
                           <span className="holo-ticker-line">最长 60 秒，首次慢响应自动重试 1 次</span>
