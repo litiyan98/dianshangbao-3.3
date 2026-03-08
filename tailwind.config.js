@@ -29,6 +29,8 @@ export default {
         'rainbow': 'rainbowSweep 3s linear infinite',
         'fade-in-up': 'fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards',
         shimmer: 'shimmer 2s linear infinite',
+        'phase-text': 'phaseText 2.8s ease-in-out infinite',
+        'ambient-drift': 'ambientDrift 6s ease-in-out infinite',
       },
       keyframes: {
         'gradient-x': {
@@ -79,6 +81,16 @@ export default {
         },
         shimmer: {
           '100%': { transform: 'translateX(100%)' },
+        },
+        phaseText: {
+          '0%': { opacity: '0.28', color: 'rgba(156, 163, 175, 0.72)' },
+          '35%': { opacity: '0.82', color: 'rgba(107, 114, 128, 0.92)' },
+          '65%': { opacity: '0.14', color: 'rgba(209, 213, 219, 0.68)' },
+          '100%': { opacity: '0.78', color: 'rgba(75, 85, 99, 0.9)' },
+        },
+        ambientDrift: {
+          '0%, 100%': { transform: 'translate3d(-2%, 0, 0) scale(1)' },
+          '50%': { transform: 'translate3d(2%, -1.5%, 0) scale(1.04)' },
         },
       },
     },

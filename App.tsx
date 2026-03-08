@@ -4116,8 +4116,8 @@ const App: React.FC = () => {
         </span>
       </div>
       <div className="relative h-6 w-full flex justify-center items-center overflow-hidden">
-        <p key={logIndex} className="absolute text-[14px] md:text-[15px] text-gray-500 font-medium tracking-wide animate-[fadeInUp_0.5s_ease-out_forwards]">
-          {logMessages[logIndex]}
+        <p key={logIndex} className="absolute text-[14px] md:text-[15px] font-medium tracking-wide animate-[fadeInUp_0.5s_ease-out_forwards]">
+          <span className="inline-block animate-phase-text">{logMessages[logIndex]}</span>
         </p>
       </div>
     </div>
@@ -4524,7 +4524,7 @@ const App: React.FC = () => {
                       <div
                         className={`absolute inset-x-8 -bottom-6 h-16 rounded-full blur-3xl pointer-events-none transition-all duration-500 ${
                           promptGlowState === 'success'
-                            ? 'bg-gradient-to-r from-fuchsia-400/20 via-sky-300/18 to-violet-400/20 opacity-100'
+                            ? 'bg-[linear-gradient(90deg,rgba(244,114,182,0.22)_0%,rgba(251,191,36,0.18)_26%,rgba(74,222,128,0.16)_52%,rgba(56,189,248,0.18)_76%,rgba(168,85,247,0.22)_100%)] opacity-100'
                             : isGeneratingPrompt
                               ? 'bg-gradient-to-r from-violet-500/18 via-fuchsia-400/12 to-blue-400/16 opacity-100'
                               : 'bg-gradient-to-r from-violet-500/8 via-fuchsia-400/6 to-blue-400/8 opacity-35'
@@ -4534,7 +4534,7 @@ const App: React.FC = () => {
                         isGeneratingPrompt
                           ? 'bg-white/96 shadow-[0_14px_40px_rgba(139,92,246,0.20)] -translate-y-1 ring-1 ring-violet-400/45 border-transparent'
                           : promptGlowState === 'success'
-                            ? 'bg-white/92 shadow-[0_12px_34px_rgba(125,211,252,0.18),0_10px_28px_rgba(217,70,239,0.14)] translate-y-0 border border-violet-100/60'
+                            ? 'bg-white/92 shadow-[0_14px_38px_rgba(244,114,182,0.14),0_12px_34px_rgba(251,191,36,0.10),0_10px_30px_rgba(56,189,248,0.14)] translate-y-0 border border-violet-100/60'
                             : 'bg-white/82 shadow-sm translate-y-0 border border-violet-100 focus-within:ring-1 focus-within:ring-violet-300'
                       }`}>
                         <div className={`absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-violet-200/40 to-transparent pointer-events-none z-10 transition-opacity duration-500 ${isGeneratingPrompt ? 'opacity-100 animate-[shimmer_1.5s_infinite]' : 'opacity-0'}`}></div>
@@ -4673,7 +4673,7 @@ const App: React.FC = () => {
                       <div
                         className={`absolute inset-x-6 -bottom-7 h-24 rounded-full blur-3xl pointer-events-none transition-all duration-500 ${
                           copyGlowState === 'success'
-                            ? 'bg-gradient-to-r from-fuchsia-400/22 via-sky-300/18 to-violet-400/22 opacity-100'
+                            ? 'bg-[linear-gradient(90deg,rgba(244,114,182,0.24)_0%,rgba(251,191,36,0.20)_24%,rgba(74,222,128,0.18)_50%,rgba(56,189,248,0.20)_74%,rgba(168,85,247,0.24)_100%)] opacity-100'
                             : isExtractingCopy
                               ? 'bg-gradient-to-r from-violet-500/20 via-fuchsia-400/14 to-blue-400/18 opacity-100'
                               : 'bg-gradient-to-r from-violet-500/10 via-fuchsia-400/8 to-blue-400/10 opacity-55'
@@ -4681,7 +4681,7 @@ const App: React.FC = () => {
                       />
                       <div className={`relative z-10 w-full border border-gray-100 rounded-[2rem] overflow-hidden flex flex-col transition-all duration-300 focus-within:ring-1 focus-within:ring-violet-200 focus-within:bg-white/92 ${
                         copyGlowState === 'success'
-                          ? 'bg-white/88 backdrop-blur-xl shadow-[0_12px_34px_rgba(125,211,252,0.18),0_10px_28px_rgba(217,70,239,0.14)]'
+                          ? 'bg-white/88 backdrop-blur-xl shadow-[0_14px_38px_rgba(244,114,182,0.14),0_12px_34px_rgba(251,191,36,0.10),0_10px_30px_rgba(56,189,248,0.14)]'
                           : isExtractingCopy
                             ? 'bg-white/84 backdrop-blur-xl shadow-[0_14px_36px_rgba(139,92,246,0.18)]'
                             : 'bg-white/78 backdrop-blur-xl shadow-sm'
@@ -4774,10 +4774,10 @@ const App: React.FC = () => {
                 {renderLoadingMonitor()}
 
                 <div className="w-full max-w-3xl mx-auto">
-                  <div className="relative w-full rounded-[2rem] overflow-hidden bg-[#fafafa] shadow-sm flex flex-col items-center justify-center group" style={{ aspectRatio: currentAspectRatio, minHeight: 320 }}>
-                    <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-transparent animate-pulse" style={{ animationDuration: '3s' }}></div>
-                    <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/80 to-transparent animate-[shimmer_1.5s_infinite] z-10"></div>
-                    <span className="relative z-20 text-[12px] font-mono text-gray-400 tracking-[0.2em] uppercase">
+                  <div className="relative w-full rounded-[2rem] overflow-hidden bg-[linear-gradient(180deg,rgba(251,251,252,0.98)_0%,rgba(244,244,246,0.94)_100%)] shadow-sm flex flex-col items-center justify-center group" style={{ aspectRatio: currentAspectRatio, minHeight: 320 }}>
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_24%,rgba(168,85,247,0.10),transparent_48%),radial-gradient(circle_at_50%_100%,rgba(59,130,246,0.08),transparent_42%)] animate-ambient-drift"></div>
+                    <div className="absolute inset-0 opacity-80 bg-[linear-gradient(115deg,transparent_18%,rgba(255,255,255,0.12)_34%,rgba(255,255,255,0.72)_50%,rgba(255,255,255,0.12)_66%,transparent_82%)] bg-[length:170%_100%] animate-[shimmer_1.8s_linear_infinite] z-10"></div>
+                    <span className="relative z-20 text-[12px] font-mono tracking-[0.2em] uppercase animate-phase-text">
                       Rendering...
                     </span>
                   </div>
@@ -4840,21 +4840,21 @@ const App: React.FC = () => {
                         <div
                           key={index}
                           ref={el => suiteRefs.current[index] = el}
-                          className={`glass-panel p-4 rounded-[32px] space-y-4 relative group bg-white/60 border border-stone-100 shadow-sm overflow-hidden ${img ? 'animate-fade-in-up' : ''}`}
-                          style={img ? { animationDelay: `${index * 0.3 + 0.1}s` } : undefined}
+                          className={`glass-panel rounded-[32px] relative group bg-white/62 border border-stone-100 shadow-sm overflow-hidden ${img ? 'p-4 space-y-4 animate-fade-in-up' : 'p-0'} `}
+                          style={img ? { animationDelay: `${index * 0.3 + 0.1}s` } : { aspectRatio: currentAspectRatio, minHeight: 200 }}
                         >
-                          <div className="absolute top-6 left-6 z-10 flex flex-col gap-2">
+                          <div className="absolute top-6 left-6 z-20 flex flex-col gap-2">
                             <div className="bg-black/60 backdrop-blur-md text-white text-[9px] font-black px-3 py-1 rounded-full border border-white/10">
                               {labels[index]}
                             </div>
                           </div>
                           
-                          <div
-                            className="relative rounded-[24px] overflow-hidden bg-stone-50 flex items-center justify-center"
-                            style={{ aspectRatio: currentAspectRatio, minHeight: 200 }}
-                          >
-                            {img ? (
-                              <>
+                          {img ? (
+                            <>
+                              <div
+                                className="relative rounded-[24px] overflow-hidden bg-[linear-gradient(180deg,rgba(250,250,250,0.96)_0%,rgba(245,245,247,0.88)_100%)] flex items-center justify-center"
+                                style={{ aspectRatio: currentAspectRatio, minHeight: 200 }}
+                              >
                                 <img
                                   src={img}
                                   className="w-full h-full object-contain transition-opacity duration-700 cursor-zoom-in"
@@ -4870,38 +4870,36 @@ const App: React.FC = () => {
                                 {renderLiveLogoOverlay()}
                                 {renderLiveImageLayerOverlay(index)}
                                 {renderLiveTextOverlay(true)}
-                              </>
-                            ) : slotState === 'error' ? (
-                              <div className="relative w-full aspect-square rounded-[2rem] overflow-hidden bg-[#fafafa] shadow-sm flex flex-col items-center justify-center">
-                                <div className="absolute inset-0 bg-gradient-to-br from-rose-500/5 to-transparent"></div>
-                                <span className="relative z-20 text-[12px] font-mono text-gray-400 tracking-[0.2em] uppercase">
-                                  Retry Needed
-                                </span>
-                                <span className="relative z-20 mt-3 text-[12px] text-gray-500">
-                                  该张因模型波动未完成
-                                </span>
                               </div>
-                            ) : (
-                              <div className="relative w-full aspect-square rounded-[2rem] overflow-hidden bg-[#fafafa] shadow-sm flex flex-col items-center justify-center group">
-                                <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-transparent animate-pulse" style={{ animationDuration: '3s' }}></div>
-                                <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/80 to-transparent animate-[shimmer_1.5s_infinite] z-10"></div>
-                                <span className="relative z-20 text-[12px] font-mono text-gray-400 tracking-[0.2em] uppercase">
-                                  Rendering...
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                          
-                          {img && (
-                            <button 
-                              onClick={async () => {
-                                const packed = await composeResultDownloadDataUrl(img);
-                                await triggerDownload(packed, buildDownloadFileName(`套图${index + 1}`));
-                              }}
-                              className="w-full py-2.5 bg-stone-900 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-[#002FA7] transition-all active:scale-95 flex items-center justify-center gap-2"
-                            >
-                              <Download size={12} /> 下载此张
-                            </button>
+                              <button 
+                                onClick={async () => {
+                                  const packed = await composeResultDownloadDataUrl(img);
+                                  await triggerDownload(packed, buildDownloadFileName(`套图${index + 1}`));
+                                }}
+                                className="w-full py-2.5 bg-stone-900 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-[#002FA7] transition-all active:scale-95 flex items-center justify-center gap-2"
+                              >
+                                <Download size={12} /> 下载此张
+                              </button>
+                            </>
+                          ) : slotState === 'error' ? (
+                            <div className="relative w-full h-full rounded-[32px] overflow-hidden bg-[linear-gradient(180deg,rgba(255,250,250,0.96)_0%,rgba(255,244,244,0.92)_100%)] flex flex-col items-center justify-center">
+                              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,rgba(251,113,133,0.10),transparent_55%)] animate-ambient-drift"></div>
+                              <span className="relative z-20 text-[12px] font-mono text-gray-400 tracking-[0.2em] uppercase animate-phase-text">
+                                Retry Needed
+                              </span>
+                              <span className="relative z-20 mt-3 text-[12px] text-gray-500">
+                                该张因模型波动未完成
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="relative w-full h-full rounded-[32px] overflow-hidden bg-[linear-gradient(180deg,rgba(251,251,252,0.98)_0%,rgba(244,244,246,0.94)_100%)] flex flex-col items-center justify-center">
+                              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_22%,rgba(168,85,247,0.10),transparent_46%),radial-gradient(circle_at_50%_100%,rgba(59,130,246,0.08),transparent_42%)] animate-ambient-drift"></div>
+                              <div className="absolute inset-0 opacity-80 bg-[linear-gradient(115deg,transparent_18%,rgba(255,255,255,0.12)_34%,rgba(255,255,255,0.72)_50%,rgba(255,255,255,0.12)_66%,transparent_82%)] bg-[length:170%_100%] animate-[shimmer_1.8s_linear_infinite]"></div>
+                              <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-white/35 to-transparent"></div>
+                              <span className="relative z-20 text-[12px] font-mono tracking-[0.2em] uppercase animate-phase-text">
+                                Rendering...
+                              </span>
+                            </div>
                           )}
                         </div>
                       );
