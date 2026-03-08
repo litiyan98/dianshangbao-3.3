@@ -167,11 +167,24 @@ const TEXT_GEN_LOCK_KEY = 'visionEngine_textLock';
 const UNSUPPORTED_COLOR_FN_RE = /\b(oklch|oklab)\(/i;
 type TextGlowState = 'idle' | 'generating' | 'success';
 type SuiteSlotState = 'idle' | 'loading' | 'success' | 'error';
+type MatrixLockLevel = 'strict' | 'balanced' | 'editorial';
 
-const SUITE_VARIATION_PROMPTS = [
-  'Commercial product photography, studio lighting, high contrast, clean background, highly detailed, eye-catching. Keep the exact uploaded product identity, bottle shape, label layout, and packaging artwork unchanged.',
-  'Lifestyle photography in a warm real-world environment, natural sunlight, cinematic lighting, depth of field, cozy atmosphere. Keep the exact uploaded product identity, bottle shape, label layout, and packaging artwork unchanged.',
-  'Minimalist high-end aesthetic, geometric background, soft diffuse reflection, close-up material details, Apple product photography style. Keep the exact uploaded product identity, bottle shape, label layout, and packaging artwork unchanged.',
+const MATRIX_PROFILES: Array<{
+  variationPrompt: string;
+  lockLevel: MatrixLockLevel;
+}> = [
+  {
+    lockLevel: 'strict',
+    variationPrompt: 'Commercial product photography, studio lighting, high contrast, clean background, highly detailed, eye-catching. Keep the exact uploaded product identity, bottle shape, label layout, and packaging artwork unchanged. No camera angle change. Only optimize lighting, reflections, and peripheral splash details around the same product.',
+  },
+  {
+    lockLevel: 'balanced',
+    variationPrompt: 'Lifestyle photography in a warm real-world environment, natural sunlight, cinematic lighting, depth of field, cozy atmosphere. Keep the exact uploaded product identity, bottle shape, label layout, and packaging artwork unchanged. Allow only a subtle perspective change of the same bottle and premium material polish such as clearer liquid, improved condensation, and refined highlights.',
+  },
+  {
+    lockLevel: 'editorial',
+    variationPrompt: 'Minimalist high-end aesthetic, geometric background, soft diffuse reflection, close-up material details, Apple product photography style. Keep the exact uploaded product identity and packaging design recognizable. Allow a moderate camera angle shift, bolder scene design, and editorial props, but do not change the bottle into a different product.',
+  },
 ];
 
 type StepHaloTitleProps = {
@@ -2891,7 +2904,7 @@ const App: React.FC = () => {
       const currentRenderConfig = { ...textConfig, title: '', detail: '' };
       let successCount = 0;
 
-      const matrixTasks = SUITE_VARIATION_PROMPTS.map((variationPrompt, index) => (async () => {
+      const matrixTasks = MATRIX_PROFILES.map(({ variationPrompt, lockLevel }, index) => (async () => {
         try {
           const aiResult = await generateScenarioImage(
             [sourceImages[0].split(',')[1]],
@@ -2911,7 +2924,8 @@ const App: React.FC = () => {
             safeIsRedesignMode,
             localUserId,
             1,
-            true
+            true,
+            lockLevel
           );
 
           if (typeof aiResult !== 'string' || !aiResult) {

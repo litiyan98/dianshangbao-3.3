@@ -686,7 +686,8 @@ function buildEnhancedPrompt(
   aspectRatio: AspectRatio = '1:1', 
   layout: CompositionLayout = 'center',
   redesignPrompt?: string,
-  targetPlatform: string = '通用电商'
+  targetPlatform: string = '通用电商',
+  productLockLevel: 'strict' | 'balanced' | 'editorial' = 'strict'
 ): string {
   let ratioDirective = "";
   if (aspectRatio === '3:4' || aspectRatio === '9:16') {
@@ -776,9 +777,19 @@ WARNING: Apply ONLY the lighting, color, and vibe. Do NOT introduce any new obje
 
   const styleDirective = (styleImageBase64 && !visualDNA) ? `[STYLE TRANSFER] Extract and replicate the exact color grading, lighting, and aesthetic DNA of the SECOND image.\n` : "";
   const variationDirective = variationPrompt ? `\n[MANDATORY COMMERCIAL VARIATION] ${variationPrompt}\n` : "";
-  const productIdentityLock = redesignPrompt
-    ? ""
-    : `\n[ABSOLUTE PRODUCT ID LOCK - CRITICAL] Treat the uploaded product image as the only canonical SKU reference. You MUST keep the exact same product identity in the final image. Preserve the exact bottle silhouette, cap shape, neck and base proportions, label layout, branding position, packaging color blocking, and printed fruit/package artwork from the uploaded product. Do NOT redesign, substitute, simplify, or replace it with a similar beverage or a generic bottle. Only change scene, lighting, camera framing, props, reflections, and environment around the SAME product. Product label graphics that already exist on the uploaded package must remain consistent; the NO TEXT rule only forbids adding new scene text or watermarks.\n`;
+  const productIdentityLock = (() => {
+    if (redesignPrompt) return "";
+
+    switch (productLockLevel) {
+      case 'balanced':
+        return `\n[ABSOLUTE PRODUCT ID LOCK - BALANCED] The uploaded product image remains the only canonical SKU reference. Preserve the exact same product identity, bottle silhouette, cap shape, overall proportions, label layout, branding placement, and packaging artwork. A subtle perspective shift of the SAME bottle is allowed, but do NOT redesign, relabel, simplify, or replace it with a similar beverage. You may only enhance material realism, condensation, reflections, refraction, and premium lighting around the same package.\n`;
+      case 'editorial':
+        return `\n[ABSOLUTE PRODUCT ID LOCK - EDITORIAL] The uploaded product image is still the canonical SKU. Keep the product immediately recognizable as the same bottle and the same packaging design, including cap form, bottle structure, label system, branding position, color blocking, and fruit/package artwork. A moderate camera angle shift and stronger art direction are allowed, but the product itself must remain the same SKU. Never substitute it with a different beverage, generic bottle, or redesigned package.\n`;
+      case 'strict':
+      default:
+        return `\n[ABSOLUTE PRODUCT ID LOCK - STRICT] Treat the uploaded product image as the only canonical SKU reference. You MUST keep the exact same product identity in the final image. Preserve the exact bottle silhouette, cap shape, neck and base proportions, label layout, branding position, packaging color blocking, and printed fruit/package artwork from the uploaded product. Do NOT redesign, substitute, simplify, or replace it with a similar beverage or a generic bottle. No camera angle change is allowed. Only change scene, lighting, reflections, and peripheral environment around the SAME product. Product label graphics that already exist on the uploaded package must remain consistent; the NO TEXT rule only forbids adding new scene text or watermarks.\n`;
+    }
+  })();
 
   // 在最终拼接前，如果存在改款指令，将其提权到极高的优先级
   let finalRedesignOverride = "";
@@ -809,10 +820,11 @@ export async function generateScenarioImage(
   isRedesignMode: boolean = false,
   userId?: string,
   count: 1 | 3 = 1,
-  skipPromptExpansion: boolean = false
+  skipPromptExpansion: boolean = false,
+  productLockLevel: 'strict' | 'balanced' | 'editorial' = 'strict'
 ): Promise<string | string[]> {
   
-  const finalPrompt = buildEnhancedPrompt(scenario, analysis, userIntent, textConfig, mode, styleImageBase64, visualDNA, variationPrompt, aspectRatio, layout, redesignPrompt, targetPlatform);
+  const finalPrompt = buildEnhancedPrompt(scenario, analysis, userIntent, textConfig, mode, styleImageBase64, visualDNA, variationPrompt, aspectRatio, layout, redesignPrompt, targetPlatform, productLockLevel);
 
   let parts: any[] = [];
   
