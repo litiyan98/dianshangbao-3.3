@@ -236,6 +236,7 @@ const App: React.FC = () => {
   const [isAvatarMenuOpen, setIsAvatarMenuOpen] = useState(false);
   const [isCreditsLoading, setIsCreditsLoading] = useState(false);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [authTokenReady, setAuthTokenReady] = useState(false);
   const [generationProgress, setGenerationProgress] = useState<string>("");
   const [loadingBrief, setLoadingBrief] = useState('');
 
@@ -1927,22 +1928,26 @@ const App: React.FC = () => {
             // 核心修复：防止存入 "undefined" 字符串，优先使用 idToken，兜底使用 accessToken
             const validToken = state.idToken || state.accessToken || "";
             localStorage.setItem('authing_token', validToken);
+            setAuthTokenReady(Boolean(validToken));
           } catch (userInfoErr: any) {
             console.warn("🚨 获取用户信息失败，Token 可能已过期，正在清理本地状态:", userInfoErr);
             // 遇到无效 Token，强制清空并恢复未登录状态，绝不阻断 UI
             setIsLoggedIn(false);
             setUserInfo(null);
+            setAuthTokenReady(false);
             localStorage.removeItem('authing_token');
           }
         } else {
           setIsLoggedIn(false);
           setUserInfo(null);
+          setAuthTokenReady(false);
           localStorage.removeItem('authing_token');
         }
       } catch (err) {
         console.error("Authing init error:", err);
         setIsLoggedIn(false);
         setUserInfo(null);
+        setAuthTokenReady(false);
       } finally {
         setIsAuthLoading(false);
       }
@@ -2024,20 +2029,44 @@ const App: React.FC = () => {
   }, [userVipExpireDate]);
 
   useEffect(() => {
-    // 监听底层的 Token 过期事件
-    const handleAuthExpired = () => {
-      // 如果你有 setToken 或 setIsLoggedIn 的状态，请在这里重置，例如：
+    const handleAuthExpired = (event: Event) => {
+      const detail = (event as CustomEvent<{ message?: string }>).detail;
       setIsLoggedIn(false);
       setUserInfo(null);
-      
-      // 提示用户并延迟刷新页面以彻底清除内存状态
-      alert("登录已过期，为了保护您的数据安全，请重新登录。");
-      window.location.reload();
+      setAuthTokenReady(false);
+      localStorage.removeItem('authing_token');
+      setToastMessage(detail?.message || '登录状态尚未就绪或已失效，请重新登录后再试。');
     };
 
-    window.addEventListener('auth-expired', handleAuthExpired);
-    return () => window.removeEventListener('auth-expired', handleAuthExpired);
+    window.addEventListener('auth-expired', handleAuthExpired as EventListener);
+    return () => window.removeEventListener('auth-expired', handleAuthExpired as EventListener);
   }, []);
+
+  const authReady = !isAuthLoading && isLoggedIn && !!userInfo && authTokenReady;
+
+  const isAuthErrorMessage = useCallback((message: string) => {
+    return (
+      message.includes('AUTH_REQUIRED') ||
+      message.includes('登录状态尚未就绪') ||
+      message.includes('登录身份已失效') ||
+      message.includes('身份认证失败') ||
+      message.includes('鉴权被拒')
+    );
+  }, []);
+
+  const ensureAuthReady = useCallback((engineLabel: string) => {
+    if (isAuthLoading) {
+      setToastMessage('登录状态同步中，请稍后再试。');
+      return false;
+    }
+
+    if (!authReady) {
+      setToastMessage(`${engineLabel}暂不可用，请重新登录或等待登录状态同步完成。`);
+      return false;
+    }
+
+    return true;
+  }, [authReady, isAuthLoading]);
 
   const handleLogout = async () => {
     await authing.logoutWithRedirect({ redirectUri: window.location.origin });
@@ -2548,6 +2577,7 @@ const App: React.FC = () => {
 
   const handleSmartPrompt = async () => {
     if (isAnalyzingPrompt) return;
+    if (!ensureAuthReady('灵感引擎')) return;
     if (!localUserId) {
       setToastMessage('用户身份初始化中，请稍后重试');
       return;
@@ -2616,6 +2646,7 @@ const App: React.FC = () => {
 
   const handleExtractCopy = async () => {
     if (isExtractingCopy) return;
+    if (!ensureAuthReady('文案引擎')) return;
     if (!localUserId) {
       setToastMessage('用户身份初始化中，请稍后重试');
       return;
@@ -2786,6 +2817,7 @@ const App: React.FC = () => {
   };
 
   const handleGenerate = async () => {
+    if (!ensureAuthReady('单张生图引擎')) return;
     if (isSingleCreditsInsufficient) {
       setToastMessage('生图算力不足，请先补充额度');
       openPaymentModalForAssetError('INSUFFICIENT_QUOTA');
@@ -2864,6 +2896,9 @@ const App: React.FC = () => {
       } else if (errMessage.includes('VIP_EXPIRED')) {
         openPaymentModalForAssetError('VIP_EXPIRED');
         setStep('upload');
+      } else if (isAuthErrorMessage(errMessage)) {
+        setToastMessage('登录状态尚未就绪或已失效，请重新登录后再试。');
+        setStep('upload');
       } else {
         alert(err.message);
         setStep('upload');
@@ -2876,6 +2911,7 @@ const App: React.FC = () => {
   };
 
   const handleGenerateSuite = async () => {
+    if (!ensureAuthReady('营销矩阵引擎')) return;
     if (isMatrixCreditsInsufficient) {
       setToastMessage('生图算力不足，生成 3 张至少需要 3 点额度');
       openPaymentModalForAssetError('INSUFFICIENT_QUOTA');
@@ -4432,7 +4468,7 @@ const App: React.FC = () => {
                       <MorphingAiButton
                         onClick={handleSmartPrompt}
                         loading={isAnalyzingPrompt}
-                        disabled={isAnalyzingPrompt}
+                        disabled={isAnalyzingPrompt || !authReady}
                         icon={<Wand2 size={16} />}
                         idleText={userPrompt ? '重新生成灵感' : 'AI 帮我写神级提示词'}
                         loadingText={`✨ 灵感引擎思考中 ${promptCountdown ?? 60}s`}
@@ -4576,7 +4612,7 @@ const App: React.FC = () => {
                       <MorphingAiButton
                         onClick={handleExtractCopy}
                         loading={isExtractingCopy}
-                        disabled={isExtractingCopy}
+                        disabled={isExtractingCopy || !authReady}
                         icon={<Sparkles size={12} />}
                         idleText="爆款文案制作"
                         loadingText={`爆款文案制作中 ${copywritingCountdown ?? 60}s`}
@@ -4598,7 +4634,7 @@ const App: React.FC = () => {
                     <button
                       type="button"
                       onClick={handleGenerateSuite}
-                      disabled={isProcessing || sourceImages.length === 0}
+                      disabled={isProcessing || sourceImages.length === 0 || !authReady}
                       className={`flex items-center justify-center gap-3 w-[300px] py-4 rounded-2xl font-medium text-lg transition-all duration-300 border-none ${isMatrixRainbow ? 'bg-gradient-to-r from-violet-600 via-fuchsia-500 to-blue-600 bg-[length:200%_auto] animate-rainbow text-white shadow-[0_0_20px_rgba(168,85,247,0.4)]' : 'bg-[#111827] hover:bg-[#1a2333] text-white shadow-xl hover:shadow-2xl'} disabled:opacity-60 disabled:cursor-not-allowed`}
                     >
                       <span className="flex items-center gap-2">
@@ -4617,7 +4653,7 @@ const App: React.FC = () => {
                     <button
                       type="button"
                       onClick={handleGenerate}
-                      disabled={isProcessing || sourceImages.length === 0}
+                      disabled={isProcessing || sourceImages.length === 0 || !authReady}
                       className="relative z-10 flex items-center justify-center gap-2 w-[300px] py-4 bg-transparent border border-gray-200 hover:border-gray-300 text-gray-600 hover:text-gray-900 rounded-2xl font-medium text-lg transition-all duration-300 hover:bg-gray-50/50 disabled:opacity-60 disabled:cursor-not-allowed"
                     >
                       生成单张精修

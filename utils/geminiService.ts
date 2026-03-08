@@ -2,6 +2,11 @@ import { MarketAnalysis, ScenarioType, TextConfig, GenerationMode, CompositionLa
 
 let latestAssetSnapshot: { image_quota?: number | null; vip_expire_date?: string | null } | null = null;
 
+function emitAuthExpired(message: string) {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent('auth-expired', { detail: { message } }));
+}
+
 function captureLatestAssetSnapshot(data: any) {
   if (!data || typeof data !== "object" || Array.isArray(data)) return;
   const hasQuota = Object.prototype.hasOwnProperty.call(data, "image_quota");
@@ -53,8 +58,8 @@ async function safeFetchJson(url: string, payload: any, timeoutMs: number = 3000
 
         if (response.status === 401) {
           localStorage.removeItem('authing_token');
-          window.location.href = '/'; // 强制刷新回首页重新走鉴权流程
-          throw new Error("您的登录身份已失效或异常，正在为您重新刷新...");
+          emitAuthExpired('登录状态尚未就绪或已失效，请重新登录后再试。');
+          throw new Error('AUTH_REQUIRED: 登录状态尚未就绪或已失效，请重新登录后再试。');
         }
 
         if (response.status === 403) {
@@ -69,8 +74,8 @@ async function safeFetchJson(url: string, payload: any, timeoutMs: number = 3000
           const isAuth403 = backendError === 'FORBIDDEN' || String(backendMessage).includes('鉴权');
           if (isAuth403) {
             localStorage.removeItem('authing_token');
-            window.location.href = '/'; // 强制刷新回首页重新走鉴权流程
-            throw new Error("您的登录身份已失效或异常，正在为您重新刷新...");
+            emitAuthExpired('登录状态尚未就绪或已失效，请重新登录后再试。');
+            throw new Error('AUTH_REQUIRED: 登录状态尚未就绪或已失效，请重新登录后再试。');
           }
           // 业务型 403（如算力不足）直接透传给前端业务层处理
           throw new Error(parsedDetail?.error || backendMessage || "请求被拒绝(403)");
@@ -870,7 +875,7 @@ export async function generateScenarioImage(
     fullPayload,
     imageModelChain,
     60000,
-    0,
+    1,
     "生图引擎",
     {
       "gemini-3.1-flash-image-preview": 22000,
