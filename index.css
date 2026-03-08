@@ -675,71 +675,83 @@
 
 @keyframes status-text-phase {
   0% {
-    opacity: 0.24;
-    color: rgba(107, 114, 128, 0.52);
-    filter: blur(0.4px);
+    opacity: 0.18;
+    color: rgba(148, 163, 184, 0.42);
+    filter: blur(1px);
+    transform: translateY(1px);
+    letter-spacing: 0.14em;
   }
-  28% {
-    opacity: 0.74;
-    color: rgba(107, 114, 128, 0.76);
+  24% {
+    opacity: 0.78;
+    color: rgba(107, 114, 128, 0.82);
     filter: blur(0px);
+    transform: translateY(0);
+    letter-spacing: 0.18em;
   }
   52% {
-    opacity: 0.12;
-    color: rgba(148, 163, 184, 0.28);
-    filter: blur(0.9px);
+    opacity: 0.04;
+    color: rgba(203, 213, 225, 0.14);
+    filter: blur(1.6px);
+    transform: translateY(2px);
+    letter-spacing: 0.22em;
   }
   78% {
-    opacity: 0.96;
-    color: rgba(31, 41, 55, 0.86);
+    opacity: 1;
+    color: rgba(31, 41, 55, 0.96);
     filter: blur(0px);
+    transform: translateY(0);
+    letter-spacing: 0.18em;
   }
   100% {
-    opacity: 0.28;
-    color: rgba(107, 114, 128, 0.56);
-    filter: blur(0.3px);
+    opacity: 0.22;
+    color: rgba(107, 114, 128, 0.5);
+    filter: blur(0.8px);
+    transform: translateY(1px);
+    letter-spacing: 0.15em;
   }
 }
 
 @keyframes ambient-drift {
   0%,
   100% {
-    transform: translate3d(-2%, 0, 0) scale(1);
-    opacity: 0.72;
-    filter: saturate(100%);
+    transform: translate3d(-5%, -2%, 0) scale(1.01) rotate(-1.2deg);
+    opacity: 0.82;
+    filter: saturate(100%) brightness(100%);
   }
   50% {
-    transform: translate3d(2%, -1.5%, 0) scale(1.03);
+    transform: translate3d(6%, 2%, 0) scale(1.08) rotate(1.2deg);
     opacity: 1;
-    filter: saturate(108%);
+    filter: saturate(112%) brightness(102%);
   }
 }
 
 @keyframes loading-drift {
   0%,
   100% {
-    transform: translate3d(-3%, 0, 0) scale(1);
-    opacity: 0.72;
+    transform: translate3d(-8%, -2%, 0) scale(1.02) rotate(-1.5deg);
+    opacity: 0.78;
+    filter: brightness(100%);
   }
   50% {
-    transform: translate3d(3%, -1.2%, 0) scale(1.04);
+    transform: translate3d(8%, 2%, 0) scale(1.1) rotate(1.5deg);
     opacity: 1;
+    filter: brightness(104%);
   }
 }
 
 @keyframes light-sweep {
   0% {
-    transform: translateX(-36%) scaleX(0.92);
+    transform: translateX(-62%) scaleX(0.88);
     opacity: 0;
   }
   18% {
-    opacity: 0.68;
+    opacity: 0.52;
   }
-  58% {
-    opacity: 0.92;
+  46% {
+    opacity: 0.9;
   }
   100% {
-    transform: translateX(126%) scaleX(1.06);
+    transform: translateX(165%) scaleX(1.14);
     opacity: 0;
   }
 }
