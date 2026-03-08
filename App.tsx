@@ -4524,7 +4524,7 @@ const App: React.FC = () => {
                       <div
                         className={`absolute inset-x-8 -bottom-6 h-16 rounded-full blur-3xl pointer-events-none transition-all duration-500 ${
                           promptGlowState === 'success'
-                            ? 'bg-[linear-gradient(90deg,rgba(244,114,182,0.22)_0%,rgba(251,191,36,0.18)_26%,rgba(74,222,128,0.16)_52%,rgba(56,189,248,0.18)_76%,rgba(168,85,247,0.22)_100%)] opacity-100'
+                            ? 'bg-[linear-gradient(90deg,rgba(244,114,182,0.26)_0%,rgba(251,191,36,0.22)_24%,rgba(74,222,128,0.18)_50%,rgba(56,189,248,0.20)_74%,rgba(168,85,247,0.24)_100%)] [background-size:200%_100%] animate-rainbow opacity-100'
                             : isGeneratingPrompt
                               ? 'bg-gradient-to-r from-violet-500/18 via-fuchsia-400/12 to-blue-400/16 opacity-100'
                               : 'bg-gradient-to-r from-violet-500/8 via-fuchsia-400/6 to-blue-400/8 opacity-35'
@@ -4673,7 +4673,7 @@ const App: React.FC = () => {
                       <div
                         className={`absolute inset-x-6 -bottom-7 h-24 rounded-full blur-3xl pointer-events-none transition-all duration-500 ${
                           copyGlowState === 'success'
-                            ? 'bg-[linear-gradient(90deg,rgba(244,114,182,0.24)_0%,rgba(251,191,36,0.20)_24%,rgba(74,222,128,0.18)_50%,rgba(56,189,248,0.20)_74%,rgba(168,85,247,0.24)_100%)] opacity-100'
+                            ? 'bg-[linear-gradient(90deg,rgba(244,114,182,0.28)_0%,rgba(251,191,36,0.22)_24%,rgba(74,222,128,0.20)_50%,rgba(56,189,248,0.22)_74%,rgba(168,85,247,0.24)_100%)] [background-size:200%_100%] animate-rainbow opacity-100'
                             : isExtractingCopy
                               ? 'bg-gradient-to-r from-violet-500/20 via-fuchsia-400/14 to-blue-400/18 opacity-100'
                               : 'bg-gradient-to-r from-violet-500/10 via-fuchsia-400/8 to-blue-400/10 opacity-55'
@@ -4775,8 +4775,8 @@ const App: React.FC = () => {
 
                 <div className="w-full max-w-3xl mx-auto">
                   <div className="relative w-full rounded-[2rem] overflow-hidden bg-[linear-gradient(180deg,rgba(251,251,252,0.98)_0%,rgba(244,244,246,0.94)_100%)] shadow-sm flex flex-col items-center justify-center group" style={{ aspectRatio: currentAspectRatio, minHeight: 320 }}>
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_24%,rgba(168,85,247,0.10),transparent_48%),radial-gradient(circle_at_50%_100%,rgba(59,130,246,0.08),transparent_42%)] animate-ambient-drift"></div>
-                    <div className="absolute inset-0 opacity-80 bg-[linear-gradient(115deg,transparent_18%,rgba(255,255,255,0.12)_34%,rgba(255,255,255,0.72)_50%,rgba(255,255,255,0.12)_66%,transparent_82%)] bg-[length:170%_100%] animate-[shimmer_1.8s_linear_infinite] z-10"></div>
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_16%,rgba(255,255,255,0.84),transparent_24%),radial-gradient(circle_at_82%_82%,rgba(226,232,240,0.30),transparent_34%),linear-gradient(180deg,rgba(248,250,252,0.62)_0%,rgba(255,255,255,0)_72%)] animate-ambient-drift"></div>
+                    <div className="absolute inset-y-[-10%] left-[-42%] w-[58%] bg-[linear-gradient(110deg,transparent_12%,rgba(255,255,255,0.18)_34%,rgba(255,255,255,0.84)_50%,rgba(255,255,255,0.18)_66%,transparent_88%)] blur-3xl animate-light-sweep z-10"></div>
                     <span className="relative z-20 text-[12px] font-mono text-gray-500 tracking-[0.2em] uppercase animate-status-text">
                       Rendering...
                     </span>
@@ -4883,7 +4883,7 @@ const App: React.FC = () => {
                             </>
                           ) : slotState === 'error' ? (
                             <div className="relative w-full h-full rounded-[32px] overflow-hidden bg-[linear-gradient(180deg,rgba(255,250,250,0.96)_0%,rgba(255,244,244,0.92)_100%)] flex flex-col items-center justify-center">
-                              <div className="absolute inset-[-10%] bg-[radial-gradient(circle_at_50%_-8%,rgba(255,255,255,0.78),transparent_42%),radial-gradient(circle_at_50%_112%,rgba(251,191,36,0.10),transparent_40%)] animate-loading-drift"></div>
+                              <div className="absolute inset-[-10%] bg-[radial-gradient(circle_at_18%_18%,rgba(255,255,255,0.76),transparent_30%),radial-gradient(circle_at_82%_84%,rgba(254,226,226,0.22),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.32)_0%,rgba(255,255,255,0)_68%)] animate-loading-drift"></div>
                               <span className="relative z-20 text-[12px] font-mono text-gray-500 tracking-[0.2em] uppercase animate-status-text">
                                 Retry Needed
                               </span>
@@ -4893,10 +4893,8 @@ const App: React.FC = () => {
                             </div>
                           ) : (
                             <div className="relative w-full h-full rounded-[32px] overflow-hidden bg-[linear-gradient(180deg,rgba(251,251,252,0.99)_0%,rgba(243,244,246,0.96)_100%)] flex flex-col items-center justify-center">
-                              <div className="absolute inset-[-12%] bg-[radial-gradient(circle_at_50%_-8%,rgba(255,255,255,0.90),transparent_42%),radial-gradient(circle_at_50%_112%,rgba(226,232,240,0.34),transparent_42%)] animate-loading-drift"></div>
-                              <div className="absolute inset-y-[-12%] left-[-42%] w-[60%] bg-white/55 blur-3xl animate-light-sweep"></div>
-                              <div className="absolute inset-0 opacity-75 bg-[linear-gradient(115deg,transparent_20%,rgba(255,255,255,0.08)_36%,rgba(255,255,255,0.60)_50%,rgba(255,255,255,0.08)_64%,transparent_80%)] bg-[length:180%_100%] animate-[shimmer_2.2s_linear_infinite]"></div>
-                              <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-white/28 to-transparent"></div>
+                              <div className="absolute inset-[-12%] bg-[radial-gradient(circle_at_18%_16%,rgba(255,255,255,0.86),transparent_26%),radial-gradient(circle_at_82%_82%,rgba(226,232,240,0.28),transparent_34%),linear-gradient(180deg,rgba(248,250,252,0.58)_0%,rgba(255,255,255,0)_72%)] animate-loading-drift"></div>
+                              <div className="absolute inset-y-[-12%] left-[-42%] w-[60%] bg-[linear-gradient(110deg,transparent_12%,rgba(255,255,255,0.16)_34%,rgba(255,255,255,0.82)_50%,rgba(255,255,255,0.16)_66%,transparent_88%)] blur-3xl animate-light-sweep"></div>
                               <span className="relative z-20 text-[12px] font-mono text-gray-500 tracking-[0.2em] uppercase animate-status-text">
                                 Rendering...
                               </span>

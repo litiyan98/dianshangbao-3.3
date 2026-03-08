@@ -639,6 +639,111 @@
   }
 }
 
+
+.animate-rainbow {
+  animation: rainbow-sweep 3s linear infinite;
+}
+
+.animate-status-text {
+  animation: status-text-phase 2.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  will-change: opacity, color, filter;
+}
+
+.animate-ambient-drift {
+  animation: ambient-drift 8.8s ease-in-out infinite;
+  will-change: transform, opacity, filter;
+}
+
+.animate-loading-drift {
+  animation: loading-drift 6.6s ease-in-out infinite;
+  will-change: transform, opacity, filter;
+}
+
+.animate-light-sweep {
+  animation: light-sweep 4.2s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+@keyframes rainbow-sweep {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
+}
+
+@keyframes status-text-phase {
+  0% {
+    opacity: 0.24;
+    color: rgba(107, 114, 128, 0.52);
+    filter: blur(0.4px);
+  }
+  28% {
+    opacity: 0.74;
+    color: rgba(107, 114, 128, 0.76);
+    filter: blur(0px);
+  }
+  52% {
+    opacity: 0.12;
+    color: rgba(148, 163, 184, 0.28);
+    filter: blur(0.9px);
+  }
+  78% {
+    opacity: 0.96;
+    color: rgba(31, 41, 55, 0.86);
+    filter: blur(0px);
+  }
+  100% {
+    opacity: 0.28;
+    color: rgba(107, 114, 128, 0.56);
+    filter: blur(0.3px);
+  }
+}
+
+@keyframes ambient-drift {
+  0%,
+  100% {
+    transform: translate3d(-2%, 0, 0) scale(1);
+    opacity: 0.72;
+    filter: saturate(100%);
+  }
+  50% {
+    transform: translate3d(2%, -1.5%, 0) scale(1.03);
+    opacity: 1;
+    filter: saturate(108%);
+  }
+}
+
+@keyframes loading-drift {
+  0%,
+  100% {
+    transform: translate3d(-3%, 0, 0) scale(1);
+    opacity: 0.72;
+  }
+  50% {
+    transform: translate3d(3%, -1.2%, 0) scale(1.04);
+    opacity: 1;
+  }
+}
+
+@keyframes light-sweep {
+  0% {
+    transform: translateX(-36%) scaleX(0.92);
+    opacity: 0;
+  }
+  18% {
+    opacity: 0.68;
+  }
+  58% {
+    opacity: 0.92;
+  }
+  100% {
+    transform: translateX(126%) scaleX(1.06);
+    opacity: 0;
+  }
+}
+
 @media (pointer: coarse) {
   .ai-engine-pill {
     opacity: 0.72;
