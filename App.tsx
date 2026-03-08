@@ -4657,14 +4657,18 @@ const App: React.FC = () => {
 
                 <section ref={posterRef} className={`bg-white rounded-[2rem] p-8 md:p-10 mb-8 mx-auto max-w-4xl border border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.03)] transition-shadow duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.06)] apple-reveal-base ${isPosterVisible ? 'apple-reveal-visible' : 'apple-reveal-hidden'}`}>
                   <StepHaloTitle step="05" title="海报文字设计" />
-                  <div className={`poster-copy-shell w-full mt-8 flex flex-col gap-4 ${
-                    isExtractingCopy ? 'is-generating' : copyGlowState === 'success' ? 'is-success' : ''
-                  }`}>
-                    <div className="poster-copy-ambient poster-copy-ambient--left" />
-                    <div className="poster-copy-ambient poster-copy-ambient--right" />
+                  <div className="w-full mt-8 flex flex-col gap-4">
                     <div className="relative w-full">
-                      <div className="absolute -inset-2 bg-gradient-to-r from-violet-500/15 via-fuchsia-500/10 to-blue-500/15 blur-3xl rounded-[3rem] animate-pulse pointer-events-none z-0" style={{ animationDuration: '4s' }}></div>
-                      <div className="relative z-10 w-full bg-white/70 backdrop-blur-xl border border-gray-100 rounded-[2rem] overflow-hidden shadow-sm flex flex-col transition-all duration-300 focus-within:ring-1 focus-within:ring-violet-200 focus-within:bg-white/90">
+                      <div
+                        className={`absolute inset-x-8 -bottom-6 h-20 rounded-full blur-3xl pointer-events-none transition-all duration-500 ${
+                          copyGlowState === 'success'
+                            ? 'bg-gradient-to-r from-fuchsia-400/18 via-sky-300/16 to-violet-400/18 opacity-100'
+                            : isExtractingCopy
+                              ? 'bg-gradient-to-r from-violet-500/18 via-fuchsia-400/14 to-blue-400/18 opacity-100'
+                              : 'bg-gradient-to-r from-violet-500/10 via-fuchsia-400/8 to-blue-400/10 opacity-65'
+                        }`}
+                      />
+                      <div className="relative z-10 w-full bg-white/78 backdrop-blur-xl border border-gray-100 rounded-[2rem] overflow-hidden shadow-sm flex flex-col transition-all duration-300 focus-within:ring-1 focus-within:ring-violet-200 focus-within:bg-white/92">
                         <input
                           type="text"
                           placeholder="输入主标题..."
