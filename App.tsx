@@ -2910,7 +2910,8 @@ const App: React.FC = () => {
             safeMaskImageBase64,
             safeIsRedesignMode,
             localUserId,
-            1
+            1,
+            true
           );
 
           if (typeof aiResult !== 'string' || !aiResult) {

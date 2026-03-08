@@ -230,6 +230,7 @@ export async function onRequestPost(context: { env: Env; request: Request }) {
     }
 
     const billingUserId = typeof payload.userId === 'string' ? payload.userId.trim() : '';
+    const skipPromptExpansion = payload.skipPromptExpansion === true;
     const isImageRequest = model.includes('flash-image');
 
     if (!billingUserId) {
@@ -275,7 +276,7 @@ export async function onRequestPost(context: { env: Env; request: Request }) {
     }
 
     // userId / count 仅用于后端鉴权，不转发给 Gemini
-    const { userId: _skipUserId, count: _skipCount, ...googlePayload } = payload as Record<string, any>;
+    const { userId: _skipUserId, count: _skipCount, skipPromptExpansion: _skipPromptExpansion, ...googlePayload } = payload as Record<string, any>;
 
     let modelData: any;
     const generatedImages: string[] = [];
@@ -286,16 +287,19 @@ export async function onRequestPost(context: { env: Env; request: Request }) {
         return json({ error: 'INVALID_REQUEST', message: '缺少有效的生图提示词' }, 400);
       }
 
-      const expandedPrompt = await expandPromptForSingleImage(env, userSeedPrompt);
-      const singlePayload = replaceFirstTextPart(googlePayload, expandedPrompt);
+      const shouldExpandPrompt = !skipPromptExpansion;
+      const effectivePrompt = shouldExpandPrompt
+        ? await expandPromptForSingleImage(env, userSeedPrompt)
+        : userSeedPrompt;
+      const singlePayload = replaceFirstTextPart(googlePayload, effectivePrompt);
       const result = await callGemini(env, model, singlePayload);
       if (!result.ok) return toUpstreamError(result);
 
       modelData = result.data;
       generatedImages.push(...extractGeminiImages(result.data));
 
-      if (modelData && typeof modelData === 'object' && !Array.isArray(modelData)) {
-        modelData.expanded_prompt = expandedPrompt;
+      if (modelData && typeof modelData === 'object' && !Array.isArray(modelData) && shouldExpandPrompt) {
+        modelData.expanded_prompt = effectivePrompt;
       }
     } else if (isImageRequest && requestedCount === 3) {
       const basePrompt = extractFirstTextPart(googlePayload);

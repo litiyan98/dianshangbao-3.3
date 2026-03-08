@@ -805,7 +805,8 @@ export async function generateScenarioImage(
   maskImageBase64?: string | null,
   isRedesignMode: boolean = false,
   userId?: string,
-  count: 1 | 3 = 1
+  count: 1 | 3 = 1,
+  skipPromptExpansion: boolean = false
 ): Promise<string | string[]> {
   
   const finalPrompt = buildEnhancedPrompt(scenario, analysis, userIntent, textConfig, mode, styleImageBase64, visualDNA, variationPrompt, aspectRatio, layout, redesignPrompt, targetPlatform);
@@ -834,6 +835,7 @@ export async function generateScenarioImage(
   const fullPayload = {
     userId,
     count,
+    skipPromptExpansion,
     contents: [
       { parts: parts }
     ],
