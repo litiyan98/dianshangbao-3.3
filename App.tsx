@@ -166,6 +166,13 @@ const TEXT_GEN_COUNT_KEY = 'visionEngine_textCount';
 const TEXT_GEN_LOCK_KEY = 'visionEngine_textLock';
 const UNSUPPORTED_COLOR_FN_RE = /\b(oklch|oklab)\(/i;
 type TextGlowState = 'idle' | 'generating' | 'success';
+type SuiteSlotState = 'idle' | 'loading' | 'success' | 'error';
+
+const SUITE_VARIATION_PROMPTS = [
+  'Commercial product photography, studio lighting, high contrast, clean background, highly detailed, eye-catching.',
+  'Lifestyle photography in a warm real-world environment, natural sunlight, cinematic lighting, depth of field, cozy atmosphere.',
+  'Minimalist high-end aesthetic, geometric background, soft diffuse reflection, close-up material details, Apple product photography style.',
+];
 
 type StepHaloTitleProps = {
   step: string;
@@ -295,6 +302,7 @@ const App: React.FC = () => {
   const [analysis, setAnalysis] = useState<MarketAnalysis | null>(null);
   
   const [resultImages, setResultImages] = useState<string[]>([]);
+  const [suiteSlotStates, setSuiteSlotStates] = useState<SuiteSlotState[]>([]);
   const [styleReferenceImage, setStyleReferenceImage] = useState<string | null>(null);
   const [visualDNA, setVisualDNA] = useState<VisualDNA | null>(null);
   const [isExtractingDNA, setIsExtractingDNA] = useState(false);
@@ -2117,8 +2125,9 @@ const App: React.FC = () => {
 
   // 结果图更新后，智能探测文案区域明暗并自动选择可读性色彩
   useEffect(() => {
-    if (!isAutoTextContrast || resultImages.length === 0) return;
-    autoTuneTextContrast(resultImages[0]);
+    const firstAvailableResultImage = resultImages.find((imageUrl): imageUrl is string => Boolean(imageUrl));
+    if (!isAutoTextContrast || !firstAvailableResultImage) return;
+    autoTuneTextContrast(firstAvailableResultImage);
   }, [isAutoTextContrast, resultImages, layout, textConfig.positionX, textConfig.positionY, textConfig.textAlign]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -2396,7 +2405,8 @@ const App: React.FC = () => {
       if (Number.isFinite(index) && resultImages[index]) return resultImages[index];
     }
 
-    if (resultImages.length > 0) return resultImages[0];
+    const firstAvailableResultImage = resultImages.find((imageUrl): imageUrl is string => Boolean(imageUrl));
+    if (firstAvailableResultImage) return firstAvailableResultImage;
     if (sourceImages.length > 0) return sourceImages[0];
     return null;
   };
@@ -2774,7 +2784,7 @@ const App: React.FC = () => {
       return;
     }
     setActiveGenerateCount(1);
-    setIsProcessing(true); setStep('result'); setResultImages([]); setIsSuiteMode(false);
+    setIsProcessing(true); setStep('result'); setResultImages([]); setSuiteSlotStates([]); setIsSuiteMode(false);
     setGenerationProgress('✨ AI 视觉神经元正在为您注入顶级商业摄影参数...');
     // 安全瘦身：保留后端契约字段，但固定为安全默认值，避免 UI 移除后触发 400/500
     const safeRedesignPrompt: string | undefined = undefined;
@@ -2864,7 +2874,7 @@ const App: React.FC = () => {
       return;
     }
     setActiveGenerateCount(3);
-    setIsProcessing(true); setStep('result'); setResultImages([]); setIsSuiteMode(true);
+    setIsProcessing(true); setStep('result'); setResultImages(['', '', '']); setSuiteSlotStates(['loading', 'loading', 'loading']); setIsSuiteMode(true);
     setGenerationProgress('🚀 正在并发渲染：高转化主图 / 沉浸场景 / 极简海报...');
     // 安全瘦身：保留后端契约字段，但固定为安全默认值，避免 UI 移除后触发 400/500
     const safeRedesignPrompt: string | undefined = undefined;
@@ -2878,33 +2888,35 @@ const App: React.FC = () => {
       const currentAnalysis = analysis || await analyzeProduct([sourceImages[0].split(',')[1]], localUserId);
       if (!analysis) setAnalysis(currentAnalysis);
 
-      const aiMatrixResults = await generateScenarioImage(
-        [sourceImages[0].split(',')[1]],
-        selectedScenario,
-        currentAnalysis,
-        userPrompt,
-        textConfig,
-        mode,
-        styleReferenceImage ? styleReferenceImage.split(',')[1] : undefined,
-        visualDNA,
-        undefined,
-        aspectRatio,
-        layout,
-        safeRedesignPrompt,
-        targetPlatform,
-        safeMaskImageBase64,
-        safeIsRedesignMode,
-        localUserId,
-        3
-      );
-
-      if (!Array.isArray(aiMatrixResults) || aiMatrixResults.length === 0) {
-        throw new Error('营销矩阵生图失败：未返回可用图片');
-      }
-
       const currentRenderConfig = { ...textConfig, title: '', detail: '' };
-      const composedResults = await Promise.all(
-        aiMatrixResults.slice(0, 3).map(async (aiResult) => {
+      let successCount = 0;
+
+      const matrixTasks = SUITE_VARIATION_PROMPTS.map((variationPrompt, index) => (async () => {
+        try {
+          const aiResult = await generateScenarioImage(
+            [sourceImages[0].split(',')[1]],
+            selectedScenario,
+            currentAnalysis,
+            userPrompt,
+            textConfig,
+            mode,
+            styleReferenceImage ? styleReferenceImage.split(',')[1] : undefined,
+            visualDNA,
+            variationPrompt,
+            aspectRatio,
+            layout,
+            safeRedesignPrompt,
+            targetPlatform,
+            safeMaskImageBase64,
+            safeIsRedesignMode,
+            localUserId,
+            1
+          );
+
+          if (typeof aiResult !== 'string' || !aiResult) {
+            throw new Error(`营销矩阵第 ${index + 1} 张未返回有效图片`);
+          }
+
           const finalResult = await processFinalImage(
             aiResult,
             sourceImages[0],
@@ -2916,17 +2928,53 @@ const App: React.FC = () => {
             safeStickerConfig,
             safeLogoConfig
           );
-          return enforceAspectRatio(finalResult, aspectRatio);
-        })
-      );
+          const normalizedResult = await enforceAspectRatio(finalResult, aspectRatio);
 
-      setResultImages(composedResults);
+          successCount += 1;
+          setResultImages((prev) => {
+            const next = prev.length === 3 ? [...prev] : ['', '', ''];
+            next[index] = normalizedResult;
+            return next;
+          });
+          setSuiteSlotStates((prev) => {
+            const next: SuiteSlotState[] = prev.length === 3 ? [...prev] : ['loading', 'loading', 'loading'];
+            next[index] = 'success';
+            return next;
+          });
+          setGenerationProgress(`营销矩阵渲染中：已完成 ${successCount}/3`);
+
+          return normalizedResult;
+        } catch (error) {
+          setSuiteSlotStates((prev) => {
+            const next: SuiteSlotState[] = prev.length === 3 ? [...prev] : ['loading', 'loading', 'loading'];
+            next[index] = 'error';
+            return next;
+          });
+          throw error;
+        }
+      })());
+
+      const settledResults = await Promise.allSettled(matrixTasks);
+      const fulfilledCount = settledResults.filter((item): item is PromiseFulfilledResult<string> => item.status === 'fulfilled').length;
+      const failedCount = settledResults.length - fulfilledCount;
+
+      if (fulfilledCount === 0) {
+        const firstRejected = settledResults.find((item): item is PromiseRejectedResult => item.status === 'rejected');
+        throw firstRejected?.reason || new Error('营销矩阵生图失败：3 张图片均未成功返回');
+      }
+
       resetTextGenCapability();
       if (!syncAssetsFromGemini()) {
         void refreshUserCredits();
       }
-      setGenerationProgress('营销矩阵渲染完成！');
+
       flashButtonDone('genMatrix');
+      if (failedCount > 0) {
+        setToastMessage(`营销矩阵已完成 ${fulfilledCount}/3 张，${failedCount} 张因超时或模型波动未成功返回。`);
+        setGenerationProgress(`营销矩阵部分完成：${fulfilledCount}/3`);
+      } else {
+        setGenerationProgress('营销矩阵渲染完成！');
+      }
     } catch (err: any) { 
       const errMessage = String(err?.message || '');
       if (errMessage.includes('INSUFFICIENT_QUOTA')) {
@@ -3963,6 +4011,10 @@ const App: React.FC = () => {
   };
 
   const currentAspectRatio = aspectRatio.replace(':', ' / ');
+  const availableResultEntries = resultImages.reduce<Array<{ url: string; index: number }>>((acc, url, index) => {
+    if (url) acc.push({ url, index });
+    return acc;
+  }, []);
   const isGeneratingPrompt = isAnalyzingPrompt;
   const isMatrixGenerating = isProcessing && activeGenerateCount === 3;
   const isMatrixRainbow = isMatrixGenerating || buttonDoneFlash.genMatrix;
@@ -4594,24 +4646,22 @@ const App: React.FC = () => {
                     </h2>
                     <div className="flex items-center gap-4 mt-4 md:mt-0">
                       <button
-                        onClick={() => { setStep('upload'); setResultImages([]); }}
+                        onClick={() => { setStep('upload'); setResultImages([]); setSuiteSlotStates([]); }}
                         className="px-6 py-2.5 bg-transparent border border-gray-200 hover:border-gray-300 text-gray-600 hover:text-[#1d1d1f] rounded-xl font-medium text-[14px] transition-all"
                       >
                         返回重构
                       </button>
                       <button
                         onClick={async () => {
-                          if (resultImages.length === 1) {
-                            const packed = await composeResultDownloadDataUrl(resultImages[0] || '');
+                          if (availableResultEntries.length === 1) {
+                            const packed = await composeResultDownloadDataUrl(availableResultEntries[0]?.url || '');
                             if (!packed) return;
                             await triggerDownload(packed, buildDownloadFileName('单图'));
                             return;
                           }
-                          for (let i = 0; i < resultImages.length; i++) {
-                            const imageUrl = resultImages[i];
-                            if (!imageUrl) continue;
-                            const packed = await composeResultDownloadDataUrl(imageUrl);
-                            await triggerDownload(packed, buildDownloadFileName(`套图${i + 1}`));
+                          for (const entry of availableResultEntries) {
+                            const packed = await composeResultDownloadDataUrl(entry.url);
+                            await triggerDownload(packed, buildDownloadFileName(`套图${entry.index + 1}`));
                             await new Promise(r => setTimeout(r, 320));
                           }
                         }}
@@ -4620,7 +4670,7 @@ const App: React.FC = () => {
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-violet-400">
                           <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                         </svg>
-                        {resultImages.length > 1 ? '一键打包全套' : '下载单张大图'}
+                        {availableResultEntries.length > 1 ? '一键打包全套' : '下载单张大图'}
                       </button>
                     </div>
                   </div>
@@ -4631,6 +4681,7 @@ const App: React.FC = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     {Array.from({ length: 3 }).map((_, index) => {
                       const img = resultImages[index];
+                      const slotState = suiteSlotStates[index] || (img ? 'success' : 'loading');
                       const labels = ['🔥 高转化主图', '🛋️ 沉浸生活感', '✨ 极简高级感'];
                       
                       return (
@@ -4668,6 +4719,16 @@ const App: React.FC = () => {
                                 {renderLiveImageLayerOverlay(index)}
                                 {renderLiveTextOverlay(true)}
                               </>
+                            ) : slotState === 'error' ? (
+                              <div className="relative w-full aspect-square rounded-[2rem] overflow-hidden bg-[#fafafa] shadow-sm flex flex-col items-center justify-center">
+                                <div className="absolute inset-0 bg-gradient-to-br from-rose-500/5 to-transparent"></div>
+                                <span className="relative z-20 text-[12px] font-mono text-gray-400 tracking-[0.2em] uppercase">
+                                  Retry Needed
+                                </span>
+                                <span className="relative z-20 mt-3 text-[12px] text-gray-500">
+                                  该张因模型波动未完成
+                                </span>
+                              </div>
                             ) : (
                               <div className="relative w-full aspect-square rounded-[2rem] overflow-hidden bg-[#fafafa] shadow-sm flex flex-col items-center justify-center group">
                                 <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-transparent animate-pulse" style={{ animationDuration: '3s' }}></div>
