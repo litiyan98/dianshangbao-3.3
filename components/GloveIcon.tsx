@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId } from 'react';
 
 interface GloveIconProps {
   size?: number;
@@ -6,6 +6,10 @@ interface GloveIconProps {
 }
 
 const GloveIcon: React.FC<GloveIconProps> = ({ size = 20, className = '' }) => {
+  const leftGradientId = useId().replace(/:/g, '');
+  const rightGradientId = useId().replace(/:/g, '');
+  const shadowId = useId().replace(/:/g, '');
+
   return (
     <svg
       width={size}
@@ -16,17 +20,44 @@ const GloveIcon: React.FC<GloveIconProps> = ({ size = 20, className = '' }) => {
       className={className}
       aria-hidden="true"
     >
-      <circle cx="32" cy="32" r="31" fill="#FFF4DF" />
-      <circle cx="32" cy="32" r="28" fill="#FFE8BD" />
-      <path
-        d="M22 43c0 3.9 3.2 7 7.1 7h8.8c4.5 0 8.1-3.6 8.1-8.1V29.8c0-1.8-1.4-3.2-3.2-3.2-1.2 0-2.2.6-2.8 1.5V18.9c0-1.8-1.4-3.2-3.2-3.2-1.8 0-3.2 1.4-3.2 3.2v8.4c-.2-1.6-1.5-2.8-3.1-2.8-1.8 0-3.2 1.4-3.2 3.2v2.5c-.2-1.4-1.5-2.5-3-2.5-1.8 0-3.2 1.4-3.2 3.2v8.6l-2.4-2.2c-1.5-1.4-3.8-1.3-5.2.2-1.4 1.5-1.3 3.8.2 5.2L22 43z"
-        fill="#FF9D2E"
-      />
-      <path
-        d="M41.5 20.2c-.9.9-2.3.9-3.2 0-.9-.9-.9-2.3 0-3.2l2.1-2.1c.9-.9 2.3-.9 3.2 0 .9.9.9 2.3 0 3.2l-2.1 2.1z"
-        fill="#FFD66B"
-      />
-      <circle cx="47.5" cy="14.5" r="2.2" fill="#FFBE55" />
+      <defs>
+        <linearGradient id={leftGradientId} x1="10" y1="12" x2="40" y2="52" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#111827" />
+          <stop offset="0.58" stopColor="#4B5563" />
+          <stop offset="1" stopColor="#8B5CF6" />
+        </linearGradient>
+        <linearGradient id={rightGradientId} x1="24" y1="12" x2="56" y2="52" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#8B5CF6" />
+          <stop offset="0.55" stopColor="#6366F1" />
+          <stop offset="1" stopColor="#38BDF8" />
+        </linearGradient>
+        <filter id={shadowId} x="0" y="4" width="64" height="56" filterUnits="userSpaceOnUse" colorInterpolationFilters="sRGB">
+          <feDropShadow dx="0" dy="6" stdDeviation="4" floodColor="#8B5CF6" floodOpacity="0.12" />
+        </filter>
+      </defs>
+
+      <g filter={`url(#${shadowId})`}>
+        <ellipse
+          cx="22"
+          cy="32"
+          rx="12.5"
+          ry="16.5"
+          transform="rotate(-18 22 32)"
+          stroke={`url(#${leftGradientId})`}
+          strokeWidth="8.5"
+          strokeLinecap="round"
+        />
+        <ellipse
+          cx="42"
+          cy="32"
+          rx="12.5"
+          ry="16.5"
+          transform="rotate(18 42 32)"
+          stroke={`url(#${rightGradientId})`}
+          strokeWidth="8.5"
+          strokeLinecap="round"
+        />
+      </g>
     </svg>
   );
 };

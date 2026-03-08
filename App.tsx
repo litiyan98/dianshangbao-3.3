@@ -16,6 +16,7 @@ import MorphingAiButton, { NebulaDiamondIcon } from './components/MorphingAiButt
 import { removeBackground as imglyRemoveBackground } from '@imgly/background-removal';
 import { useAppleReveal } from './hooks/useAppleReveal';
 import LiquidMetalBackground from './components/LiquidMetalBackground';
+import GloveIcon from './components/GloveIcon';
 
 const BARRAGE_TEXTS = [
   '影棚级光影 ✦',
@@ -4187,10 +4188,7 @@ const App: React.FC = () => {
 
       <header className="fixed top-0 inset-x-0 z-50 h-16 bg-white/70 backdrop-blur-xl transition-all duration-300 ease-out flex items-center justify-between px-6 border-b border-white/20">
         <div className="flex items-center gap-2.5 cursor-pointer group">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1d1d1f" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="transform group-hover:scale-105 transition-transform duration-300">
-            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-            <circle cx="12" cy="12" r="3"></circle>
-          </svg>
+          <GloveIcon size={24} className="transform group-hover:scale-105 transition-transform duration-300" />
           <span className="text-xl font-bold tracking-tight text-[#1d1d1f]">
             电商宝 <span className="text-sm font-semibold text-gray-400 tracking-wider ml-0.5">PRO</span>
           </span>
