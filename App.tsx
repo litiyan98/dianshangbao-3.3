@@ -3091,6 +3091,11 @@ const App: React.FC = () => {
     if (recommended) openPaymentCheckout(recommended);
   };
 
+  const handleOpenInviteCenter = () => {
+    setCreditModalTab('invite');
+    setIsCreditModalOpen(true);
+  };
+
   const renderLiveTextOverlay = (compact: boolean = false) => {
     if (!textConfig.isEnabled || (!textConfig.title && !textConfig.detail)) return null;
 
@@ -4194,11 +4199,24 @@ const App: React.FC = () => {
         <div className="flex items-center gap-2 md:gap-4 relative z-[110]">
           {isAuthLoading ? (
             <>
+              <div className="w-24 h-9 bg-stone-100 animate-pulse rounded-full" />
               <div className="w-20 h-9 bg-stone-100 animate-pulse rounded-full" />
               <div className="w-9 h-9 bg-stone-100 animate-pulse rounded-full" />
             </>
           ) : isLoggedIn && userInfo ? (
             <>
+              <button
+                type="button"
+                title="邀请好友注册并首充，获得返还 Token"
+                onClick={handleOpenInviteCenter}
+                className="group hidden md:flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#f5f5f7] border border-gray-200/70 text-sm font-semibold text-[#1d1d1f] shadow-sm transition-all duration-300 hover:bg-white hover:border-violet-200 hover:shadow-[0_10px_24px_rgba(139,92,246,0.08)]"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="text-violet-500 transition-transform duration-300 group-hover:scale-105">
+                  <path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z" fill="currentColor" />
+                </svg>
+                <span>邀请得 Token</span>
+              </button>
+
               <button
                 type="button"
                 title="剩余算力点，点击补充"
@@ -4237,6 +4255,16 @@ const App: React.FC = () => {
                       <p className="text-[11px] text-stone-500 mt-1">👑 VIP: {getVipStatusText()}</p>
                     </div>
                     <div className="h-px bg-stone-100 my-1" />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAvatarMenuOpen(false);
+                        handleOpenInviteCenter();
+                      }}
+                      className="w-full text-left px-3.5 py-2 text-[12px] font-bold text-violet-600 hover:bg-violet-50 rounded-lg transition-colors"
+                    >
+                      邀请得 Token
+                    </button>
                     <button
                       type="button"
                       onClick={() => {

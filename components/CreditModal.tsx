@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { X, Copy, Loader2, Sparkles } from 'lucide-react';
+import { X, Copy, Loader2, Share2, Sparkles } from 'lucide-react';
 import GloveIcon from './GloveIcon';
 
 export type CreditTab = 'invite' | 'recharge';
@@ -122,6 +122,10 @@ const CreditModal: React.FC<CreditModalProps> = ({
     return `${window.location.origin}/?invite=${code}`;
   }, [summary?.invite_code, inviteCode]);
 
+  const canNativeShare = useMemo(() => {
+    return typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+  }, []);
+
   const vipStatusText = useMemo(() => {
     if (!vipExpireDate) return '免费试用中';
     const ts = Date.parse(vipExpireDate);
@@ -180,6 +184,28 @@ const CreditModal: React.FC<CreditModalProps> = ({
     } catch (error) {
       console.error('[CreditModal] copy failed:', error);
       showToast('复制失败，请手动复制链接');
+    }
+  };
+
+  const handleShare = async () => {
+    if (!inviteLink) {
+      showToast('邀请码尚未生成，请稍后重试');
+      return;
+    }
+    if (!canNativeShare) {
+      await handleCopy();
+      return;
+    }
+    try {
+      await navigator.share({
+        title: '电商宝 Pro 邀请链接',
+        text: '我在用电商宝 Pro 做商品主图，注册后首充可获得额外 Token。',
+        url: inviteLink,
+      });
+    } catch (error) {
+      if ((error as Error)?.name === 'AbortError') return;
+      console.error('[CreditModal] share failed:', error);
+      showToast('系统分享失败，请改用复制链接');
     }
   };
 
@@ -286,13 +312,24 @@ const CreditModal: React.FC<CreditModalProps> = ({
                         <p className="text-[12px] text-stone-400 font-mono uppercase tracking-[0.18em]">邀请链接</p>
                         <p className="text-[13px] text-stone-700 break-all mt-3 leading-6">{inviteLink || '邀请码生成中...'}</p>
                       </div>
-                      <button
-                        onClick={handleCopy}
-                        className="w-full h-11 rounded-xl bg-[#111827] text-white text-[13px] font-bold flex items-center justify-center gap-2 hover:bg-[#1a2333] transition-colors"
-                      >
-                        <Copy size={14} />
-                        复制邀请链接
-                      </button>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <button
+                          onClick={handleCopy}
+                          className="w-full h-11 rounded-xl bg-[#111827] text-white text-[13px] font-bold flex items-center justify-center gap-2 hover:bg-[#1a2333] transition-colors"
+                        >
+                          <Copy size={14} />
+                          复制邀请链接
+                        </button>
+                        {canNativeShare ? (
+                          <button
+                            onClick={handleShare}
+                            className="w-full h-11 rounded-xl border border-stone-200 bg-stone-50 text-[13px] font-bold text-stone-700 flex items-center justify-center gap-2 hover:bg-stone-100 transition-colors"
+                          >
+                            <Share2 size={14} />
+                            分享给好友
+                          </button>
+                        ) : null}
+                      </div>
                       <p className="text-[12px] text-stone-500">好友注册后可获得启动算力，完成首充后双方自动到账奖励。</p>
                     </div>
 
