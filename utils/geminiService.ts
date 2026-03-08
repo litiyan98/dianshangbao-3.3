@@ -287,7 +287,9 @@ export async function generateMasterImagePrompt(
   productBase64: string,
   referenceBgBase64?: string,
   currentText?: string,
-  userId?: string
+  userId?: string,
+  sceneSetting?: string,
+  toneSetting?: string
 ): Promise<string> {
   if (!productBase64) {
     throw new Error("未获取到商品主体图，请先上传商品图。");
@@ -295,19 +297,34 @@ export async function generateMasterImagePrompt(
 
   const userInput = currentText?.trim();
   const safeInput = userInput?.replace(/`/g, "'") || "";
+  const safeScene = sceneSetting?.trim() || '未指定';
+  const safeTone = toneSetting?.trim() || '未指定';
 
-  const systemInstruction = `你是一个精通商业产品摄影和电商海报设计的顶级 AI 提示词专家。
-【任务】：我会提供 1 到 2 张图片，以及用户的文字修改指令。请你提取特征并融合，写出一段极致专业的纯中文生图提示词。
+  const systemInstruction = `你是一个精通商业产品摄影、广告美术指导与电商场景设计的顶级 AI 提示词专家。
+【任务】：我会提供商品图、可选的风格参考图、用户已写好的导演指令、预选的场景设定与画面色调。请你融合这些信息，输出一段极致专业、纯中文、适合直接生图的提示词。
 
-【分析逻辑】：
-1. 图像 1（商品主体，必传）：精准提取商品品类、材质、颜色、外形等特征，在最终提示词中必须保持该商品主体特征不变。
-2. 图像 2（参考背景，可选）：提取场景环境、光线氛围、构图风格，并与商品主体自然融合。
-3. 文字指令（可选）：${safeInput ? `用户给出了明确要求：【${safeInput}】。请优先满足并用其覆盖或修正背景风格。` : "若无额外文字要求，请将图像 1 的商品自然融入图像 2 的背景风格。"}
+【优先级规则（按维度执行，不允许混淆）】：
+1. 商品图优先级最高，但只负责锁定商品身份：必须识别并保持商品的真实品类、主体形态、包装识别点与核心材质，不要长篇复述商品细节。
+2. 风格参考图优先级最高，但只允许参考风格：只能学习其中的光影氛围、色彩倾向、构图节奏、空间气质、背景材质与道具语言。绝对禁止参考参考图里的任何商品、品牌、包装、标签、文案或主体类别。
+3. 用户导演指令优先级高：如果用户已经写了具体环境、氛围、材质、镜头或光线要求，优先满足，并用其修正场景表现。
+4. 场景设定与画面色调是稳定约束：它们负责限定环境类型与整体色温倾向，除非与商品识别或用户明确指令冲突，否则必须体现在结果里。
 
-【严格输出要求】：
+【当前控制条件】：
+- 场景设定：${safeScene}
+- 画面色调：${safeTone}
+- 用户导演指令：${safeInput ? `【${safeInput}】` : '未填写'}
+
+【生成目标】：
+1. 最终提示词必须少写商品、多写环境。商品描述只保留必要锚点，用一句话锁定主体即可。
+2. 重点展开背景环境、空间关系、台面/墙面材质、景深层次、冷暖空气感、反射/折射、水珠/雾气、光线方向、高光与阴影质地。
+3. 必须根据商品品类自动选择更适合该商品的背景环境与光影，而不是偷懒使用统一白底。除非用户明确要求极简纯白棚拍，否则禁止输出默认白底、空白背景、无影棚白底。
+4. 如果存在风格参考图，最终画面的美术语言应向参考图靠拢，但商品必须仍然来自商品图，而不是参考图。
+5. 如果不存在风格参考图，也必须基于商品品类、场景设定、画面色调和用户导演指令，主动构建合理的商业摄影环境。
+
+【输出格式】：
 1. 只能输出一段纯中文提示词文本。
-2. 内容要包含具体环境与光影细节，例如丁达尔光、高级质感、大面积留白、背景干净纯粹。
-3. 绝对不要输出任何英文、解释、前缀或客套话，直接输出最终结果。`;
+2. 不要输出分析、解释、前缀、标题、编号或客套话。
+3. 不要输出英文，不要输出 JSON，不要输出分点。`;
 
   const parseBase64Image = (value: string) => {
     const trimmed = value.trim();
@@ -329,12 +346,12 @@ export async function generateMasterImagePrompt(
 
   const parts: any[] = [
     { text: systemInstruction },
-    { text: "\n--- 图像 1：商品主体 ---" },
+    { text: "\n--- 图像 1：商品主体（唯一商品锚点）---" },
     { inlineData: { mimeType: productImage.mimeType, data: productImage.data } }
   ];
 
   if (bgImage?.data) {
-    parts.push({ text: "\n--- 图像 2：参考背景风格 ---" });
+    parts.push({ text: "\n--- 图像 2：风格参考（只允许提取风格，不允许借用其中的商品主体）---" });
     parts.push({ inlineData: { mimeType: bgImage.mimeType, data: bgImage.data } });
   }
 

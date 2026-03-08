@@ -2608,7 +2608,14 @@ const App: React.FC = () => {
         : undefined;
       const bestPrompt = await runWithRetryTimeout(
         async () => {
-          const raw = await generateMasterImagePrompt(productBase64, referenceBgBase64, userPrompt.trim(), localUserId);
+          const raw = await generateMasterImagePrompt(
+            productBase64,
+            referenceBgBase64,
+            userPrompt.trim(),
+            localUserId,
+            promptScene,
+            promptTone
+          );
           const normalized = raw.trim();
           if (!normalized) throw new Error('模型返回为空，请稍后重试。');
           return normalized;
