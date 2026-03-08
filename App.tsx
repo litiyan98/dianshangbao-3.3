@@ -4117,7 +4117,7 @@ const App: React.FC = () => {
       </div>
       <div className="relative h-6 w-full flex justify-center items-center overflow-hidden">
         <p key={logIndex} className="absolute text-[14px] md:text-[15px] font-medium tracking-wide animate-[fadeInUp_0.5s_ease-out_forwards]">
-          <span className="inline-block animate-phase-text">{logMessages[logIndex]}</span>
+          <span className="inline-block text-gray-500 animate-status-text">{logMessages[logIndex]}</span>
         </p>
       </div>
     </div>
@@ -4777,7 +4777,7 @@ const App: React.FC = () => {
                   <div className="relative w-full rounded-[2rem] overflow-hidden bg-[linear-gradient(180deg,rgba(251,251,252,0.98)_0%,rgba(244,244,246,0.94)_100%)] shadow-sm flex flex-col items-center justify-center group" style={{ aspectRatio: currentAspectRatio, minHeight: 320 }}>
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_24%,rgba(168,85,247,0.10),transparent_48%),radial-gradient(circle_at_50%_100%,rgba(59,130,246,0.08),transparent_42%)] animate-ambient-drift"></div>
                     <div className="absolute inset-0 opacity-80 bg-[linear-gradient(115deg,transparent_18%,rgba(255,255,255,0.12)_34%,rgba(255,255,255,0.72)_50%,rgba(255,255,255,0.12)_66%,transparent_82%)] bg-[length:170%_100%] animate-[shimmer_1.8s_linear_infinite] z-10"></div>
-                    <span className="relative z-20 text-[12px] font-mono tracking-[0.2em] uppercase animate-phase-text">
+                    <span className="relative z-20 text-[12px] font-mono text-gray-500 tracking-[0.2em] uppercase animate-status-text">
                       Rendering...
                     </span>
                   </div>
@@ -4883,8 +4883,8 @@ const App: React.FC = () => {
                             </>
                           ) : slotState === 'error' ? (
                             <div className="relative w-full h-full rounded-[32px] overflow-hidden bg-[linear-gradient(180deg,rgba(255,250,250,0.96)_0%,rgba(255,244,244,0.92)_100%)] flex flex-col items-center justify-center">
-                              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,rgba(251,113,133,0.10),transparent_55%)] animate-ambient-drift"></div>
-                              <span className="relative z-20 text-[12px] font-mono text-gray-400 tracking-[0.2em] uppercase animate-phase-text">
+                              <div className="absolute inset-[-10%] bg-[radial-gradient(circle_at_50%_-8%,rgba(255,255,255,0.78),transparent_42%),radial-gradient(circle_at_50%_112%,rgba(251,191,36,0.10),transparent_40%)] animate-loading-drift"></div>
+                              <span className="relative z-20 text-[12px] font-mono text-gray-500 tracking-[0.2em] uppercase animate-status-text">
                                 Retry Needed
                               </span>
                               <span className="relative z-20 mt-3 text-[12px] text-gray-500">
@@ -4892,11 +4892,12 @@ const App: React.FC = () => {
                               </span>
                             </div>
                           ) : (
-                            <div className="relative w-full h-full rounded-[32px] overflow-hidden bg-[linear-gradient(180deg,rgba(251,251,252,0.98)_0%,rgba(244,244,246,0.94)_100%)] flex flex-col items-center justify-center">
-                              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_22%,rgba(168,85,247,0.10),transparent_46%),radial-gradient(circle_at_50%_100%,rgba(59,130,246,0.08),transparent_42%)] animate-ambient-drift"></div>
-                              <div className="absolute inset-0 opacity-80 bg-[linear-gradient(115deg,transparent_18%,rgba(255,255,255,0.12)_34%,rgba(255,255,255,0.72)_50%,rgba(255,255,255,0.12)_66%,transparent_82%)] bg-[length:170%_100%] animate-[shimmer_1.8s_linear_infinite]"></div>
-                              <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-white/35 to-transparent"></div>
-                              <span className="relative z-20 text-[12px] font-mono tracking-[0.2em] uppercase animate-phase-text">
+                            <div className="relative w-full h-full rounded-[32px] overflow-hidden bg-[linear-gradient(180deg,rgba(251,251,252,0.99)_0%,rgba(243,244,246,0.96)_100%)] flex flex-col items-center justify-center">
+                              <div className="absolute inset-[-12%] bg-[radial-gradient(circle_at_50%_-8%,rgba(255,255,255,0.90),transparent_42%),radial-gradient(circle_at_50%_112%,rgba(226,232,240,0.34),transparent_42%)] animate-loading-drift"></div>
+                              <div className="absolute inset-y-[-12%] left-[-42%] w-[60%] bg-white/55 blur-3xl animate-light-sweep"></div>
+                              <div className="absolute inset-0 opacity-75 bg-[linear-gradient(115deg,transparent_20%,rgba(255,255,255,0.08)_36%,rgba(255,255,255,0.60)_50%,rgba(255,255,255,0.08)_64%,transparent_80%)] bg-[length:180%_100%] animate-[shimmer_2.2s_linear_infinite]"></div>
+                              <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-white/28 to-transparent"></div>
+                              <span className="relative z-20 text-[12px] font-mono text-gray-500 tracking-[0.2em] uppercase animate-status-text">
                                 Rendering...
                               </span>
                             </div>
