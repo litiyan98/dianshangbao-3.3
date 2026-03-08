@@ -1,4 +1,12 @@
-import { generateRandomCode, getWelcomeVipExpireDateISO, NEW_USER_WELCOME_IMAGE_QUOTA } from '../../utils/user';
+import { getWelcomeVipExpireDateISO, NEW_USER_WELCOME_IMAGE_QUOTA } from '../../utils/user';
+import {
+  countPaidOrders,
+  createUniqueInviteCode,
+  ensureReferralBinding,
+  getUsersColumns,
+  normalizeInviteCode,
+  resolveInviterByCode,
+} from './referral/_shared';
 
 interface Env {
   DB: any;
@@ -10,6 +18,7 @@ interface UserRow {
   invite_code?: string | null;
   image_quota?: number | null;
   vip_expire_date?: string | null;
+  invited_by?: string | null;
 }
 
 const CORS_HEADERS: Record<string, string> = {
@@ -27,49 +36,52 @@ function json(data: unknown, status = 200): Response {
   });
 }
 
-function normalizeInviteCode(value: string | null): string | null {
-  if (!value) return null;
-  const clean = value.trim().toUpperCase();
-  return clean || null;
-}
-
-async function getUsersColumns(env: Env): Promise<Set<string>> {
-  const names = new Set<string>();
-  const tableInfo = await env.DB.prepare('PRAGMA table_info(Users)').all();
-  const rows = Array.isArray(tableInfo?.results) ? tableInfo.results : [];
-  for (const row of rows) {
-    const name = typeof row?.name === 'string' ? row.name.trim() : '';
-    if (name) names.add(name);
-  }
-  return names;
-}
-
-async function createUniqueInviteCode(env: Env, length = 6): Promise<string> {
-  for (let i = 0; i < 80; i += 1) {
-    const code = generateRandomCode(length);
-    const exists = await env.DB
-      .prepare('SELECT user_id FROM Users WHERE invite_code = ?1')
-      .bind(code)
-      .first();
-    if (!exists) return code;
-  }
-  throw new Error('邀请码生成失败，请重试');
-}
-
 function buildUserSelectColumns(usersColumns: Set<string>): string[] {
   const columns = ['user_id', 'credits'];
   if (usersColumns.has('invite_code')) columns.push('invite_code');
   if (usersColumns.has('image_quota')) columns.push('image_quota');
   if (usersColumns.has('vip_expire_date')) columns.push('vip_expire_date');
+  if (usersColumns.has('invited_by')) columns.push('invited_by');
   return columns;
 }
 
 async function fetchUserById(env: Env, userId: string, selectColumns: string[]): Promise<UserRow | null> {
   const userSql = `SELECT ${selectColumns.join(', ')} FROM Users WHERE user_id = ?1`;
-  return (await env.DB
-    .prepare(userSql)
-    .bind(userId)
-    .first()) as UserRow | null;
+  return (await env.DB.prepare(userSql).bind(userId).first()) as UserRow | null;
+}
+
+async function tryBindInviteForExistingUser(
+  env: Env,
+  options: {
+    userId: string;
+    inviteCode: string | null;
+    currentInvitedBy: string | null;
+    hasInviteCode: boolean;
+    hasInvitedBy: boolean;
+  },
+): Promise<string | null> {
+  if (!options.hasInviteCode || !options.hasInvitedBy) return options.currentInvitedBy;
+  if (!options.inviteCode || options.currentInvitedBy) return options.currentInvitedBy;
+
+  const paidCount = await countPaidOrders(env, options.userId);
+  if (paidCount > 0) return options.currentInvitedBy;
+
+  const inviter = await resolveInviterByCode(env, options.inviteCode, options.userId);
+  if (!inviter?.user_id) return options.currentInvitedBy;
+
+  await env.DB
+    .prepare('UPDATE Users SET invited_by = ?1 WHERE user_id = ?2 AND (invited_by IS NULL OR invited_by = "")')
+    .bind(inviter.user_id, options.userId)
+    .run();
+
+  await ensureReferralBinding(env, {
+    inviteCode: inviter.invite_code,
+    referrerUserId: inviter.user_id,
+    referredUserId: options.userId,
+    bindSource: 'landing',
+  });
+
+  return inviter.user_id;
 }
 
 export async function onRequestOptions(): Promise<Response> {
@@ -94,7 +106,7 @@ export async function onRequestGet(context: { request: Request; env: Env }): Pro
           error: 'MISSING_USER_ID',
           message: '缺少 userId 参数',
         },
-        400
+        400,
       );
     }
 
@@ -110,17 +122,8 @@ export async function onRequestGet(context: { request: Request; env: Env }): Pro
     if (!user) {
       const newInviteCode = hasInviteCode ? await createUniqueInviteCode(env, 6) : null;
       const welcomeVipExpireDate = getWelcomeVipExpireDateISO();
-      let invitedBy: string | null = null;
-
-      if (hasInviteCode && inviteCode) {
-        const inviter = (await env.DB
-          .prepare('SELECT user_id FROM Users WHERE invite_code = ?1')
-          .bind(inviteCode)
-          .first()) as { user_id: string } | null;
-        if (inviter?.user_id) {
-          invitedBy = inviter.user_id;
-        }
-      }
+      const inviter = hasInviteCode ? await resolveInviterByCode(env, inviteCode, userId) : null;
+      const invitedBy = inviter?.user_id || null;
 
       const insertColumns: string[] = ['user_id', 'credits'];
       const insertValues: Array<string | number | null> = [userId, 10];
@@ -157,11 +160,13 @@ export async function onRequestGet(context: { request: Request; env: Env }): Pro
         if (!user) throw insertErr;
       }
 
-      if (hasInviteCode && invitedBy) {
-        await env.DB
-          .prepare('UPDATE Users SET credits = credits + 10 WHERE user_id = ?1')
-          .bind(invitedBy)
-          .run();
+      if (inviter?.user_id && inviter.invite_code) {
+        await ensureReferralBinding(env, {
+          inviteCode: inviter.invite_code,
+          referrerUserId: inviter.user_id,
+          referredUserId: userId,
+          bindSource: 'landing',
+        });
       }
 
       if (!user) {
@@ -176,10 +181,10 @@ export async function onRequestGet(context: { request: Request; env: Env }): Pro
       }
     }
 
-    // 兼容历史脏数据：如果用户是旧逻辑插入且缺少新字段，补发新人资产。
-    let inviteCodeValue = hasInviteCode ? (user.invite_code || null) : null;
+    let inviteCodeValue = hasInviteCode ? user.invite_code || null : null;
     let imageQuotaValue = hasImageQuota ? Number(user.image_quota) : null;
-    let vipExpireDateValue = hasVipExpireDate ? (user.vip_expire_date || null) : null;
+    let vipExpireDateValue = hasVipExpireDate ? user.vip_expire_date || null : null;
+    let invitedByValue = hasInvitedBy ? user.invited_by || null : null;
 
     const updateFragments: string[] = [];
     const updateValues: Array<string | number> = [];
@@ -210,13 +215,22 @@ export async function onRequestGet(context: { request: Request; env: Env }): Pro
         .run();
     }
 
+    invitedByValue = await tryBindInviteForExistingUser(env, {
+      userId,
+      inviteCode,
+      currentInvitedBy: invitedByValue,
+      hasInviteCode,
+      hasInvitedBy,
+    });
+
     const credits = Number(user.credits ?? 10);
     return json({
       success: true,
       credits: Number.isFinite(credits) ? credits : 10,
       invite_code: hasInviteCode ? inviteCodeValue : null,
       image_quota: hasImageQuota ? Number(imageQuotaValue ?? NEW_USER_WELCOME_IMAGE_QUOTA) : null,
-      vip_expire_date: hasVipExpireDate ? (vipExpireDateValue || null) : null,
+      vip_expire_date: hasVipExpireDate ? vipExpireDateValue || null : null,
+      invited_by: hasInvitedBy ? invitedByValue : null,
     });
   } catch (error: any) {
     console.error('[/api/user] unexpected error:', error);
@@ -226,7 +240,7 @@ export async function onRequestGet(context: { request: Request; env: Env }): Pro
         error: 'SERVER_ERROR',
         message: error?.message || '服务端异常',
       },
-      500
+      500,
     );
   }
 }

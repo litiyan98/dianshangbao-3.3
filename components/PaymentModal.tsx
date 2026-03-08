@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowLeft, CheckCircle2, Loader2, RefreshCw, ScanLine, X } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Loader2, RefreshCw, ScanLine, Sparkles, X } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import confetti from 'canvas-confetti';
-import { RECHARGE_PACKAGES, type RechargePackage } from './CreditModal';
+import { RECHARGE_PACKAGES, REFERRAL_BONUS_BY_PACKAGE, type RechargePackage } from './CreditModal';
 
 interface PaymentModalProps {
   open: boolean;
@@ -234,6 +234,10 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
             <div className="text-center mb-8">
               <h2 className="text-2xl md:text-3xl font-bold text-[#1d1d1f] tracking-tight mb-3">解锁更强大的视觉大模型</h2>
               <p className="text-[15px] text-gray-500 font-medium">扩展算力边界，持续稳定输出工业级视觉资产</p>
+              <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-violet-50 px-4 py-2 text-[12px] font-medium text-violet-700">
+                <Sparkles size={14} />
+                受邀新用户首充可获得额外 Token，加赠将在支付成功后自动到账
+              </div>
             </div>
 
             <div className="flex justify-center mb-10 select-none">
@@ -275,6 +279,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                     <ul className="space-y-4 text-[14px] text-gray-600 font-medium flex-1 relative z-10">
                       <li className="flex items-center gap-3">✦ 6 张极速渲染阵列</li>
                       <li className="flex items-center gap-3">✦ 3 天基础文案引擎</li>
+                      <li className="flex items-center gap-3 text-blue-600">✦ 受邀首充加赠 +{REFERRAL_BONUS_BY_PACKAGE.starter_15_quota_7d_vip.buyerBonus} Token</li>
                     </ul>
                     <button
                       type="button"
@@ -295,6 +300,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                     <ul className="space-y-4 text-[14px] text-gray-600 font-medium flex-1 relative z-10">
                       <li className="flex items-center gap-3">✦ 70 张极速渲染阵列</li>
                       <li className="flex items-center gap-3">✦ 30 天无缝文案引擎</li>
+                      <li className="flex items-center gap-3 text-violet-600">✦ 受邀首充加赠 +{REFERRAL_BONUS_BY_PACKAGE.standard_80_quota_30d_vip.buyerBonus} Token</li>
                     </ul>
                     <button
                       type="button"
@@ -315,6 +321,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                     <ul className="space-y-4 text-[14px] text-gray-600 font-medium flex-1 relative z-10">
                       <li className="flex items-center gap-3">✦ 150 张极速渲染阵列</li>
                       <li className="flex items-center gap-3">✦ 90 天无缝文案引擎</li>
+                      <li className="flex items-center gap-3 text-gray-700">✦ 受邀首充加赠 +{REFERRAL_BONUS_BY_PACKAGE.enterprise_400_quota_90d_vip.buyerBonus} Token</li>
                     </ul>
                     <button
                       type="button"

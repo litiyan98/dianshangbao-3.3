@@ -4915,6 +4915,7 @@ const App: React.FC = () => {
         onClose={() => setIsCreditModalOpen(false)}
         credits={userCredits}
         vipExpireDate={userVipExpireDate}
+        userId={localUserId}
         inviteCode={userInviteCode}
         activeTab={creditModalTab}
         onTabChange={setCreditModalTab}

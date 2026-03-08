@@ -1,4 +1,5 @@
 import { verifyAlipayNotify } from '../../../utils/alipay';
+import { grantReferralRewardsForFirstPaidOrder } from '../referral/_shared';
 
 interface Env {
   DB: any;
@@ -8,7 +9,7 @@ interface Env {
 interface FulfillmentGrant {
   imageQuota: number;
   vipDays: number;
-  tier: 'tier_9_9' | 'tier_39_9' | 'tier_149';
+  tier: 'starter' | 'advanced' | 'ultra';
 }
 
 function text(body: string, status = 200): Response {
@@ -28,24 +29,24 @@ function almostEqualAmount(a: number, b: number, tolerance = 0.01): boolean {
 
 function resolveGrant(packageType: string, amount: number): FulfillmentGrant | null {
   const normalized = normalizePackageType(packageType);
-  if (normalized.includes('9.9') || normalized.includes('15_quota') || normalized.includes('starter')) {
-    return { imageQuota: 15, vipDays: 7, tier: 'tier_9_9' };
+  if (normalized.includes('starter') || normalized.includes('15_quota') || normalized.includes('9.9')) {
+    return { imageQuota: 6, vipDays: 3, tier: 'starter' };
   }
-  if (normalized.includes('39.9') || normalized.includes('80_quota') || normalized.includes('standard')) {
-    return { imageQuota: 80, vipDays: 30, tier: 'tier_39_9' };
+  if (normalized.includes('standard') || normalized.includes('80_quota') || normalized.includes('99')) {
+    return { imageQuota: 70, vipDays: 30, tier: 'advanced' };
   }
-  if (normalized.includes('149') || normalized.includes('400_quota') || normalized.includes('enterprise') || normalized.includes('annual')) {
-    return { imageQuota: 400, vipDays: 90, tier: 'tier_149' };
+  if (normalized.includes('enterprise') || normalized.includes('400_quota') || normalized.includes('199')) {
+    return { imageQuota: 150, vipDays: 90, tier: 'ultra' };
   }
 
-  if (almostEqualAmount(amount, 9.9) || (amount > 9.9 && amount < 39.9)) {
-    return { imageQuota: 15, vipDays: 7, tier: 'tier_9_9' };
+  if (almostEqualAmount(amount, 9.9) || (amount > 0 && amount < 99)) {
+    return { imageQuota: 6, vipDays: 3, tier: 'starter' };
   }
-  if (almostEqualAmount(amount, 39.9) || (amount >= 39.9 && amount < 149)) {
-    return { imageQuota: 80, vipDays: 30, tier: 'tier_39_9' };
+  if (almostEqualAmount(amount, 99) || (amount >= 99 && amount < 199)) {
+    return { imageQuota: 70, vipDays: 30, tier: 'advanced' };
   }
-  if (almostEqualAmount(amount, 149) || amount >= 149) {
-    return { imageQuota: 400, vipDays: 90, tier: 'tier_149' };
+  if (almostEqualAmount(amount, 199) || amount >= 199) {
+    return { imageQuota: 150, vipDays: 90, tier: 'ultra' };
   }
   return null;
 }
@@ -183,6 +184,17 @@ export async function onRequestPost(context: { env: Env; request: Request }): Pr
     }
 
     await deliverUserAssets(env, order.user_id, grant);
+
+    const referralReward = await grantReferralRewardsForFirstPaidOrder(env, {
+      paidOrderId: outTradeNo,
+      referredUserId: order.user_id,
+      packageType: order.package_type || '',
+    });
+
+    if (referralReward.granted) {
+      console.log('[/api/pay/notify] referral rewards granted', referralReward);
+    }
+
     await markOrderAsCompleted(env, outTradeNo);
 
     return text('success');
