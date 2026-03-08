@@ -776,6 +776,9 @@ WARNING: Apply ONLY the lighting, color, and vibe. Do NOT introduce any new obje
 
   const styleDirective = (styleImageBase64 && !visualDNA) ? `[STYLE TRANSFER] Extract and replicate the exact color grading, lighting, and aesthetic DNA of the SECOND image.\n` : "";
   const variationDirective = variationPrompt ? `\n[MANDATORY COMMERCIAL VARIATION] ${variationPrompt}\n` : "";
+  const productIdentityLock = redesignPrompt
+    ? ""
+    : `\n[ABSOLUTE PRODUCT ID LOCK - CRITICAL] Treat the uploaded product image as the only canonical SKU reference. You MUST keep the exact same product identity in the final image. Preserve the exact bottle silhouette, cap shape, neck and base proportions, label layout, branding position, packaging color blocking, and printed fruit/package artwork from the uploaded product. Do NOT redesign, substitute, simplify, or replace it with a similar beverage or a generic bottle. Only change scene, lighting, camera framing, props, reflections, and environment around the SAME product. Product label graphics that already exist on the uploaded package must remain consistent; the NO TEXT rule only forbids adding new scene text or watermarks.\n`;
 
   // 在最终拼接前，如果存在改款指令，将其提权到极高的优先级
   let finalRedesignOverride = "";
@@ -784,7 +787,7 @@ WARNING: Apply ONLY the lighting, color, and vibe. Do NOT introduce any new obje
   }
 
   // 将新的 compositionRules 加入到最终 Prompt 中
-  return `${AESTHETIC_BASE}${platformDirective}\nYou are a Top-tier Commercial E-commerce Photographer.\n${cameraSpecs}\n[SCENE VIBE] ${vibe}\n${compositionRules}${layoutDirective}\n${guardrails}\n${dnaDirective}${redesignDirective}${finalRedesignOverride}${styleDirective}${variationDirective}[USER DIRECTIVE] ${userIntent}\n[SAFETY] NO TEXT. NO WATERMARKS. NO FLOATING OBJECTS.`.trim();
+  return `${AESTHETIC_BASE}${platformDirective}\nYou are a Top-tier Commercial E-commerce Photographer.\n${cameraSpecs}\n[SCENE VIBE] ${vibe}\n${compositionRules}${layoutDirective}\n${guardrails}${productIdentityLock}\n${dnaDirective}${redesignDirective}${finalRedesignOverride}${styleDirective}${variationDirective}[USER DIRECTIVE] ${userIntent}\n[SAFETY] NO TEXT. NO WATERMARKS. NO FLOATING OBJECTS.`.trim();
 }
 
 // 2. 底层生图引擎（绝对纯净的 Payload 构建）

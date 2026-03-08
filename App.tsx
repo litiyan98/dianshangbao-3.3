@@ -169,9 +169,9 @@ type TextGlowState = 'idle' | 'generating' | 'success';
 type SuiteSlotState = 'idle' | 'loading' | 'success' | 'error';
 
 const SUITE_VARIATION_PROMPTS = [
-  'Commercial product photography, studio lighting, high contrast, clean background, highly detailed, eye-catching.',
-  'Lifestyle photography in a warm real-world environment, natural sunlight, cinematic lighting, depth of field, cozy atmosphere.',
-  'Minimalist high-end aesthetic, geometric background, soft diffuse reflection, close-up material details, Apple product photography style.',
+  'Commercial product photography, studio lighting, high contrast, clean background, highly detailed, eye-catching. Keep the exact uploaded product identity, bottle shape, label layout, and packaging artwork unchanged.',
+  'Lifestyle photography in a warm real-world environment, natural sunlight, cinematic lighting, depth of field, cozy atmosphere. Keep the exact uploaded product identity, bottle shape, label layout, and packaging artwork unchanged.',
+  'Minimalist high-end aesthetic, geometric background, soft diffuse reflection, close-up material details, Apple product photography style. Keep the exact uploaded product identity, bottle shape, label layout, and packaging artwork unchanged.',
 ];
 
 type StepHaloTitleProps = {
