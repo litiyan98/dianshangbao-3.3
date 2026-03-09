@@ -1,4 +1,6 @@
+import { createRemoteJWKSet, jwtVerify } from 'jose';
 import { getWelcomeVipExpireDateISO, NEW_USER_WELCOME_IMAGE_QUOTA } from '../../utils/user';
+import { ensureAdminDailyQuota, extractPhoneFromClaims, normalizePhone } from './_adminQuota';
 import {
   countPaidOrders,
   createUniqueInviteCode,
@@ -10,6 +12,7 @@ import {
 
 interface Env {
   DB: any;
+  AUTHING_DOMAIN?: string;
 }
 
 interface UserRow {
@@ -48,6 +51,27 @@ function buildUserSelectColumns(usersColumns: Set<string>): string[] {
 async function fetchUserById(env: Env, userId: string, selectColumns: string[]): Promise<UserRow | null> {
   const userSql = `SELECT ${selectColumns.join(', ')} FROM Users WHERE user_id = ?1`;
   return (await env.DB.prepare(userSql).bind(userId).first()) as UserRow | null;
+}
+
+async function tryResolveVerifiedPhone(request: Request, env: Env): Promise<string | null> {
+  const authHeader = request.headers.get('Authorization');
+  if (!authHeader?.startsWith('Bearer ')) return null;
+
+  const authingDomain = env.AUTHING_DOMAIN || 'YOUR_AUTHING_DOMAIN';
+  if (!authingDomain || authingDomain.includes('YOUR_AUTHING_DOMAIN')) {
+    return null;
+  }
+
+  try {
+    const token = authHeader.split(' ')[1];
+    const cleanDomain = authingDomain.replace(/^https?:\/\//, '');
+    const JWKS = createRemoteJWKSet(new URL(`https://${cleanDomain}/oidc/.well-known/jwks.json`));
+    const { payload } = await jwtVerify(token, JWKS);
+    return extractPhoneFromClaims(payload as Record<string, unknown>);
+  } catch (error: any) {
+    console.warn('[/api/user] JWT verify failed, skip phone sync:', error?.message || error);
+    return null;
+  }
 }
 
 async function tryBindInviteForExistingUser(
@@ -98,6 +122,9 @@ export async function onRequestGet(context: { request: Request; env: Env }): Pro
     const url = new URL(request.url);
     const userId = url.searchParams.get('userId')?.trim();
     const inviteCode = normalizeInviteCode(url.searchParams.get('inviteCode'));
+    const providedPhone = normalizePhone(url.searchParams.get('phone'));
+    const verifiedPhone = await tryResolveVerifiedPhone(request, env);
+    const adminPhone = verifiedPhone || providedPhone;
 
     if (!userId) {
       return json(
@@ -170,12 +197,16 @@ export async function onRequestGet(context: { request: Request; env: Env }): Pro
       }
 
       if (!user) {
+        if (adminPhone) {
+          await ensureAdminDailyQuota(env, { userId, phone: adminPhone });
+        }
+        const freshUser = await fetchUserById(env, userId, selectColumns);
         return json({
           success: true,
-          credits: 10,
-          invite_code: newInviteCode,
-          image_quota: hasImageQuota ? NEW_USER_WELCOME_IMAGE_QUOTA : null,
-          vip_expire_date: hasVipExpireDate ? welcomeVipExpireDate : null,
+          credits: Number(freshUser?.credits ?? 10),
+          invite_code: hasInviteCode ? (freshUser?.invite_code || newInviteCode) : null,
+          image_quota: hasImageQuota ? Number(freshUser?.image_quota ?? NEW_USER_WELCOME_IMAGE_QUOTA) : null,
+          vip_expire_date: hasVipExpireDate ? freshUser?.vip_expire_date || welcomeVipExpireDate : null,
           isNewUser: true,
         });
       }
@@ -223,7 +254,17 @@ export async function onRequestGet(context: { request: Request; env: Env }): Pro
       hasInvitedBy,
     });
 
-    const credits = Number(user.credits ?? 10);
+    if (adminPhone) {
+      const adminResult = await ensureAdminDailyQuota(env, { userId, phone: adminPhone });
+      if (adminResult.isAdmin) {
+        user = await fetchUserById(env, userId, selectColumns);
+        inviteCodeValue = hasInviteCode ? user?.invite_code || inviteCodeValue : null;
+        imageQuotaValue = hasImageQuota ? Number(user?.image_quota ?? imageQuotaValue) : null;
+        vipExpireDateValue = hasVipExpireDate ? user?.vip_expire_date || vipExpireDateValue : null;
+      }
+    }
+
+    const credits = Number(user?.credits ?? 10);
     return json({
       success: true,
       credits: Number.isFinite(credits) ? credits : 10,

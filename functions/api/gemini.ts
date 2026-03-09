@@ -1,4 +1,5 @@
 import { createRemoteJWKSet, jwtVerify } from 'jose';
+import { ensureAdminDailyQuota, extractPhoneFromClaims } from './_adminQuota';
 
 interface Env {
   API_KEY: string;
@@ -198,6 +199,8 @@ export async function onRequestPost(context: { env: Env; request: Request }) {
     return new Response(JSON.stringify({ error: 'AUTH_ERROR', message: '服务端 API_KEY 未配置' }), { status: 500 });
   }
 
+  let authPayload: Record<string, unknown> | null = null;
+
   // 1. Edge 边缘 JWT 鉴权逻辑
   try {
     if (!authingDomain || authingDomain.includes('YOUR_AUTHING_DOMAIN')) {
@@ -211,7 +214,8 @@ export async function onRequestPost(context: { env: Env; request: Request }) {
 
       const cleanDomain = authingDomain.replace(/^https?:\/\//, '');
       const JWKS = createRemoteJWKSet(new URL(`https://${cleanDomain}/oidc/.well-known/jwks.json`));
-      await jwtVerify(token, JWKS);
+      const verified = await jwtVerify(token, JWKS);
+      authPayload = verified.payload as Record<string, unknown>;
     }
   } catch (error: any) {
     console.error('JWT 验证失败:', error.message);
@@ -236,6 +240,11 @@ export async function onRequestPost(context: { env: Env; request: Request }) {
     if (!billingUserId) {
       return json({ error: 'UNAUTHORIZED', code: 401, message: '缺少 userId' }, 401);
     }
+
+    await ensureAdminDailyQuota(env, {
+      userId: billingUserId,
+      phone: extractPhoneFromClaims(authPayload),
+    });
 
     const userAssets = await getUserAssets(env, billingUserId);
     if (!userAssets) {
