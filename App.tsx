@@ -84,7 +84,56 @@ const ENABLE_CREDITS_OVERDRAFT = true;
 
 function resolveUserPhone(userInfo: any): string {
   if (!userInfo || typeof userInfo !== 'object') return '';
-  const candidates = [userInfo.phone, userInfo.phoneNumber, userInfo.mobile, userInfo.username, userInfo.preferred_username];
+  const candidates = [
+    userInfo.phone,
+    userInfo.phoneNumber,
+    userInfo.phone_number,
+    userInfo.mobile,
+    userInfo.username,
+    userInfo.preferred_username,
+  ];
+  for (const item of candidates) {
+    if (typeof item !== 'string') continue;
+    const digits = item.replace(/\D/g, '');
+    if (digits.length === 11 && digits.startsWith('1')) return digits;
+    if (digits.length === 13 && digits.startsWith('86')) return digits.slice(2);
+  }
+  return '';
+}
+
+function resolveAuthingUserId(userInfo: any): string {
+  if (!userInfo || typeof userInfo !== 'object') return '';
+  const candidates = [userInfo.sub, userInfo.userId, userInfo.user_id, userInfo.id, userInfo.uid];
+  for (const item of candidates) {
+    if (typeof item === 'string' && item.trim()) return item.trim();
+  }
+  return '';
+}
+
+function decodeJwtPayload(token: string | null): Record<string, any> | null {
+  if (!token || token === 'undefined' || token === 'null') return null;
+  const segments = token.split('.');
+  if (segments.length < 2) return null;
+  try {
+    const normalized = segments[1].replace(/-/g, '+').replace(/_/g, '/');
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+    const decoded = typeof window !== 'undefined' ? window.atob(padded) : Buffer.from(padded, 'base64').toString('utf8');
+    return JSON.parse(decoded);
+  } catch {
+    return null;
+  }
+}
+
+function resolvePhoneFromToken(token: string | null): string {
+  const payload = decodeJwtPayload(token);
+  if (!payload || typeof payload !== 'object') return '';
+  const candidates = [
+    payload.phone_number,
+    payload.phone,
+    payload.mobile,
+    payload.username,
+    payload.preferred_username,
+  ];
   for (const item of candidates) {
     if (typeof item !== 'string') continue;
     const digits = item.replace(/\D/g, '');
@@ -1972,6 +2021,13 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const key = 'dsb_mock_user_id';
+    const authUserId = resolveAuthingUserId(userInfo);
+    if (authUserId) {
+      localStorage.setItem(key, authUserId);
+      setLocalUserId(authUserId);
+      return;
+    }
+
     const existing = localStorage.getItem(key)?.trim();
     if (existing) {
       setLocalUserId(existing);
@@ -1981,7 +2037,7 @@ const App: React.FC = () => {
     const generated = `u_${Date.now().toString(36)}_${randomPart}`;
     localStorage.setItem(key, generated);
     setLocalUserId(generated);
-  }, []);
+  }, [userInfo]);
 
   const refreshUserCredits = useCallback(async () => {
     if (!localUserId) return;
@@ -1992,10 +2048,10 @@ const App: React.FC = () => {
       const query = new URLSearchParams({ userId: localUserId });
       if (inviteCode) query.set('inviteCode', inviteCode);
 
-      const resolvedPhone = resolveUserPhone(userInfo);
+      const token = localStorage.getItem('authing_token');
+      const resolvedPhone = resolveUserPhone(userInfo) || resolvePhoneFromToken(token);
       if (resolvedPhone) query.set('phone', resolvedPhone);
 
-      const token = localStorage.getItem('authing_token');
       const headers: Record<string, string> = {};
       if (token && token !== 'undefined' && token !== 'null') {
         headers.Authorization = `Bearer ${token}`;
