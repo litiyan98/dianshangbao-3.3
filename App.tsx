@@ -2045,7 +2045,7 @@ const App: React.FC = () => {
     try {
       const searchParams = new URLSearchParams(window.location.search);
       const inviteCode = searchParams.get('invite')?.trim() || '';
-      const query = new URLSearchParams({ userId: localUserId });
+      const query = new URLSearchParams({ userId: localUserId, debugAdmin: '1' });
       if (inviteCode) query.set('inviteCode', inviteCode);
 
       const token = localStorage.getItem('authing_token');
@@ -2068,6 +2068,9 @@ const App: React.FC = () => {
       const quota = Number(data?.image_quota ?? data?.credits);
       if (!Number.isFinite(quota)) {
         throw new Error('资产数据格式异常');
+      }
+      if (data?.admin_debug) {
+        console.info('[admin-debug] /api/user', data.admin_debug);
       }
       setUserCredits(quota);
       setUserVipExpireDate(data?.vip_expire_date ? String(data.vip_expire_date) : null);

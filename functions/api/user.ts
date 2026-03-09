@@ -122,9 +122,23 @@ export async function onRequestGet(context: { request: Request; env: Env }): Pro
     const url = new URL(request.url);
     const userId = url.searchParams.get('userId')?.trim();
     const inviteCode = normalizeInviteCode(url.searchParams.get('inviteCode'));
+    const debugAdmin = url.searchParams.get('debugAdmin') === '1';
     const providedPhone = normalizePhone(url.searchParams.get('phone'));
     const verifiedPhone = await tryResolveVerifiedPhone(request, env);
     const adminPhone = verifiedPhone || providedPhone;
+    const authingDomainConfigured = Boolean(env.AUTHING_DOMAIN && !env.AUTHING_DOMAIN.includes('YOUR_AUTHING_DOMAIN'));
+    const adminDebug = debugAdmin
+      ? {
+          user_id: userId || '',
+          provided_phone: providedPhone,
+          verified_phone: verifiedPhone,
+          admin_phone: adminPhone,
+          authing_domain_configured: authingDomainConfigured,
+          admin_checked: false,
+          is_admin: false,
+          admin_refreshed: false,
+        }
+      : null;
 
     if (!userId) {
       return json(
@@ -198,7 +212,14 @@ export async function onRequestGet(context: { request: Request; env: Env }): Pro
 
       if (!user) {
         if (adminPhone) {
-          await ensureAdminDailyQuota(env, { userId, phone: adminPhone });
+          const adminResult = await ensureAdminDailyQuota(env, { userId, phone: adminPhone });
+          if (adminDebug) {
+            adminDebug.admin_checked = true;
+            adminDebug.is_admin = adminResult.isAdmin;
+            adminDebug.admin_refreshed = adminResult.refreshed;
+          }
+        } else if (adminDebug) {
+          adminDebug.admin_checked = false;
         }
         const freshUser = await fetchUserById(env, userId, selectColumns);
         return json({
@@ -208,6 +229,7 @@ export async function onRequestGet(context: { request: Request; env: Env }): Pro
           image_quota: hasImageQuota ? Number(freshUser?.image_quota ?? NEW_USER_WELCOME_IMAGE_QUOTA) : null,
           vip_expire_date: hasVipExpireDate ? freshUser?.vip_expire_date || welcomeVipExpireDate : null,
           isNewUser: true,
+          ...(adminDebug ? { admin_debug: adminDebug } : {}),
         });
       }
     }
@@ -256,12 +278,19 @@ export async function onRequestGet(context: { request: Request; env: Env }): Pro
 
     if (adminPhone) {
       const adminResult = await ensureAdminDailyQuota(env, { userId, phone: adminPhone });
+      if (adminDebug) {
+        adminDebug.admin_checked = true;
+        adminDebug.is_admin = adminResult.isAdmin;
+        adminDebug.admin_refreshed = adminResult.refreshed;
+      }
       if (adminResult.isAdmin) {
         user = await fetchUserById(env, userId, selectColumns);
         inviteCodeValue = hasInviteCode ? user?.invite_code || inviteCodeValue : null;
         imageQuotaValue = hasImageQuota ? Number(user?.image_quota ?? imageQuotaValue) : null;
         vipExpireDateValue = hasVipExpireDate ? user?.vip_expire_date || vipExpireDateValue : null;
       }
+    } else if (adminDebug) {
+      adminDebug.admin_checked = false;
     }
 
     const credits = Number(user?.credits ?? 10);
@@ -272,6 +301,7 @@ export async function onRequestGet(context: { request: Request; env: Env }): Pro
       image_quota: hasImageQuota ? Number(imageQuotaValue ?? NEW_USER_WELCOME_IMAGE_QUOTA) : null,
       vip_expire_date: hasVipExpireDate ? vipExpireDateValue || null : null,
       invited_by: hasInvitedBy ? invitedByValue : null,
+      ...(adminDebug ? { admin_debug: adminDebug } : {}),
     });
   } catch (error: any) {
     console.error('[/api/user] unexpected error:', error);
