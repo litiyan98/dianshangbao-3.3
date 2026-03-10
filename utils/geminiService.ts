@@ -27,9 +27,25 @@ export function consumeLatestAssetSnapshot() {
 // ==========================================
 // 🛡️ 核心基建：带 Authing 鉴权与防断连的原生 Fetch
 // ==========================================
+function getAutoRetryDelayMs(statusCode: number, attempt: number, url: string) {
+  const isImageRequest = url.includes('flash-image');
+  const jitter = Math.floor(Math.random() * 600);
+
+  if (statusCode === 429) {
+    const base = isImageRequest ? 2600 : 1600;
+    return base * Math.pow(2, attempt) + jitter;
+  }
+
+  if (statusCode === 503) {
+    const base = isImageRequest ? 1800 : 1200;
+    return base * Math.pow(2, attempt) + jitter;
+  }
+
+  return 1500 + jitter;
+}
+
 async function safeFetchJson(url: string, payload: any, timeoutMs: number = 30000) {
   const maxAutoRetries = 2;
-  const retryDelayMs = 1500;
 
   for (let attempt = 0; attempt <= maxAutoRetries; attempt++) {
     const controller = new AbortController();
@@ -81,8 +97,9 @@ async function safeFetchJson(url: string, payload: any, timeoutMs: number = 3000
           throw new Error(parsedDetail?.error || backendMessage || "请求被拒绝(403)");
         }
 
-        // 网络拥挤：静默自动重试 2 次（共最多 3 次）
+        // 网络拥挤：按状态码做指数退避，避免三图同时重试形成雪崩
         if ((response.status === 429 || response.status === 503) && attempt < maxAutoRetries) {
+          const retryDelayMs = getAutoRetryDelayMs(response.status, attempt, url);
           console.warn(`[safeFetchJson] ${response.status} detected, auto retry ${attempt + 1}/${maxAutoRetries} after ${retryDelayMs}ms`);
           await new Promise(resolve => setTimeout(resolve, retryDelayMs));
           continue;
@@ -146,6 +163,7 @@ const IMAGE_MODEL_CHAIN_PRECISION = [
 
 const TEMP_MODEL_SKIP_MS = 30 * 60 * 1000;
 const TEMP_MODEL_SKIP_MS_UNSTABLE_IMAGE = 10 * 60 * 1000;
+const TEMP_MODEL_SKIP_MS_RATE_LIMIT_IMAGE = 90 * 1000;
 const temporaryUnavailableModels = new Map<string, number>();
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -227,6 +245,10 @@ async function fetchGeminiWithFallback(
         }
 
         const isImageFlow = purpose.includes("生图");
+        const isRateLimitedImageModel =
+          isImageFlow &&
+          model.includes("flash-image") &&
+          statusCode === 429;
         const isUnstableImageModel =
           isImageFlow &&
           model.includes("flash-image") &&
@@ -239,6 +261,11 @@ async function fetchGeminiWithFallback(
             message.toLowerCase().includes("failed to fetch") ||
             message.includes("超时")
           );
+
+        // 图像模型限流：短时间跳过被打爆的模型，避免三图同一时刻继续撞 429
+        if (isRateLimitedImageModel) {
+          temporaryUnavailableModels.set(model, Date.now() + TEMP_MODEL_SKIP_MS_RATE_LIMIT_IMAGE);
+        }
 
         // 图像模型熔断：短时间内跳过异常模型，避免套图流程反复卡在同一故障模型
         if (isUnstableImageModel) {
