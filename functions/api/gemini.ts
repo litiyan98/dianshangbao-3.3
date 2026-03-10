@@ -285,7 +285,7 @@ export async function onRequestPost(context: { env: Env; request: Request }) {
     }
 
     // userId / count 仅用于后端鉴权，不转发给 Gemini
-    const { userId: _skipUserId, count: _skipCount, skipPromptExpansion: _skipPromptExpansion, ...googlePayload } = payload as Record<string, any>;
+    const { userId: _skipUserId, count: _skipCount, skipPromptExpansion: _skipPromptExpansion, imageRequestProfile: _skipImageRequestProfile, ...googlePayload } = payload as Record<string, any>;
 
     let modelData: any;
     const generatedImages: string[] = [];
