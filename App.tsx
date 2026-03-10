@@ -230,22 +230,35 @@ const UNSUPPORTED_COLOR_FN_RE = /\b(oklch|oklab)\(/i;
 type TextGlowState = 'idle' | 'generating' | 'success';
 type SuiteSlotState = 'idle' | 'loading' | 'success' | 'error';
 type MatrixLockLevel = 'strict' | 'balanced' | 'editorial';
+type MatrixRequestProfile = 'default' | 'stable';
 
 const MATRIX_PROFILES: Array<{
   variationPrompt: string;
   lockLevel: MatrixLockLevel;
+  requestProfile: MatrixRequestProfile;
+  startDelayMs: number;
+  taskRetries: number;
 }> = [
   {
     lockLevel: 'strict',
+    requestProfile: 'default',
+    startDelayMs: 0,
+    taskRetries: 0,
     variationPrompt: 'Commercial product photography, studio lighting, high contrast, clean background, highly detailed, eye-catching. Keep the exact uploaded product identity, bottle shape, label layout, and packaging artwork unchanged. No camera angle change. Only optimize lighting, reflections, and peripheral splash details around the same product.',
   },
   {
     lockLevel: 'balanced',
+    requestProfile: 'default',
+    startDelayMs: 900,
+    taskRetries: 0,
     variationPrompt: 'Lifestyle photography in a warm real-world environment, natural sunlight, cinematic lighting, depth of field, cozy atmosphere. Keep the exact uploaded product identity, bottle shape, label layout, and packaging artwork unchanged. Allow only a subtle perspective change of the same bottle and premium material polish such as clearer liquid, improved condensation, and refined highlights.',
   },
   {
     lockLevel: 'editorial',
-    variationPrompt: 'Minimalist high-end aesthetic, geometric background, soft diffuse reflection, close-up material details, Apple product photography style. Keep the exact uploaded product identity and packaging design recognizable. Allow a moderate camera angle shift, bolder scene design, and editorial props, but do not change the bottle into a different product.',
+    requestProfile: 'stable',
+    startDelayMs: 2600,
+    taskRetries: 1,
+    variationPrompt: 'Minimalist high-end aesthetic, geometric background, premium art direction, controlled props, soft diffuse reflection, and refined material details. Keep the exact uploaded product identity and packaging design immediately recognizable. Allow a moderate camera angle shift and editorial scene design, but never replace or redesign the bottle, label system, or package artwork.',
   },
 ];
 
@@ -3049,69 +3062,85 @@ const App: React.FC = () => {
       const currentRenderConfig = { ...textConfig, title: '', detail: '' };
       let successCount = 0;
 
-      const runMatrixTask = async ({ variationPrompt, lockLevel }: typeof MATRIX_PROFILES[number], index: number) => {
-        try {
-          const aiResult = await generateScenarioImage(
-            [sourceImages[0].split(',')[1]],
-            selectedScenario,
-            currentAnalysis,
-            userPrompt,
-            textConfig,
-            mode,
-            styleReferenceImage ? styleReferenceImage.split(',')[1] : undefined,
-            visualDNA,
-            variationPrompt,
-            aspectRatio,
-            layout,
-            safeRedesignPrompt,
-            targetPlatform,
-            safeMaskImageBase64,
-            safeIsRedesignMode,
-            localUserId,
-            1,
-            true,
-            lockLevel
-          );
+      const runMatrixTask = async ({ variationPrompt, lockLevel, requestProfile, startDelayMs, taskRetries }: typeof MATRIX_PROFILES[number], index: number) => {
+        const attemptDelays = [0, 4200];
+        for (let attempt = 0; attempt <= taskRetries; attempt++) {
+          try {
+            const delayMs = (attempt === 0 ? startDelayMs : 0) + (attemptDelays[attempt] || 0);
+            if (delayMs > 0) {
+              await new Promise(resolve => setTimeout(resolve, delayMs));
+            }
 
-          if (typeof aiResult !== 'string' || !aiResult) {
-            throw new Error(`营销矩阵第 ${index + 1} 张未返回有效图片`);
+            const aiResult = await generateScenarioImage(
+              [sourceImages[0].split(',')[1]],
+              selectedScenario,
+              currentAnalysis,
+              userPrompt,
+              textConfig,
+              mode,
+              styleReferenceImage ? styleReferenceImage.split(',')[1] : undefined,
+              visualDNA,
+              variationPrompt,
+              aspectRatio,
+              layout,
+              safeRedesignPrompt,
+              targetPlatform,
+              safeMaskImageBase64,
+              safeIsRedesignMode,
+              localUserId,
+              1,
+              true,
+              lockLevel,
+              requestProfile
+            );
+
+            if (typeof aiResult !== 'string' || !aiResult) {
+              throw new Error(`营销矩阵第 ${index + 1} 张未返回有效图片`);
+            }
+
+            const finalResult = await processFinalImage(
+              aiResult,
+              sourceImages[0],
+              currentAnalysis,
+              mode,
+              currentRenderConfig,
+              safeLogoImage,
+              aspectRatio,
+              safeStickerConfig,
+              safeLogoConfig
+            );
+            const normalizedResult = await enforceAspectRatio(finalResult, aspectRatio);
+
+            successCount += 1;
+            setResultImages((prev) => {
+              const next = prev.length === 3 ? [...prev] : ['', '', ''];
+              next[index] = normalizedResult;
+              return next;
+            });
+            setSuiteSlotStates((prev) => {
+              const next: SuiteSlotState[] = prev.length === 3 ? [...prev] : ['loading', 'loading', 'loading'];
+              next[index] = 'success';
+              return next;
+            });
+            setGenerationProgress(`营销矩阵渲染中：已完成 ${successCount}/3`);
+
+            return normalizedResult;
+          } catch (error) {
+            if (attempt < taskRetries) {
+              setGenerationProgress(`营销矩阵渲染中：第 ${index + 1} 张进入稳态补偿重试...`);
+              continue;
+            }
+
+            setSuiteSlotStates((prev) => {
+              const next: SuiteSlotState[] = prev.length === 3 ? [...prev] : ['loading', 'loading', 'loading'];
+              next[index] = 'error';
+              return next;
+            });
+            throw error;
           }
-
-          const finalResult = await processFinalImage(
-            aiResult,
-            sourceImages[0],
-            currentAnalysis,
-            mode,
-            currentRenderConfig,
-            safeLogoImage,
-            aspectRatio,
-            safeStickerConfig,
-            safeLogoConfig
-          );
-          const normalizedResult = await enforceAspectRatio(finalResult, aspectRatio);
-
-          successCount += 1;
-          setResultImages((prev) => {
-            const next = prev.length === 3 ? [...prev] : ['', '', ''];
-            next[index] = normalizedResult;
-            return next;
-          });
-          setSuiteSlotStates((prev) => {
-            const next: SuiteSlotState[] = prev.length === 3 ? [...prev] : ['loading', 'loading', 'loading'];
-            next[index] = 'success';
-            return next;
-          });
-          setGenerationProgress(`营销矩阵渲染中：已完成 ${successCount}/3`);
-
-          return normalizedResult;
-        } catch (error) {
-          setSuiteSlotStates((prev) => {
-            const next: SuiteSlotState[] = prev.length === 3 ? [...prev] : ['loading', 'loading', 'loading'];
-            next[index] = 'error';
-            return next;
-          });
-          throw error;
         }
+
+        throw new Error(`营销矩阵第 ${index + 1} 张补偿重试后仍未成功返回`);
       };
 
       let matrixCursor = 0;

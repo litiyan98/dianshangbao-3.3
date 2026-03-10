@@ -870,7 +870,8 @@ export async function generateScenarioImage(
   userId?: string,
   count: 1 | 3 = 1,
   skipPromptExpansion: boolean = false,
-  productLockLevel: 'strict' | 'balanced' | 'editorial' = 'strict'
+  productLockLevel: 'strict' | 'balanced' | 'editorial' = 'strict',
+  imageRequestProfile: 'default' | 'stable' = 'default'
 ): Promise<string | string[]> {
   
   const finalPrompt = buildEnhancedPrompt(scenario, analysis, userIntent, textConfig, mode, styleImageBase64, visualDNA, variationPrompt, aspectRatio, layout, redesignPrompt, targetPlatform, productLockLevel);
@@ -900,6 +901,7 @@ export async function generateScenarioImage(
     userId,
     count,
     skipPromptExpansion,
+    imageRequestProfile,
     contents: [
       { parts: parts }
     ],
@@ -911,8 +913,19 @@ export async function generateScenarioImage(
     }
   };
 
-  // 当前前端已固定艺术重构模式，这里固定使用艺术链路（3.1 -> 2.5）
-  const imageModelChain = IMAGE_MODEL_CHAIN_ARTISTIC;
+  const imageModelChain = imageRequestProfile === 'stable'
+    ? ["gemini-2.5-flash-image", "gemini-3.1-flash-image-preview"]
+    : IMAGE_MODEL_CHAIN_ARTISTIC;
+
+  const timeoutByModel = imageRequestProfile === 'stable'
+    ? {
+        "gemini-2.5-flash-image": 70000,
+        "gemini-3.1-flash-image-preview": 22000
+      }
+    : {
+        "gemini-3.1-flash-image-preview": 22000,
+        "gemini-2.5-flash-image": 60000
+      };
 
   // 📸 生图请求给予 60s 宽容度，失败自动回落下一个模型
   const data = await fetchGeminiWithFallback(
@@ -921,10 +934,7 @@ export async function generateScenarioImage(
     60000,
     1,
     "生图引擎",
-    {
-      "gemini-3.1-flash-image-preview": 22000,
-      "gemini-2.5-flash-image": 60000
-    }
+    timeoutByModel
   );
 
   const directImages = Array.isArray((data as any)?.images)
