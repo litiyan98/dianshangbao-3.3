@@ -2915,10 +2915,8 @@ const App: React.FC = () => {
   const isSingleCreditsInsufficient = !ENABLE_CREDITS_OVERDRAFT && hasCreditsValue && userCredits < 1;
   const isMatrixCreditsInsufficient = !ENABLE_CREDITS_OVERDRAFT && hasCreditsValue && userCredits < 3;
   const loadingHeadline = activeGenerateCount === 3
-    ? '🚀 正在错峰渲染：高转化主图 / 沉浸场景 / 极简海报...'
+    ? '🚀 正在顺序渲染：高转化主图 / 沉浸场景 / 极简海报...'
     : '✨ AI 视觉神经元正在为您注入顶级商业摄影参数...';
-  const MATRIX_MAX_CONCURRENCY = 2;
-  const MATRIX_WORKER_STAGGER_MS = 1800;
 
   const openPaymentModalForAssetError = (errorCode: 'VIP_EXPIRED' | 'INSUFFICIENT_QUOTA') => {
     const tip = errorCode === 'VIP_EXPIRED'
@@ -3046,7 +3044,7 @@ const App: React.FC = () => {
     }
     setActiveGenerateCount(3);
     setIsProcessing(true); setStep('result'); setResultImages(['', '', '']); setSuiteSlotStates(['loading', 'loading', 'loading']); setIsSuiteMode(true);
-    setGenerationProgress('🚀 正在并发渲染：高转化主图 / 沉浸场景 / 极简海报...');
+    setGenerationProgress('🚀 正在顺序渲染：第 1 张高转化主图即将开始...');
     // 安全瘦身：保留后端契约字段，但固定为安全默认值，避免 UI 移除后触发 400/500
     const safeRedesignPrompt: string | undefined = undefined;
     const safeMaskImageBase64: string | null = null;
@@ -3063,13 +3061,15 @@ const App: React.FC = () => {
       let successCount = 0;
 
       const runMatrixTask = async ({ variationPrompt, lockLevel, requestProfile, startDelayMs, taskRetries }: typeof MATRIX_PROFILES[number], index: number) => {
-        const attemptDelays = [0, 4200];
+        const attemptDelays = [0, 7000];
         for (let attempt = 0; attempt <= taskRetries; attempt++) {
           try {
             const delayMs = (attempt === 0 ? startDelayMs : 0) + (attemptDelays[attempt] || 0);
             if (delayMs > 0) {
               await new Promise(resolve => setTimeout(resolve, delayMs));
             }
+
+            setGenerationProgress(`营销矩阵顺序渲染中：正在处理第 ${index + 1}/3 张...`);
 
             const aiResult = await generateScenarioImage(
               [sourceImages[0].split(',')[1]],
@@ -3122,12 +3122,12 @@ const App: React.FC = () => {
               next[index] = 'success';
               return next;
             });
-            setGenerationProgress(`营销矩阵渲染中：已完成 ${successCount}/3`);
+            setGenerationProgress(`营销矩阵顺序渲染中：已完成 ${successCount}/3`);
 
-            return normalizedResult;
+            return { status: 'fulfilled' as const, value: normalizedResult };
           } catch (error) {
             if (attempt < taskRetries) {
-              setGenerationProgress(`营销矩阵渲染中：第 ${index + 1} 张进入稳态补偿重试...`);
+              setGenerationProgress(`营销矩阵顺序渲染中：第 ${index + 1} 张进入稳态补偿重试...`);
               continue;
             }
 
@@ -3136,34 +3136,23 @@ const App: React.FC = () => {
               next[index] = 'error';
               return next;
             });
-            throw error;
+            return { status: 'rejected' as const, reason: error };
           }
         }
 
-        throw new Error(`营销矩阵第 ${index + 1} 张补偿重试后仍未成功返回`);
+        return { status: 'rejected' as const, reason: new Error(`营销矩阵第 ${index + 1} 张补偿重试后仍未成功返回`) };
       };
 
-      let matrixCursor = 0;
-      const workerCount = Math.min(MATRIX_MAX_CONCURRENCY, MATRIX_PROFILES.length);
-      const workerTasks = Array.from({ length: workerCount }, (_, workerIndex) => (async () => {
-        if (workerIndex > 0) {
-          await new Promise(resolve => setTimeout(resolve, MATRIX_WORKER_STAGGER_MS * workerIndex));
+      const settledResults: PromiseSettledResult<string>[] = [];
+      for (let index = 0; index < MATRIX_PROFILES.length; index++) {
+        const taskResult = await runMatrixTask(MATRIX_PROFILES[index], index);
+        if (taskResult.status === 'fulfilled') {
+          settledResults.push({ status: 'fulfilled', value: taskResult.value });
+        } else {
+          settledResults.push({ status: 'rejected', reason: taskResult.reason });
         }
-        const workerResults: PromiseSettledResult<string>[] = [];
-        while (true) {
-          const currentIndex = matrixCursor++;
-          if (currentIndex >= MATRIX_PROFILES.length) break;
-          try {
-            const value = await runMatrixTask(MATRIX_PROFILES[currentIndex], currentIndex);
-            workerResults.push({ status: 'fulfilled', value });
-          } catch (reason) {
-            workerResults.push({ status: 'rejected', reason });
-          }
-        }
-        return workerResults;
-      })());
+      }
 
-      const settledResults = (await Promise.all(workerTasks)).flat();
       const fulfilledCount = settledResults.filter((item): item is PromiseFulfilledResult<string> => item.status === 'fulfilled').length;
       const failedCount = settledResults.length - fulfilledCount;
 

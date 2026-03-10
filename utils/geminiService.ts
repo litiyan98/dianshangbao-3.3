@@ -44,8 +44,13 @@ function getAutoRetryDelayMs(statusCode: number, attempt: number, url: string) {
   return 1500 + jitter;
 }
 
+function isImageModelUrl(url: string) {
+  return /model=gemini-[^&]*flash-image/.test(url);
+}
+
 async function safeFetchJson(url: string, payload: any, timeoutMs: number = 30000) {
   const maxAutoRetries = 2;
+  const isImageRequest = isImageModelUrl(url);
 
   for (let attempt = 0; attempt <= maxAutoRetries; attempt++) {
     const controller = new AbortController();
@@ -97,8 +102,9 @@ async function safeFetchJson(url: string, payload: any, timeoutMs: number = 3000
           throw new Error(parsedDetail?.error || backendMessage || "请求被拒绝(403)");
         }
 
-        // 网络拥挤：按状态码做指数退避，避免三图同时重试形成雪崩
-        if ((response.status === 429 || response.status === 503) && attempt < maxAutoRetries) {
+        // 图像请求的 429/503 交给 fallback 处理，避免同一模型在 safeFetchJson 内部被重复撞击。
+        const shouldAutoRetryHere = !isImageRequest && (response.status === 429 || response.status === 503) && attempt < maxAutoRetries;
+        if (shouldAutoRetryHere) {
           const retryDelayMs = getAutoRetryDelayMs(response.status, attempt, url);
           console.warn(`[safeFetchJson] ${response.status} detected, auto retry ${attempt + 1}/${maxAutoRetries} after ${retryDelayMs}ms`);
           await new Promise(resolve => setTimeout(resolve, retryDelayMs));
@@ -270,6 +276,10 @@ async function fetchGeminiWithFallback(
         // 图像模型熔断：短时间内跳过异常模型，避免套图流程反复卡在同一故障模型
         if (isUnstableImageModel) {
           temporaryUnavailableModels.set(model, Date.now() + TEMP_MODEL_SKIP_MS_UNSTABLE_IMAGE);
+        }
+
+        if (isRateLimitedImageModel || isUnstableImageModel) {
+          break;
         }
 
         if (retryable && attempt < retriesPerModel) {
