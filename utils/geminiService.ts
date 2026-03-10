@@ -911,7 +911,6 @@ export async function generateScenarioImage(
     userId,
     count,
     skipPromptExpansion,
-    imageRequestProfile,
     contents: [
       { parts: parts }
     ],
