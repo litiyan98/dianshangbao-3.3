@@ -4958,8 +4958,8 @@ const App: React.FC = () => {
                         <div
                           key={index}
                           ref={el => suiteRefs.current[index] = el}
-                          className={`glass-panel rounded-[32px] relative group bg-white/62 border border-stone-100 shadow-sm overflow-hidden ${img ? 'p-4 space-y-4 animate-fade-in-up' : 'p-0'} `}
-                          style={img ? { animationDelay: `${index * 0.3 + 0.1}s` } : { aspectRatio: currentAspectRatio, minHeight: 200 }}
+                          className={`glass-panel rounded-[32px] relative group overflow-hidden ${img ? 'bg-white/62 border border-stone-100 shadow-sm p-4 space-y-4 animate-fade-in-up' : slotState === 'error' ? 'bg-white/40 border border-stone-100/70 shadow-sm p-0' : 'bg-white/24 border border-white/65 shadow-[0_20px_44px_rgba(15,23,42,0.04)] backdrop-blur-sm p-0'} `}
+                          style={img ? { animationDelay: `${index * 0.3 + 0.1}s` } : ({ aspectRatio: currentAspectRatio, minHeight: 200, ['--render-phase' as any]: `${index * 1.15}s`, ['--render-sweep-phase' as any]: `${index * 1.45 + 0.5}s` } as React.CSSProperties)}
                         >
                           <div className="absolute top-6 left-6 z-20 flex flex-col gap-2">
                             <div className="bg-black/60 backdrop-blur-md text-white text-[9px] font-black px-3 py-1 rounded-full border border-white/10">
