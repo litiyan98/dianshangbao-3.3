@@ -2,9 +2,33 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   X, Plus, Download, Sparkles, Wand2, Palette, Zap, Loader2, Lightbulb, ZoomIn, Trash2
 } from 'lucide-react';
-import { ScenarioType, MarketAnalysis, TextConfig, GenerationMode, FontStyle, CompositionLayout, AspectRatio, StickerConfig, VisualDNA, LogoConfig } from './types';
+import {
+  AspectRatio,
+  CompositionLayout,
+  DetailPageModule,
+  DetailPageModuleAssets,
+  DetailPageReferenceImage,
+  DetailPageReferenceStyle,
+  FontStyle,
+  GenerationMode,
+  LogoConfig,
+  MarketAnalysis,
+  ScenarioType,
+  StickerConfig,
+  TextConfig,
+  VisualDNA,
+} from './types';
 import { SCENARIO_CONFIGS, DEFAULT_STICKERS } from './constants';
-import { analyzeProduct, generateScenarioImage, extractVisualDNA, generateMasterImagePrompt, generateMasterMarketingCopy, consumeLatestAssetSnapshot } from './utils/geminiService';
+import {
+  analyzeProduct,
+  consumeLatestAssetSnapshot,
+  extractVisualDNA,
+  generateDetailPageModuleCopy,
+  generateDetailPagePlan,
+  generateMasterImagePrompt,
+  generateMasterMarketingCopy,
+  generateScenarioImage,
+} from './utils/geminiService';
 import { processFinalImage, FONT_REGISTRY, exportImageWithText, preloadFont, compressImage, generateMask, loadImage } from './utils/imageComposite';
 import html2canvas from 'html2canvas';
 import { Authing } from '@authing/browser';
@@ -17,6 +41,19 @@ import { removeBackground as imglyRemoveBackground } from '@imgly/background-rem
 import { useAppleReveal } from './hooks/useAppleReveal';
 import LiquidMetalBackground from './components/LiquidMetalBackground';
 import GloveIcon from './components/GloveIcon';
+import DetailPageWorkbench from './components/DetailPageWorkbench';
+import { exportDetailPageModuleImage, exportDetailPageSuiteImage } from './utils/detailPageExport';
+import {
+  buildDetailModuleImageIntent,
+  createFallbackDetailPagePlans,
+  createDetailPageSeedModules,
+  createFallbackDetailReferenceStyle,
+  getDetailModuleLayout,
+  getDetailModuleLockLevel,
+  getDetailModuleScenario,
+  isDetailModuleSupported,
+  mergeDetailPagePlan,
+} from './utils/detailPageEngine';
 
 const BARRAGE_TEXTS = [
   '影棚级光影 ✦',
@@ -81,6 +118,18 @@ const FONT_STYLE_OPTIONS: Array<{ id: FontStyle; label: string }> = [
 
 // 临时开发开关：允许算力透支，不拦截单图/套图生成
 const ENABLE_CREDITS_OVERDRAFT = true;
+
+const DEFAULT_DETAIL_MODULE_ID = createDetailPageSeedModules()[0]?.id ?? null;
+const DETAIL_PRIMARY_REFERENCE_ID = 'detail-primary-reference';
+
+function buildPrimaryDetailReference(url: string, dna: VisualDNA | null): DetailPageReferenceImage {
+  return {
+    id: DETAIL_PRIMARY_REFERENCE_ID,
+    url,
+    label: '主参考图',
+    visualDNA: dna,
+  };
+}
 
 function resolveUserPhone(userInfo: any): string {
   if (!userInfo || typeof userInfo !== 'object') return '';
@@ -313,6 +362,14 @@ const App: React.FC = () => {
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [authTokenReady, setAuthTokenReady] = useState(false);
   const [scrollCueVisible, setScrollCueVisible] = useState(true);
+  const [isDetailWorkbenchOpen, setIsDetailWorkbenchOpen] = useState(false);
+  const [isDetailPlanning, setIsDetailPlanning] = useState(false);
+  const [isDetailGeneratingAssets, setIsDetailGeneratingAssets] = useState(false);
+  const [isDetailUploadingReferences, setIsDetailUploadingReferences] = useState(false);
+  const [detailReferenceStyle, setDetailReferenceStyle] = useState<DetailPageReferenceStyle | null>(null);
+  const [detailReferenceImages, setDetailReferenceImages] = useState<DetailPageReferenceImage[]>([]);
+  const [detailPageModules, setDetailPageModules] = useState<DetailPageModule[]>(() => createDetailPageSeedModules());
+  const [activeDetailModuleId, setActiveDetailModuleId] = useState<string | null>(DEFAULT_DETAIL_MODULE_ID);
   const [generationProgress, setGenerationProgress] = useState<string>("");
   const [loadingBrief, setLoadingBrief] = useState('');
 
@@ -396,6 +453,45 @@ const App: React.FC = () => {
   const [styleReferenceImage, setStyleReferenceImage] = useState<string | null>(null);
   const [visualDNA, setVisualDNA] = useState<VisualDNA | null>(null);
   const [isExtractingDNA, setIsExtractingDNA] = useState(false);
+
+  useEffect(() => {
+    setDetailReferenceImages((prev) => {
+      if (!styleReferenceImage) {
+        return prev.filter((item) => item.id !== DETAIL_PRIMARY_REFERENCE_ID);
+      }
+
+      const primaryReference = buildPrimaryDetailReference(styleReferenceImage, visualDNA);
+      const currentIndex = prev.findIndex((item) => item.id === DETAIL_PRIMARY_REFERENCE_ID);
+      if (currentIndex === -1) {
+        return [primaryReference, ...prev];
+      }
+
+      const next = [...prev];
+      next[currentIndex] = primaryReference;
+      return next;
+    });
+  }, [styleReferenceImage, visualDNA]);
+
+  useEffect(() => {
+    const validReferenceIds = new Set(detailReferenceImages.map((item) => item.id));
+    setDetailPageModules((prev) => {
+      let changed = false;
+      const next = prev.map((module) => {
+        if (module.assets.referenceImageId && !validReferenceIds.has(module.assets.referenceImageId)) {
+          changed = true;
+          return {
+            ...module,
+            assets: {
+              ...module.assets,
+              referenceImageId: null,
+            },
+          };
+        }
+        return module;
+      });
+      return changed ? next : prev;
+    });
+  }, [detailReferenceImages]);
 
   const [promptTone, setPromptTone] = useState('🌤️ 治愈系自然光 (Golden Hour & Dappled)');
   const [promptScene, setPromptScene] = useState('真实生活代入');
@@ -524,6 +620,21 @@ const App: React.FC = () => {
     const hh = String(now.getHours()).padStart(2, '0');
     const mm = String(now.getMinutes()).padStart(2, '0');
     return `电商宝_${safeScenario}${suffix ? `_${suffix}` : ''}_${hh}${mm}.png`;
+  };
+
+  const buildDetailPageDownloadFileName = (module: DetailPageModule) => {
+    const safeModule = module.name.replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, '');
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    return `电商宝_详情页_${String(module.order).padStart(2, '0')}_${safeModule}_${hh}${mm}.png`;
+  };
+
+  const buildDetailPageSuiteDownloadFileName = () => {
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    return `电商宝_详情页_整套长图_${hh}${mm}.png`;
   };
 
   const triggerDownload = async (dataUrl: string, fileName: string) => {
@@ -2566,6 +2677,20 @@ const App: React.FC = () => {
     return null;
   };
 
+  const readFileAsDataUrl = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string' && reader.result) {
+          resolve(reader.result);
+          return;
+        }
+        reject(new Error('参考图读取失败，请重新上传'));
+      };
+      reader.onerror = () => reject(new Error('参考图读取失败，请重新上传'));
+      reader.readAsDataURL(file);
+    });
+
   const fetchImageAsBase64 = async (imageUrl: string): Promise<string> => {
     if (!imageUrl) throw new Error('未找到可用图片');
 
@@ -2914,6 +3039,8 @@ const App: React.FC = () => {
   const hasCreditsValue = typeof userCredits === 'number';
   const isSingleCreditsInsufficient = !ENABLE_CREDITS_OVERDRAFT && hasCreditsValue && userCredits < 1;
   const isMatrixCreditsInsufficient = !ENABLE_CREDITS_OVERDRAFT && hasCreditsValue && userCredits < 3;
+  const detailBatchImageCost = detailPageModules.filter((module) => module.isGeneratable).length || 8;
+  const isDetailBatchCreditsInsufficient = !ENABLE_CREDITS_OVERDRAFT && hasCreditsValue && userCredits < detailBatchImageCost;
   const loadingHeadline = activeGenerateCount === 3
     ? '🚀 正在顺序渲染：高转化主图 / 沉浸场景 / 极简海报...'
     : '✨ AI 视觉神经元正在为您注入顶级商业摄影参数...';
@@ -2934,6 +3061,427 @@ const App: React.FC = () => {
 
     setCreditModalTab('recharge');
     setIsCreditModalOpen(true);
+  };
+
+  const patchDetailModuleAssets = (moduleId: string, patch: Partial<DetailPageModuleAssets>) => {
+    setDetailPageModules((prev) =>
+      prev.map((module) =>
+        module.id === moduleId
+          ? {
+              ...module,
+              assets: {
+                ...module.assets,
+                ...patch,
+              },
+            }
+          : module
+      )
+    );
+  };
+
+  const resetDetailPagePlan = () => {
+    setIsDetailPlanning(false);
+    setIsDetailGeneratingAssets(false);
+    setDetailReferenceStyle(null);
+    setDetailPageModules(createDetailPageSeedModules());
+    setActiveDetailModuleId(DEFAULT_DETAIL_MODULE_ID);
+  };
+
+  const openDetailPageWorkbench = () => {
+    setIsDetailWorkbenchOpen(true);
+    setActiveDetailModuleId((current) => current ?? DEFAULT_DETAIL_MODULE_ID);
+  };
+
+  const handleAddDetailReferenceImages = async (files: File[]) => {
+    if (files.length === 0) return;
+
+    setIsDetailUploadingReferences(true);
+    try {
+      const nextReferences: DetailPageReferenceImage[] = [];
+      const baseCount = detailReferenceImages.length;
+
+      for (const file of files) {
+        const rawBase64 = await readFileAsDataUrl(file);
+        const compressedBase64 = await compressImage(rawBase64, 1200);
+        let referenceDNA: VisualDNA | null = null;
+
+        if (localUserId) {
+          try {
+            referenceDNA = await extractVisualDNA(compressedBase64.split(',')[1], localUserId);
+          } catch (error) {
+            console.warn('[handleAddDetailReferenceImages] dna extraction failed:', error);
+          }
+        }
+
+        nextReferences.push({
+          id: `detail-ref-${Date.now()}-${nextReferences.length}-${Math.random().toString(36).slice(2, 8)}`,
+          url: compressedBase64,
+          label: `参考图 ${baseCount + nextReferences.length + 1}`,
+          visualDNA: referenceDNA,
+        });
+      }
+
+      setDetailReferenceImages((prev) => [...prev, ...nextReferences]);
+      setToastMessage(nextReferences.length === 1 ? '已添加 1 张参考详情图' : `已添加 ${nextReferences.length} 张参考详情图`);
+    } catch (error: any) {
+      console.error('[handleAddDetailReferenceImages] failed:', error);
+      setToastMessage(error?.message || '参考图上传失败，请稍后重试');
+    } finally {
+      setIsDetailUploadingReferences(false);
+    }
+  };
+
+  const handleRemoveDetailReferenceImage = (referenceId: string) => {
+    setDetailReferenceImages((prev) => prev.filter((item) => item.id !== referenceId));
+    setDetailPageModules((prev) =>
+      prev.map((module) =>
+        module.assets.referenceImageId === referenceId
+          ? {
+              ...module,
+              assets: {
+                ...module.assets,
+                referenceImageId: null,
+              },
+            }
+          : module
+      )
+    );
+
+    if (referenceId === DETAIL_PRIMARY_REFERENCE_ID) {
+      setStyleReferenceImage(null);
+      setVisualDNA(null);
+    }
+
+    setToastMessage('已移除参考详情图');
+  };
+
+  const handleAssignDetailReferenceToModule = (moduleId: string, referenceId: string | null) => {
+    patchDetailModuleAssets(moduleId, { referenceImageId: referenceId });
+  };
+
+  const resolveDetailGenerationContext = async (referenceImageUrl?: string) => {
+    if (sourceImages.length === 0 || !sourceImages[0]) {
+      throw new Error('请先上传商品图，再生成详情页');
+    }
+    if (!localUserId) {
+      throw new Error('用户身份初始化中，请稍后重试');
+    }
+
+    const productBase64 = await fetchImageAsBase64(sourceImages[0]);
+    const activeReferenceImage = referenceImageUrl || detailReferenceImages[0]?.url || styleReferenceImage || undefined;
+    const referenceBase64 = activeReferenceImage ? await fetchImageAsBase64(activeReferenceImage) : undefined;
+    const currentAnalysis = analysis || await analyzeProduct([productBase64], localUserId);
+    if (!analysis) {
+      setAnalysis(currentAnalysis);
+    }
+
+    return {
+      productBase64,
+      referenceBase64,
+      currentAnalysis,
+    };
+  };
+
+  const handlePlanDetailPageStructure = async () => {
+    if (!ensureAuthReady('详情页规划引擎')) return;
+    if (sourceImages.length === 0) {
+      setToastMessage('请先上传商品图，再规划详情页');
+      return;
+    }
+    if (!localUserId) {
+      setToastMessage('用户身份初始化中，请稍后重试');
+      return;
+    }
+
+    setIsDetailPlanning(true);
+    setActiveDetailModuleId(DEFAULT_DETAIL_MODULE_ID);
+    setDetailPageModules(createDetailPageSeedModules().map((module) => ({ ...module, status: 'loading' })));
+
+    try {
+      const { productBase64, referenceBase64 } = await resolveDetailGenerationContext();
+      const planResult = await generateDetailPagePlan(
+        productBase64,
+        referenceBase64,
+        userPrompt.trim(),
+        promptScene,
+        promptTone,
+        targetPlatform,
+        localUserId
+      );
+      const seedModules = createDetailPageSeedModules();
+      const usedFallbackPlan = planResult.modules.length !== seedModules.length;
+      const plannedModules =
+        !usedFallbackPlan
+          ? planResult.modules
+          : createFallbackDetailPagePlans(seedModules, promptScene, promptTone);
+      const planningVisualDNA = detailReferenceImages[0]?.visualDNA || visualDNA;
+      const referenceStyle =
+        planResult.referenceStyle || createFallbackDetailReferenceStyle(planningVisualDNA, promptScene, promptTone);
+
+      setDetailReferenceStyle(referenceStyle);
+      setDetailPageModules(mergeDetailPagePlan(seedModules, plannedModules));
+      if (!syncAssetsFromGemini()) {
+        void refreshUserCredits();
+      }
+      setToastMessage(
+        usedFallbackPlan
+          ? '参考图解析未完整返回，已用通用策略生成 8 屏规划'
+          : referenceBase64
+            ? '参考详情图解析完成，8 屏规划已生成'
+            : '已按当前商品与指令生成 8 屏规划'
+      );
+    } catch (error: any) {
+      console.error('[handlePlanDetailPageStructure] failed:', error);
+      setDetailReferenceStyle(createFallbackDetailReferenceStyle(detailReferenceImages[0]?.visualDNA || visualDNA, promptScene, promptTone));
+      setDetailPageModules(createDetailPageSeedModules());
+      setToastMessage(error?.message || '详情页规划失败，请稍后重试');
+    } finally {
+      setIsDetailPlanning(false);
+    }
+  };
+
+  const generateSingleDetailModule = async (moduleId: string): Promise<boolean> => {
+    const module = detailPageModules.find((item) => item.id === moduleId);
+    if (!module) return false;
+    if (!isDetailModuleSupported(module.type)) {
+      setToastMessage('当前模块暂未开放真实生成');
+      return false;
+    }
+    if (!ensureAuthReady('详情页图文引擎')) return false;
+    if (isSingleCreditsInsufficient) {
+      setToastMessage('生图算力不足，请先补充额度');
+      openPaymentModalForAssetError('INSUFFICIENT_QUOTA');
+      return false;
+    }
+
+    setActiveDetailModuleId(moduleId);
+    setDetailPageModules((prev) =>
+      prev.map((item) =>
+        item.id === moduleId
+          ? {
+              ...item,
+              status: 'loading',
+              assets: {
+                ...item.assets,
+                errorMessage: null,
+              },
+            }
+          : item
+      )
+    );
+
+    try {
+      const selectedReference =
+        detailReferenceImages.find((item) => item.id === module.assets.referenceImageId) ||
+        detailReferenceImages[0] ||
+        null;
+      const selectedVisualDNA = selectedReference?.visualDNA || detailReferenceImages[0]?.visualDNA || visualDNA;
+      const { productBase64, referenceBase64, currentAnalysis } = await resolveDetailGenerationContext(selectedReference?.url);
+      const detailAspectRatio: AspectRatio = '3:4';
+      const safeStickerConfig: StickerConfig = { url: null, positionX: 85, positionY: 15, scale: 20 };
+      const safeLogoConfig: LogoConfig = { positionX: 12, positionY: 12, scale: 15 };
+      const baseGeneratedAssets = await generateDetailPageModuleCopy(
+        productBase64,
+        referenceBase64,
+        module.type,
+        module.plan,
+        userPrompt.trim(),
+        promptScene,
+        promptTone,
+        targetPlatform,
+        localUserId
+      );
+
+      const mergedAssets = {
+        ...baseGeneratedAssets,
+        headline: module.assets.headline || baseGeneratedAssets.headline,
+        subheadline: module.assets.subheadline || baseGeneratedAssets.subheadline,
+        body: module.assets.body || baseGeneratedAssets.body,
+        sellingPoints: module.assets.sellingPoints.length > 0 ? module.assets.sellingPoints : baseGeneratedAssets.sellingPoints,
+        generatedPrompt: module.assets.generatedPrompt || baseGeneratedAssets.generatedPrompt,
+        styleNotes: module.assets.styleNotes || baseGeneratedAssets.styleNotes,
+        toneNotes: module.assets.toneNotes || baseGeneratedAssets.toneNotes,
+        referenceImageId: module.assets.referenceImageId || selectedReference?.id || null,
+      };
+
+      patchDetailModuleAssets(moduleId, mergedAssets);
+
+      const activeReferenceStyle =
+        detailReferenceStyle || createFallbackDetailReferenceStyle(selectedVisualDNA, promptScene, promptTone);
+      if (!detailReferenceStyle) {
+        setDetailReferenceStyle(activeReferenceStyle);
+      }
+      const promptIntent = [
+        buildDetailModuleImageIntent(module, targetPlatform, promptScene, promptTone, activeReferenceStyle),
+        mergedAssets.generatedPrompt,
+        mergedAssets.styleNotes ? `风格微调：${mergedAssets.styleNotes}` : '',
+        mergedAssets.toneNotes ? `色调微调：${mergedAssets.toneNotes}` : '',
+      ]
+        .filter(Boolean)
+        .join(' ');
+
+      const aiResult = await generateScenarioImage(
+        [productBase64],
+        getDetailModuleScenario(module.type),
+        currentAnalysis,
+        promptIntent,
+        { ...textConfig, title: '', detail: '' },
+        mode,
+        referenceBase64,
+        selectedVisualDNA,
+        undefined,
+        detailAspectRatio,
+        getDetailModuleLayout(module.type),
+        undefined,
+        targetPlatform,
+        null,
+        false,
+        localUserId,
+        1,
+        true,
+        getDetailModuleLockLevel(module.type),
+        'stable'
+      );
+
+      const aiResultUrl = Array.isArray(aiResult) ? aiResult[0] : aiResult;
+      if (!aiResultUrl) {
+        throw new Error('当前屏未返回有效图片');
+      }
+
+      const finalImage = await processFinalImage(
+        aiResultUrl,
+        sourceImages[0],
+        currentAnalysis,
+        mode,
+        { ...textConfig, title: '', detail: '' },
+        null,
+        detailAspectRatio,
+        safeStickerConfig,
+        safeLogoConfig
+      );
+      const normalizedResult = await enforceAspectRatio(finalImage, detailAspectRatio);
+
+      setDetailPageModules((prev) =>
+        prev.map((item) =>
+          item.id === moduleId
+            ? {
+                ...item,
+                status: 'success',
+                assets: {
+                  ...item.assets,
+                  ...mergedAssets,
+                  imageUrl: normalizedResult,
+                  errorMessage: null,
+                },
+              }
+            : item
+        )
+      );
+      if (!syncAssetsFromGemini()) {
+        void refreshUserCredits();
+      }
+      return true;
+    } catch (error: any) {
+      const message = String(error?.message || '当前屏生成失败，请稍后重试');
+      setDetailPageModules((prev) =>
+        prev.map((item) =>
+          item.id === moduleId
+            ? {
+                ...item,
+                status: 'error',
+                assets: {
+                  ...item.assets,
+                  errorMessage: message,
+                },
+              }
+            : item
+        )
+      );
+
+      if (message.includes('INSUFFICIENT_QUOTA')) {
+        openPaymentModalForAssetError('INSUFFICIENT_QUOTA');
+      } else if (message.includes('VIP_EXPIRED')) {
+        openPaymentModalForAssetError('VIP_EXPIRED');
+      } else if (isAuthErrorMessage(message)) {
+        setToastMessage('登录状态尚未就绪或已失效，请重新登录后再试。');
+      } else {
+        setToastMessage(message);
+      }
+      return false;
+    }
+  };
+
+  const handleGenerateDetailPageAssets = async () => {
+    if (isDetailGeneratingAssets) return;
+    if (sourceImages.length === 0) {
+      setToastMessage('请先上传商品图，再生成详情页');
+      return;
+    }
+    if (isDetailBatchCreditsInsufficient) {
+      setToastMessage(`生图算力不足，生成整套 8 屏至少需要 ${detailBatchImageCost} 点额度`);
+      openPaymentModalForAssetError('INSUFFICIENT_QUOTA');
+      return;
+    }
+
+    setIsDetailGeneratingAssets(true);
+    const targetModules = detailPageModules.filter((module) => module.isGeneratable).map((module) => module.id);
+    if (targetModules.length === 0) {
+      setIsDetailGeneratingAssets(false);
+      setToastMessage('当前没有可生成的详情页模块');
+      return;
+    }
+
+    let successCount = 0;
+    try {
+      for (const moduleId of targetModules) {
+        const ok = await generateSingleDetailModule(moduleId);
+        if (ok) successCount += 1;
+      }
+      setToastMessage(
+        successCount === targetModules.length
+          ? '整套 8 屏图文已全部生成完成'
+          : `当前已完成 ${successCount}/${targetModules.length} 屏，可对失败屏单独重试`
+      );
+    } finally {
+      setIsDetailGeneratingAssets(false);
+    }
+  };
+
+  const handleExportDetailModule = async (moduleId: string) => {
+    const module = detailPageModules.find((item) => item.id === moduleId);
+    if (!module) return;
+    if (!module.plan && !module.assets.imageUrl && !module.assets.headline) {
+      setToastMessage('请先规划或生成当前屏后再导出');
+      return;
+    }
+
+    try {
+      const dataUrl = await exportDetailPageModuleImage(module, detailReferenceStyle);
+      await triggerDownload(dataUrl, buildDetailPageDownloadFileName(module));
+      setToastMessage(`已导出 ${module.name}`);
+    } catch (error: any) {
+      console.error('[handleExportDetailModule] failed:', error);
+      setToastMessage(error?.message || '当前屏导出失败，请稍后重试');
+    }
+  };
+
+  const handleExportDetailPageSuite = async () => {
+    const hasExportableModule = detailPageModules.some(
+      (module) => module.plan || module.assets.imageUrl || module.assets.headline || module.assets.body
+    );
+    if (!hasExportableModule) {
+      setToastMessage('请先规划或生成详情页后再导出整套长图');
+      return;
+    }
+
+    try {
+      const dataUrl = await exportDetailPageSuiteImage(detailPageModules, detailReferenceStyle);
+      await triggerDownload(dataUrl, buildDetailPageSuiteDownloadFileName());
+      setToastMessage('已导出整套详情页长图');
+    } catch (error: any) {
+      console.error('[handleExportDetailPageSuite] failed:', error);
+      setToastMessage(error?.message || '整套长图导出失败，请稍后重试');
+    }
   };
 
   const handleGenerate = async () => {
@@ -4883,6 +5431,20 @@ const App: React.FC = () => {
                       ⚡️ - 1 TOKEN
                     </span>
                   </div>
+
+                  <div className="relative group cursor-pointer flex flex-col items-center">
+                    <button
+                      type="button"
+                      onClick={openDetailPageWorkbench}
+                      disabled={isProcessing || sourceImages.length === 0 || !authReady}
+                      className="relative z-10 flex items-center justify-center gap-2 w-[300px] py-4 bg-white border border-stone-200 hover:border-stone-300 text-stone-700 hover:text-stone-900 rounded-2xl font-medium text-lg transition-all duration-300 shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      生成整套详情页
+                    </button>
+                    <span className="mt-4 text-[13px] text-gray-400 font-mono tracking-widest">
+                      MVP · 8 SCREENS
+                    </span>
+                  </div>
                 </div>              </div>
             </div>
 
@@ -5089,6 +5651,32 @@ const App: React.FC = () => {
         onClose={closePaymentCheckout}
         onPaid={refreshUserCredits}
         onToast={(message) => setToastMessage(message)}
+      />
+
+      <DetailPageWorkbench
+        open={isDetailWorkbenchOpen}
+        platform="universal"
+        style="hybrid"
+        pageCount={detailPageModules.length}
+        modules={detailPageModules}
+        activeModuleId={activeDetailModuleId}
+        isPlanning={isDetailPlanning}
+        isGeneratingAssets={isDetailGeneratingAssets}
+        isUploadingReferences={isDetailUploadingReferences}
+        referenceStyle={detailReferenceStyle}
+        referenceImages={detailReferenceImages}
+        onClose={() => setIsDetailWorkbenchOpen(false)}
+        onSelectModule={setActiveDetailModuleId}
+        onPlanStructure={handlePlanDetailPageStructure}
+        onGenerateAssets={handleGenerateDetailPageAssets}
+        onRegenerateModule={generateSingleDetailModule}
+        onExportModule={handleExportDetailModule}
+        onExportSuite={handleExportDetailPageSuite}
+        onResetPlan={resetDetailPagePlan}
+        onUpdateModuleAssets={patchDetailModuleAssets}
+        onAddReferenceImages={handleAddDetailReferenceImages}
+        onRemoveReferenceImage={handleRemoveDetailReferenceImage}
+        onAssignReferenceToModule={handleAssignDetailReferenceToModule}
       />
 
       {toastMessage && (

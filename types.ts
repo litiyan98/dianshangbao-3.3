@@ -60,6 +60,89 @@ export interface VisualDNA {
   atmosphere: string;
 }
 
+export type DetailPagePlatform = 'universal';
+
+export type DetailPageStyle = 'hybrid';
+
+export type DetailPageModuleType =
+  | 'hero'
+  | 'selling_points'
+  | 'scene'
+  | 'detail'
+  | 'benefit'
+  | 'spec'
+  | 'trust'
+  | 'cta';
+
+export type DetailPageModuleStatus = 'idle' | 'loading' | 'success' | 'error';
+
+export interface DetailPageReferenceStyle {
+  pageStyle: string;
+  palette: string[];
+  typography: {
+    headline: string;
+    body: string;
+    accent?: string;
+  };
+  lightingStyle: string;
+  atmosphere: string;
+  layoutRhythm: string;
+  decorLanguage: string;
+  moduleSamples: Array<{
+    type: DetailPageModuleType;
+    layout: string;
+    emphasis: string;
+    density: string;
+  }>;
+}
+
+export interface DetailPageReferenceImage {
+  id: string;
+  url: string;
+  label: string;
+  visualDNA: VisualDNA | null;
+}
+
+export interface DetailPageModulePlan {
+  type: DetailPageModuleType;
+  objective: string;
+  headlineDirection: string;
+  copyTask: string;
+  visualTask: string;
+  layoutPreset: string;
+  referenceHint: string;
+  sceneHint: string;
+  toneHint: string;
+}
+
+export interface DetailPageModuleAssets {
+  headline: string;
+  subheadline: string;
+  body: string;
+  sellingPoints: string[];
+  generatedPrompt: string;
+  imageUrl: string | null;
+  errorMessage: string | null;
+  styleNotes: string;
+  toneNotes: string;
+  referenceImageId: string | null;
+}
+
+export interface DetailPageModule {
+  id: string;
+  order: number;
+  type: DetailPageModuleType;
+  name: string;
+  title: string;
+  copyGoal: string;
+  imageGoal: string;
+  layoutPreset: string;
+  status: DetailPageModuleStatus;
+  isGeneratable: boolean;
+  plan: DetailPageModulePlan | null;
+  assets: DetailPageModuleAssets;
+}
+
 export interface UserAssetProfile {
   user_id: string;
   credits: number;
