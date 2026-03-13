@@ -1,4 +1,16 @@
-import { MarketAnalysis, ScenarioType, TextConfig, GenerationMode, CompositionLayout, AspectRatio, VisualDNA, FontStyle } from "../types";
+import {
+  AspectRatio,
+  CompositionLayout,
+  DetailPageModulePlan,
+  DetailPageModuleType,
+  DetailPageReferenceStyle,
+  FontStyle,
+  GenerationMode,
+  MarketAnalysis,
+  ScenarioType,
+  TextConfig,
+  VisualDNA,
+} from "../types";
 
 let latestAssetSnapshot: { image_quota?: number | null; vip_expire_date?: string | null } | null = null;
 
@@ -213,6 +225,23 @@ function collectGeminiText(data: any): string {
     ?.map((part: any) => (typeof part?.text === "string" ? part.text : ""))
     .join("\n")
     .trim();
+}
+
+function parseJsonPayload<T>(rawText: string, fallback: T): T {
+  if (!rawText) return fallback;
+
+  const cleanText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
+  try {
+    return JSON.parse(cleanText) as T;
+  } catch {
+    const jsonMatch = cleanText.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
+    if (!jsonMatch) return fallback;
+    try {
+      return JSON.parse(jsonMatch[0]) as T;
+    } catch {
+      return fallback;
+    }
+  }
 }
 
 async function fetchGeminiWithFallback(
@@ -503,6 +532,321 @@ OUTPUT FORMAT: Strict JSON only.
   } catch (error) {
     console.error("[extractVisualDNA] DNA Sequencing Failed:", error);
     return null;
+  }
+}
+
+export async function generateDetailPagePlan(
+  productBase64: string,
+  referenceBase64: string | undefined,
+  userInstruction: string,
+  sceneSetting: string,
+  toneSetting: string,
+  platform: string,
+  userId?: string
+): Promise<{ referenceStyle: DetailPageReferenceStyle | null; modules: DetailPageModulePlan[] }> {
+  const productImage = {
+    data: productBase64,
+    mimeType: detectMimeType(productBase64),
+  };
+  const referenceImage = referenceBase64
+    ? {
+        data: referenceBase64,
+        mimeType: detectMimeType(referenceBase64),
+      }
+    : null;
+
+  const systemPrompt = `你是“电商详情页复刻规划引擎”。
+【任务】
+基于商品图、可选参考详情图、用户指令、场景设定、画面色调与平台类型，输出一套固定 8 屏的详情页规划 JSON。
+
+【核心原则】
+1. 只学习参考详情图的版式、层级、色彩、留白、字体气质、图文节奏与装饰语言。
+2. 严禁借用参考详情图里的商品、品牌、包装、文案内容或任何主体类别。
+3. 商品身份永远来自商品图，详情页结构永远映射到固定 8 屏模板。
+
+【固定模块顺序】
+hero, selling_points, scene, detail, benefit, spec, trust, cta
+
+【当前约束】
+- 平台类型：${platform}
+- 场景设定：${sceneSetting}
+- 画面色调：${toneSetting}
+- 用户指令：${userInstruction || '未填写'}
+
+【输出要求】
+只输出 JSON，不要 markdown，不要解释。
+JSON 结构必须是：
+{
+  "referenceStyle": {
+    "pageStyle": "...",
+    "palette": ["...", "..."],
+    "typography": {
+      "headline": "...",
+      "body": "...",
+      "accent": "..."
+    },
+    "lightingStyle": "...",
+    "atmosphere": "...",
+    "layoutRhythm": "...",
+    "decorLanguage": "...",
+    "moduleSamples": [
+      {"type":"hero","layout":"...","emphasis":"...","density":"..."}
+    ]
+  },
+  "modules": [
+    {
+      "type": "hero",
+      "objective": "...",
+      "headlineDirection": "...",
+      "copyTask": "...",
+      "visualTask": "...",
+      "layoutPreset": "...",
+      "referenceHint": "...",
+      "sceneHint": "...",
+      "toneHint": "..."
+    }
+  ]
+}
+
+【硬性规则】
+- modules 必须包含且只包含 8 个固定 type，每个 type 只出现一次。
+- 所有字段都要简洁、可执行，适合后续逐屏生成。
+- selling_points 强调卖点拆解；scene 强调生活方式代入；spec 强调理性参数。`;
+
+  const parts: any[] = [
+    { text: systemPrompt },
+    { text: "\n--- 图像 1：新商品主体（唯一商品锚点）---" },
+    { inlineData: productImage },
+  ];
+
+  if (referenceImage?.data) {
+    parts.push({ text: "\n--- 图像 2：参考详情图（只学结构与风格）---" });
+    parts.push({ inlineData: referenceImage });
+  }
+
+  const payload = {
+    userId,
+    contents: [{ parts }],
+    generationConfig: { responseMimeType: "application/json" },
+  };
+
+  try {
+    const data = await fetchGeminiWithFallback(
+      payload,
+      TEXT_MODEL_FALLBACK_CHAIN,
+      30000,
+      1,
+      "详情页规划"
+    );
+    const rawText = collectGeminiText(data) || "{}";
+    const parsed = parseJsonPayload<{ referenceStyle?: DetailPageReferenceStyle; modules?: DetailPageModulePlan[] }>(rawText, {});
+    const modules = Array.isArray(parsed.modules)
+      ? parsed.modules.filter((item): item is DetailPageModulePlan => Boolean(item?.type))
+      : [];
+    return {
+      referenceStyle: parsed.referenceStyle || null,
+      modules,
+    };
+  } catch (error) {
+    console.error("[generateDetailPagePlan] planning failed:", error);
+    return {
+      referenceStyle: null,
+      modules: [],
+    };
+  }
+}
+
+export async function generateDetailPageModuleCopy(
+  productBase64: string,
+  referenceBase64: string | undefined,
+  moduleType: DetailPageModuleType,
+  plan: DetailPageModulePlan | null,
+  userInstruction: string,
+  sceneSetting: string,
+  toneSetting: string,
+  platform: string,
+  userId?: string
+): Promise<{
+  headline: string;
+  subheadline: string;
+  body: string;
+  sellingPoints: string[];
+  generatedPrompt: string;
+  styleNotes: string;
+  toneNotes: string;
+}> {
+  const fallbackByType: Record<
+    DetailPageModuleType,
+    {
+      headline: string;
+      subheadline: string;
+      body: string;
+      sellingPoints: string[];
+    }
+  > = {
+    hero: {
+      headline: '一眼锁定主卖点',
+      subheadline: '用首屏气质先让用户愿意继续往下看',
+      body: '把商品身份、核心利益点和整体高级感在第一屏交代清楚，形成明确的第一印象。',
+      sellingPoints: ['商品主体清晰', '利益点单刀直入', '视觉气质强'],
+    },
+    selling_points: {
+      headline: '把购买理由说透',
+      subheadline: '三到四个短句，快速建立价值感',
+      body: '用简短但可感知的表达拆解高频卖点，帮助用户快速理解为什么值得买。',
+      sellingPoints: ['卖点短句化', '阅读负担低', '适合模块化排版'],
+    },
+    scene: {
+      headline: '代入真实使用瞬间',
+      subheadline: '把商品放进用户想要的生活方式里',
+      body: '通过场景氛围、人群语境和环境细节，让商品价值从功能走向生活方式联想。',
+      sellingPoints: ['场景更真实', '人群指向明确', '氛围能带动转化'],
+    },
+    detail: {
+      headline: '细节决定高级感',
+      subheadline: '把材质、工艺与触感讲清楚',
+      body: '放大微观信息，让用户对品质建立可视化判断。',
+      sellingPoints: ['材质说明', '做工细节', '品质感强化'],
+    },
+    benefit: {
+      headline: '把效果讲明白',
+      subheadline: '从功能到体验，一步步建立价值',
+      body: '解释使用收益、体验差异和结果感知，减少用户的理解成本。',
+      sellingPoints: ['结果导向', '体验差异', '功能解释清晰'],
+    },
+    spec: {
+      headline: '理性信息一次看懂',
+      subheadline: '关键参数清晰呈现，降低决策阻力',
+      body: '把尺寸、容量、成分或规格信息清晰结构化，服务最后的购买决策。',
+      sellingPoints: ['参数清晰', '信息可信', '便于对比'],
+    },
+    trust: {
+      headline: '把信任感补齐',
+      subheadline: '售后、发货与保障信息一次说透',
+      body: '用克制的信息模块承接服务承诺与品牌可信度，减少顾虑。',
+      sellingPoints: ['发货承诺', '售后说明', '信任建立'],
+    },
+    cta: {
+      headline: '现在就做决定',
+      subheadline: '把前面建立的价值感收束成最后一推',
+      body: '总结购买理由和记忆点，在尾屏形成明确收口。',
+      sellingPoints: ['价值总结', '记忆点强化', '收口明确'],
+    },
+  };
+
+  const fallback = fallbackByType[moduleType];
+  const productImage = {
+    data: productBase64,
+    mimeType: detectMimeType(productBase64),
+  };
+  const referenceImage = referenceBase64
+    ? {
+        data: referenceBase64,
+        mimeType: detectMimeType(referenceBase64),
+      }
+    : null;
+
+  const systemPrompt = `你是顶级电商详情页文案导演 + 视觉分镜策划。
+【目标】
+现在只为一个详情页模块生成文案与视觉意图，服务“参考详情图复刻新商品”的系统。
+
+【模块信息】
+- 模块类型：${moduleType}
+- 模块目标：${plan?.objective || fallback.headline}
+- 标题方向：${plan?.headlineDirection || '突出购买理由'}
+- 文案任务：${plan?.copyTask || fallback.body}
+- 视觉任务：${plan?.visualTask || '突出商品与参考风格'} 
+- 版式建议：${plan?.layoutPreset || '沿用通用详情页布局'}
+- 参考提示：${plan?.referenceHint || '沿用参考详情页的留白与节奏'}
+
+【当前约束】
+- 平台：${platform}
+- 场景：${sceneSetting}
+- 色调：${toneSetting}
+- 用户指令：${userInstruction || '未填写'}
+
+【输出规则】
+1. 只输出 JSON。
+2. headline 6-14 字；subheadline 10-24 字；body 32-90 字。
+3. sellingPoints 输出 3 到 4 条短句数组。
+4. generatedPrompt 必须是可直接给生图引擎使用的中文视觉指令，重点写画面结构、环境、光影、材质和商品位置。
+5. styleNotes 与 toneNotes 用来给右侧编辑面板展示，写成简短可编辑的中文短语。
+6. 绝不借用参考图里的商品、品牌和原文案。
+
+JSON 结构：
+{
+  "headline": "...",
+  "subheadline": "...",
+  "body": "...",
+  "sellingPoints": ["...", "...", "..."],
+  "generatedPrompt": "...",
+  "styleNotes": "...",
+  "toneNotes": "..."
+}`;
+
+  const payload = {
+    userId,
+    contents: [
+      {
+        parts: [
+          { text: systemPrompt },
+          { text: "\n--- 图像 1：新商品主体（唯一商品锚点）---" },
+          { inlineData: productImage },
+          ...(referenceImage?.data
+            ? [
+                { text: "\n--- 图像 2：参考详情图（只学结构与风格）---" },
+                { inlineData: referenceImage },
+              ]
+            : []),
+        ],
+      },
+    ],
+    generationConfig: { responseMimeType: "application/json" },
+  };
+
+  try {
+    const data = await fetchGeminiWithFallback(
+      payload,
+      TEXT_MODEL_FALLBACK_CHAIN,
+      30000,
+      1,
+      `详情页模块文案-${moduleType}`
+    );
+    const rawText = collectGeminiText(data) || "{}";
+    const parsed = parseJsonPayload<{
+      headline?: string;
+      subheadline?: string;
+      body?: string;
+      sellingPoints?: string[];
+      generatedPrompt?: string;
+      styleNotes?: string;
+      toneNotes?: string;
+    }>(rawText, {});
+
+    const sellingPoints = Array.isArray(parsed.sellingPoints)
+      ? parsed.sellingPoints
+          .map((item) => normalizeText(String(item || ''), 18))
+          .filter(Boolean)
+          .slice(0, 4)
+      : fallback.sellingPoints;
+
+    return {
+      headline: normalizeText(String(parsed.headline || ''), 14) || fallback.headline,
+      subheadline: normalizeText(String(parsed.subheadline || ''), 24) || fallback.subheadline,
+      body: String(parsed.body || fallback.body).replace(/["'`]/g, '').trim().slice(0, 120),
+      sellingPoints,
+      generatedPrompt: String(parsed.generatedPrompt || '').replace(/["'`]/g, '').trim() || `${plan?.visualTask || fallback.body} ${sceneSetting} ${toneSetting}`,
+      styleNotes: normalizeText(String(parsed.styleNotes || plan?.referenceHint || '沿用参考详情页的版式和留白'), 28),
+      toneNotes: normalizeText(String(parsed.toneNotes || plan?.toneHint || toneSetting), 28),
+    };
+  } catch (error) {
+    console.error("[generateDetailPageModuleCopy] copy failed:", error);
+    return {
+      ...fallback,
+      generatedPrompt: `${plan?.visualTask || fallback.body} ${sceneSetting} ${toneSetting}`,
+      styleNotes: normalizeText(plan?.referenceHint || '沿用参考详情页的版式和留白', 28),
+      toneNotes: normalizeText(plan?.toneHint || toneSetting, 28),
+    };
   }
 }
 
