@@ -18,6 +18,21 @@ CREATE TABLE IF NOT EXISTS ReferralBindings (
 CREATE INDEX IF NOT EXISTS idx_referral_bindings_referrer_user_id ON ReferralBindings(referrer_user_id);
 CREATE INDEX IF NOT EXISTS idx_referral_bindings_invite_code ON ReferralBindings(invite_code);
 
+CREATE TABLE IF NOT EXISTS InviteLinks (
+  id TEXT PRIMARY KEY,
+  owner_user_id TEXT NOT NULL,
+  invite_code TEXT NOT NULL,
+  label TEXT NOT NULL,
+  channel TEXT NOT NULL DEFAULT 'landing',
+  is_default INTEGER NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'ACTIVE',
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_invite_links_owner_user_id ON InviteLinks(owner_user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_invite_links_invite_code ON InviteLinks(invite_code);
+
 CREATE TABLE IF NOT EXISTS ReferralRewardRules (
   package_type TEXT PRIMARY KEY,
   package_name TEXT NOT NULL,

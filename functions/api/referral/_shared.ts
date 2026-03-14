@@ -4,6 +4,18 @@ interface Env {
   DB: any;
 }
 
+export interface InviteLinkRecord {
+  id: string;
+  owner_user_id: string;
+  invite_code: string;
+  label: string;
+  channel: string;
+  is_default: number;
+  status: string;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
 export interface ReferralRewardRule {
   package_type: string;
   package_name: string;
@@ -56,6 +68,24 @@ export function normalizeBindSource(value: string | null): string {
   return clean || 'landing';
 }
 
+export function normalizeInviteLinkChannel(value: unknown): string {
+  const clean = String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 32);
+  return clean || 'landing';
+}
+
+export function normalizeInviteLinkLabel(value: unknown): string {
+  const clean = String(value || '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .slice(0, 24);
+  return clean || '新的邀请链接';
+}
+
 export function normalizePackageType(value: unknown): string {
   return String(value || '').trim().toLowerCase();
 }
@@ -66,6 +96,32 @@ export async function tableExists(env: Env, tableName: string): Promise<boolean>
     .bind(tableName)
     .first();
   return Boolean(row?.name);
+}
+
+export async function ensureInviteLinksTable(env: Env): Promise<void> {
+  await env.DB
+    .prepare(
+      `CREATE TABLE IF NOT EXISTS InviteLinks (
+        id TEXT PRIMARY KEY,
+        owner_user_id TEXT NOT NULL,
+        invite_code TEXT NOT NULL,
+        label TEXT NOT NULL,
+        channel TEXT NOT NULL DEFAULT 'landing',
+        is_default INTEGER NOT NULL DEFAULT 0,
+        status TEXT NOT NULL DEFAULT 'ACTIVE',
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+      )`
+    )
+    .run();
+
+  await env.DB
+    .prepare('CREATE INDEX IF NOT EXISTS idx_invite_links_owner_user_id ON InviteLinks(owner_user_id, created_at DESC)')
+    .run();
+
+  await env.DB
+    .prepare('CREATE INDEX IF NOT EXISTS idx_invite_links_invite_code ON InviteLinks(invite_code)')
+    .run();
 }
 
 export async function getUsersColumns(env: Env): Promise<Set<string>> {
@@ -101,6 +157,93 @@ export async function resolveInviterByCode(env: Env, inviteCode: string | null, 
   if (!inviter?.user_id) return null;
   if (inviter.user_id === referredUserId) return null;
   return inviter;
+}
+
+export async function getInviteLinkById(env: Env, inviteLinkId: string | null): Promise<InviteLinkRecord | null> {
+  const normalizedId = String(inviteLinkId || '').trim();
+  if (!normalizedId) return null;
+  await ensureInviteLinksTable(env);
+  return (await env.DB
+    .prepare(
+      `SELECT id, owner_user_id, invite_code, label, channel, is_default, status, created_at, updated_at
+       FROM InviteLinks
+       WHERE id = ?1
+       LIMIT 1`
+    )
+    .bind(normalizedId)
+    .first()) as InviteLinkRecord | null;
+}
+
+export async function ensureDefaultInviteLink(
+  env: Env,
+  input: { ownerUserId: string; inviteCode: string },
+): Promise<InviteLinkRecord> {
+  await ensureInviteLinksTable(env);
+
+  const existing = (await env.DB
+    .prepare(
+      `SELECT id, owner_user_id, invite_code, label, channel, is_default, status, created_at, updated_at
+       FROM InviteLinks
+       WHERE owner_user_id = ?1 AND is_default = 1
+       ORDER BY created_at ASC
+       LIMIT 1`
+    )
+    .bind(input.ownerUserId)
+    .first()) as InviteLinkRecord | null;
+
+  if (existing?.id) {
+    return existing;
+  }
+
+  const inviteLink: InviteLinkRecord = {
+    id: `link_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`,
+    owner_user_id: input.ownerUserId,
+    invite_code: input.inviteCode,
+    label: '默认落地链接',
+    channel: 'landing',
+    is_default: 1,
+    status: 'ACTIVE',
+    created_at: null,
+    updated_at: null,
+  };
+
+  await env.DB
+    .prepare(
+      `INSERT INTO InviteLinks (
+        id, owner_user_id, invite_code, label, channel, is_default, status, created_at, updated_at
+      ) VALUES (?1, ?2, ?3, ?4, ?5, 1, 'ACTIVE', datetime('now'), datetime('now'))`
+    )
+    .bind(
+      inviteLink.id,
+      inviteLink.owner_user_id,
+      inviteLink.invite_code,
+      inviteLink.label,
+      inviteLink.channel,
+    )
+    .run();
+
+  return (await getInviteLinkById(env, inviteLink.id)) as InviteLinkRecord;
+}
+
+export async function createInviteLink(
+  env: Env,
+  input: { ownerUserId: string; inviteCode: string; label: string; channel: string },
+): Promise<InviteLinkRecord> {
+  await ensureInviteLinksTable(env);
+  const inviteLinkId = `link_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`;
+  const label = normalizeInviteLinkLabel(input.label);
+  const channel = normalizeInviteLinkChannel(input.channel);
+
+  await env.DB
+    .prepare(
+      `INSERT INTO InviteLinks (
+        id, owner_user_id, invite_code, label, channel, is_default, status, created_at, updated_at
+      ) VALUES (?1, ?2, ?3, ?4, ?5, 0, 'ACTIVE', datetime('now'), datetime('now'))`
+    )
+    .bind(inviteLinkId, input.ownerUserId, input.inviteCode, label, channel)
+    .run();
+
+  return (await getInviteLinkById(env, inviteLinkId)) as InviteLinkRecord;
 }
 
 export async function ensureReferralBinding(

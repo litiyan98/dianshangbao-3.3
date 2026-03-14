@@ -5,6 +5,7 @@ import {
   countPaidOrders,
   createUniqueInviteCode,
   ensureReferralBinding,
+  getInviteLinkById,
   getUsersColumns,
   normalizeBindSource,
   normalizeInviteCode,
@@ -80,6 +81,7 @@ async function tryBindInviteForExistingUser(
   options: {
     userId: string;
     inviteCode: string | null;
+    inviteLinkId: string | null;
     inviteSource: string;
     currentInvitedBy: string | null;
     hasInviteCode: boolean;
@@ -95,6 +97,19 @@ async function tryBindInviteForExistingUser(
   const inviter = await resolveInviterByCode(env, options.inviteCode, options.userId);
   if (!inviter?.user_id) return options.currentInvitedBy;
 
+  let resolvedBindSource = options.inviteSource;
+  if (options.inviteLinkId) {
+    const inviteLink = await getInviteLinkById(env, options.inviteLinkId);
+    if (
+      inviteLink?.id &&
+      inviteLink.owner_user_id === inviter.user_id &&
+      String(inviteLink.invite_code || '').trim().toUpperCase() === String(inviter.invite_code || '').trim().toUpperCase() &&
+      String(inviteLink.status || '').toUpperCase() === 'ACTIVE'
+    ) {
+      resolvedBindSource = inviteLink.id;
+    }
+  }
+
   await env.DB
     .prepare('UPDATE Users SET invited_by = ?1 WHERE user_id = ?2 AND (invited_by IS NULL OR invited_by = "")')
     .bind(inviter.user_id, options.userId)
@@ -104,10 +119,33 @@ async function tryBindInviteForExistingUser(
     inviteCode: inviter.invite_code,
     referrerUserId: inviter.user_id,
     referredUserId: options.userId,
-    bindSource: options.inviteSource,
+    bindSource: resolvedBindSource,
   });
 
   return inviter.user_id;
+}
+
+async function resolveInviteBindSource(
+  env: Env,
+  options: {
+    inviteCode: string | null;
+    inviteLinkId: string | null;
+    inviteSource: string;
+    inviterUserId: string;
+  },
+): Promise<string> {
+  if (!options.inviteLinkId) return options.inviteSource;
+  const inviteLink = await getInviteLinkById(env, options.inviteLinkId);
+  if (!inviteLink?.id) return options.inviteSource;
+  if (inviteLink.owner_user_id !== options.inviterUserId) return options.inviteSource;
+  if (String(inviteLink.status || '').toUpperCase() !== 'ACTIVE') return options.inviteSource;
+  if (
+    options.inviteCode &&
+    String(inviteLink.invite_code || '').trim().toUpperCase() !== String(options.inviteCode || '').trim().toUpperCase()
+  ) {
+    return options.inviteSource;
+  }
+  return inviteLink.id;
 }
 
 export async function onRequestOptions(): Promise<Response> {
@@ -124,6 +162,7 @@ export async function onRequestGet(context: { request: Request; env: Env }): Pro
     const url = new URL(request.url);
     const userId = url.searchParams.get('userId')?.trim();
     const inviteCode = normalizeInviteCode(url.searchParams.get('inviteCode'));
+    const inviteLinkId = String(url.searchParams.get('inviteLinkId') || url.searchParams.get('linkId') || '').trim() || null;
     const inviteSource = normalizeBindSource(url.searchParams.get('inviteSource') || url.searchParams.get('channel') || url.searchParams.get('source'));
     const providedPhone = normalizePhone(url.searchParams.get('phone'));
     const verifiedPhone = await tryResolveVerifiedPhone(request, env);
@@ -191,11 +230,17 @@ export async function onRequestGet(context: { request: Request; env: Env }): Pro
       }
 
       if (inviter?.user_id && inviter.invite_code) {
+        const bindSource = await resolveInviteBindSource(env, {
+          inviteCode,
+          inviteLinkId,
+          inviteSource,
+          inviterUserId: inviter.user_id,
+        });
         await ensureReferralBinding(env, {
           inviteCode: inviter.invite_code,
           referrerUserId: inviter.user_id,
           referredUserId: userId,
-          bindSource: inviteSource,
+          bindSource,
         });
       }
 
@@ -252,6 +297,7 @@ export async function onRequestGet(context: { request: Request; env: Env }): Pro
     invitedByValue = await tryBindInviteForExistingUser(env, {
       userId,
       inviteCode,
+      inviteLinkId,
       inviteSource,
       currentInvitedBy: invitedByValue,
       hasInviteCode,

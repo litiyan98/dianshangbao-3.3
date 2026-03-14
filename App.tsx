@@ -2169,9 +2169,11 @@ const App: React.FC = () => {
     try {
       const searchParams = new URLSearchParams(window.location.search);
       const inviteCode = searchParams.get('invite')?.trim() || '';
+      const inviteLinkId = searchParams.get('linkId')?.trim() || '';
       const inviteSource = searchParams.get('channel')?.trim() || searchParams.get('source')?.trim() || '';
       const query = new URLSearchParams({ userId: localUserId });
       if (inviteCode) query.set('inviteCode', inviteCode);
+      if (inviteLinkId) query.set('inviteLinkId', inviteLinkId);
       if (inviteSource) query.set('inviteSource', inviteSource);
 
       const token = localStorage.getItem('authing_token');
