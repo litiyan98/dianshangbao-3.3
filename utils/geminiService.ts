@@ -2,6 +2,7 @@ import {
   AspectRatio,
   CompositionLayout,
   DetailPageModulePlan,
+  DetailPageReferenceAnalysis,
   DetailPageModuleType,
   DetailPageReferenceStyle,
   FontStyle,
@@ -677,6 +678,228 @@ JSON 结构必须是：
     console.error("[generateDetailPagePlan] planning failed:", error);
     return {
       referenceStyle: null,
+      modules: [],
+    };
+  }
+}
+
+export async function generateDetailReferenceAnalysis(
+  productBase64: string,
+  referenceImages: Array<{ label: string; base64: string }>,
+  userInstruction: string,
+  sceneSetting: string,
+  toneSetting: string,
+  platform: string,
+  userId?: string
+): Promise<DetailPageReferenceAnalysis> {
+  const productImage = {
+    data: productBase64,
+    mimeType: detectMimeType(productBase64),
+  };
+
+  const parts: any[] = [
+    {
+      text: `你是“电商详情页参考图解析器”。
+【任务】
+现在不要直接生成详情页，也不要产出商品图文。你只负责把一组参考详情图拆解成“整套风格 token + 每张参考图更适合映射哪些模块”的结构化结果。
+
+【核心原则】
+1. 只学习版式、节奏、留白、文字密度、构图、色彩、光影与装饰语言。
+2. 严禁继承参考图里的商品、品牌、包装和原始文案。
+3. 输出结果要服务后续“固定 8 屏模板”的规划器，不能做自由排版。
+
+【固定模块】
+hero, selling_points, scene, detail, benefit, spec, trust, cta
+
+【当前约束】
+- 平台：${platform}
+- 用户指令：${userInstruction || '未填写'}
+- 场景设定：${sceneSetting}
+- 画面色调：${toneSetting}
+
+【输出 JSON 结构】
+{
+  "workflowSummary": "...",
+  "adaptationStrategy": "...",
+  "referenceStyle": {
+    "pageStyle": "...",
+    "palette": ["...", "..."],
+    "typography": {
+      "headline": "...",
+      "body": "...",
+      "accent": "..."
+    },
+    "lightingStyle": "...",
+    "atmosphere": "...",
+    "layoutRhythm": "...",
+    "decorLanguage": "...",
+    "moduleSamples": [
+      {"type":"hero","layout":"...","emphasis":"...","density":"..."}
+    ]
+  },
+  "frames": [
+    {
+      "referenceIndex": 0,
+      "suggestedModules": ["hero", "scene"],
+      "layoutSignature": "...",
+      "headlineStyle": "...",
+      "copyDensity": "...",
+      "visualFocus": "...",
+      "mappingReason": "..."
+    }
+  ]
+}
+
+【硬性规则】
+- referenceIndex 从 0 开始，对应参考图上传顺序。
+- suggestedModules 只能从固定 8 屏里选。
+- frames 要覆盖每一张参考图。
+- workflowSummary 要说明为什么必须“先整组理解，再逐屏生成”。
+- 只输出 JSON，不要 markdown。`,
+    },
+    { text: '\n--- 图像 1：新商品主体（只用于锁定商品身份，不参与参考商品学习）---' },
+    { inlineData: productImage },
+  ];
+
+  referenceImages.forEach((item, index) => {
+    parts.push({ text: `\n--- 参考详情图 ${index + 1}：${item.label || `reference_${index + 1}`}（只学结构与风格）---` });
+    parts.push({
+      inlineData: {
+        data: item.base64,
+        mimeType: detectMimeType(item.base64),
+      },
+    });
+  });
+
+  const payload = {
+    userId,
+    contents: [{ parts }],
+    generationConfig: { responseMimeType: 'application/json' },
+  };
+
+  try {
+    const data = await fetchGeminiWithFallback(payload, TEXT_MODEL_FALLBACK_CHAIN, 35000, 1, '详情页参考图解析');
+    const rawText = collectGeminiText(data) || '{}';
+    const parsed = parseJsonPayload<DetailPageReferenceAnalysis>(rawText, {
+      workflowSummary: '',
+      adaptationStrategy: '',
+      referenceStyle: null,
+      frames: [],
+    });
+
+    return {
+      workflowSummary: String(parsed.workflowSummary || '').trim(),
+      adaptationStrategy: String(parsed.adaptationStrategy || '').trim(),
+      referenceStyle: parsed.referenceStyle || null,
+      frames: Array.isArray(parsed.frames)
+        ? parsed.frames
+            .filter((item): item is DetailPageReferenceAnalysis['frames'][number] => typeof item?.referenceIndex === 'number')
+            .map((item) => ({
+              referenceIndex: Number(item.referenceIndex || 0),
+              suggestedModules: Array.isArray(item.suggestedModules) ? item.suggestedModules.filter(Boolean) : [],
+              layoutSignature: String(item.layoutSignature || '').trim(),
+              headlineStyle: String(item.headlineStyle || '').trim(),
+              copyDensity: String(item.copyDensity || '').trim(),
+              visualFocus: String(item.visualFocus || '').trim(),
+              mappingReason: String(item.mappingReason || '').trim(),
+            }))
+        : [],
+    };
+  } catch (error) {
+    console.error('[generateDetailReferenceAnalysis] analysis failed:', error);
+    return {
+      workflowSummary: '',
+      adaptationStrategy: '',
+      referenceStyle: null,
+      frames: [],
+    };
+  }
+}
+
+export async function generateDetailPagePlanFromAnalysis(
+  productBase64: string,
+  referenceAnalysis: DetailPageReferenceAnalysis | null,
+  userInstruction: string,
+  sceneSetting: string,
+  toneSetting: string,
+  platform: string,
+  userId?: string
+): Promise<{ referenceStyle: DetailPageReferenceStyle | null; modules: DetailPageModulePlan[] }> {
+  const productImage = {
+    data: productBase64,
+    mimeType: detectMimeType(productBase64),
+  };
+
+  const analysisJson = JSON.stringify(referenceAnalysis || {}, null, 2);
+  const systemPrompt = `你是“电商详情页 8 屏规划引擎”。
+【任务】
+现在基于“商品图 + 已经完成的参考图解析结果”，输出固定 8 屏的详情页规划。你不是去重新理解参考图，而是消费已有的解析结果。
+
+【当前约束】
+- 平台：${platform}
+- 场景设定：${sceneSetting}
+- 画面色调：${toneSetting}
+- 用户指令：${userInstruction || '未填写'}
+
+【参考解析结果】
+${analysisJson || '{}'}
+
+【输出要求】
+只输出 JSON，不要 markdown。
+结构必须是：
+{
+  "referenceStyle": {...},
+  "modules": [
+    {
+      "type": "hero",
+      "objective": "...",
+      "headlineDirection": "...",
+      "copyTask": "...",
+      "visualTask": "...",
+      "layoutPreset": "...",
+      "referenceHint": "...",
+      "sceneHint": "...",
+      "toneHint": "...",
+      "referenceIndex": 0
+    }
+  ]
+}
+
+【硬性规则】
+- modules 必须包含且只包含 8 个固定 type。
+- referenceIndex 优先引用参考解析里最匹配的样本，没有就给 null。
+- 规划要适配“先规划，再逐屏生成”的工作流。
+- hero / selling_points / scene 这三屏优先使用最能定义整套风格的参考样本。`;
+
+  const payload = {
+    userId,
+    contents: [
+      {
+        parts: [
+          { text: systemPrompt },
+          { text: '\n--- 新商品主体图（唯一商品锚点）---' },
+          { inlineData: productImage },
+        ],
+      },
+    ],
+    generationConfig: { responseMimeType: 'application/json' },
+  };
+
+  try {
+    const data = await fetchGeminiWithFallback(payload, TEXT_MODEL_FALLBACK_CHAIN, 30000, 1, '详情页规划');
+    const rawText = collectGeminiText(data) || '{}';
+    const parsed = parseJsonPayload<{ referenceStyle?: DetailPageReferenceStyle; modules?: DetailPageModulePlan[] }>(rawText, {});
+    const modules = Array.isArray(parsed.modules)
+      ? parsed.modules.filter((item): item is DetailPageModulePlan => Boolean(item?.type))
+      : [];
+    return {
+      referenceStyle: parsed.referenceStyle || referenceAnalysis?.referenceStyle || null,
+      modules,
+    };
+  } catch (error) {
+    console.error('[generateDetailPagePlanFromAnalysis] planning failed:', error);
+    return {
+      referenceStyle: referenceAnalysis?.referenceStyle || null,
       modules: [],
     };
   }

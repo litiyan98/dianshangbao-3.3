@@ -7,6 +7,7 @@ import {
   CompositionLayout,
   DetailPageModule,
   DetailPageModuleAssets,
+  DetailPageReferenceAnalysis,
   DetailPageReferenceImage,
   DetailPageReferenceStyle,
   FontStyle,
@@ -23,8 +24,9 @@ import {
   analyzeProduct,
   consumeLatestAssetSnapshot,
   extractVisualDNA,
+  generateDetailReferenceAnalysis,
   generateDetailPageModuleCopy,
-  generateDetailPagePlan,
+  generateDetailPagePlanFromAnalysis,
   generateMasterImagePrompt,
   generateMasterMarketingCopy,
   generateScenarioImage,
@@ -44,6 +46,8 @@ import GloveIcon from './components/GloveIcon';
 import DetailPageWorkbench from './components/DetailPageWorkbench';
 import { exportDetailPageModuleImage, exportDetailPageSuiteImage } from './utils/detailPageExport';
 import {
+  assignDetailReferencesFromPlan,
+  createFallbackDetailReferenceAnalysis,
   buildDetailModuleImageIntent,
   createFallbackDetailPagePlans,
   createDetailPageSeedModules,
@@ -363,9 +367,11 @@ const App: React.FC = () => {
   const [authTokenReady, setAuthTokenReady] = useState(false);
   const [scrollCueVisible, setScrollCueVisible] = useState(true);
   const [isDetailWorkbenchOpen, setIsDetailWorkbenchOpen] = useState(false);
+  const [isDetailAnalyzingReferences, setIsDetailAnalyzingReferences] = useState(false);
   const [isDetailPlanning, setIsDetailPlanning] = useState(false);
   const [isDetailGeneratingAssets, setIsDetailGeneratingAssets] = useState(false);
   const [isDetailUploadingReferences, setIsDetailUploadingReferences] = useState(false);
+  const [detailReferenceAnalysis, setDetailReferenceAnalysis] = useState<DetailPageReferenceAnalysis | null>(null);
   const [detailReferenceStyle, setDetailReferenceStyle] = useState<DetailPageReferenceStyle | null>(null);
   const [detailReferenceImages, setDetailReferenceImages] = useState<DetailPageReferenceImage[]>([]);
   const [detailPageModules, setDetailPageModules] = useState<DetailPageModule[]>(() => createDetailPageSeedModules());
@@ -3081,8 +3087,10 @@ const App: React.FC = () => {
   };
 
   const resetDetailPagePlan = () => {
+    setIsDetailAnalyzingReferences(false);
     setIsDetailPlanning(false);
     setIsDetailGeneratingAssets(false);
+    setDetailReferenceAnalysis(null);
     setDetailReferenceStyle(null);
     setDetailPageModules(createDetailPageSeedModules());
     setActiveDetailModuleId(DEFAULT_DETAIL_MODULE_ID);
@@ -3122,6 +3130,9 @@ const App: React.FC = () => {
         });
       }
 
+      setDetailReferenceAnalysis(null);
+      setDetailReferenceStyle(null);
+      setDetailPageModules(createDetailPageSeedModules());
       setDetailReferenceImages((prev) => [...prev, ...nextReferences]);
       setToastMessage(nextReferences.length === 1 ? '已添加 1 张参考详情图' : `已添加 ${nextReferences.length} 张参考详情图`);
     } catch (error: any) {
@@ -3133,6 +3144,8 @@ const App: React.FC = () => {
   };
 
   const handleRemoveDetailReferenceImage = (referenceId: string) => {
+    setDetailReferenceAnalysis(null);
+    setDetailReferenceStyle(null);
     setDetailReferenceImages((prev) => prev.filter((item) => item.id !== referenceId));
     setDetailPageModules((prev) =>
       prev.map((module) =>
@@ -3160,6 +3173,29 @@ const App: React.FC = () => {
     patchDetailModuleAssets(moduleId, { referenceImageId: referenceId });
   };
 
+  const resolveDetailReferenceSetContext = async () => {
+    if (sourceImages.length === 0 || !sourceImages[0]) {
+      throw new Error('请先上传商品图，再开始详情页复刻');
+    }
+    if (!localUserId) {
+      throw new Error('用户身份初始化中，请稍后重试');
+    }
+
+    const productBase64 = await fetchImageAsBase64(sourceImages[0]);
+    const references = await Promise.all(
+      detailReferenceImages.map(async (item) => ({
+        id: item.id,
+        label: item.label,
+        base64: await fetchImageAsBase64(item.url),
+      }))
+    );
+
+    return {
+      productBase64,
+      references,
+    };
+  };
+
   const resolveDetailGenerationContext = async (referenceImageUrl?: string) => {
     if (sourceImages.length === 0 || !sourceImages[0]) {
       throw new Error('请先上传商品图，再生成详情页');
@@ -3183,6 +3219,80 @@ const App: React.FC = () => {
     };
   };
 
+  const handleAnalyzeDetailReferences = async (): Promise<DetailPageReferenceAnalysis | null> => {
+    if (!ensureAuthReady('详情页参考解析引擎')) return null;
+    if (sourceImages.length === 0) {
+      setToastMessage('请先上传商品图，再开始详情页复刻');
+      return null;
+    }
+    if (!localUserId) {
+      setToastMessage('用户身份初始化中，请稍后重试');
+      return null;
+    }
+
+    setIsDetailAnalyzingReferences(true);
+
+    try {
+      const { productBase64, references } = await resolveDetailReferenceSetContext();
+      const fallbackAnalysis = createFallbackDetailReferenceAnalysis(
+        references.length || detailReferenceImages.length || 1,
+        detailReferenceImages[0]?.visualDNA || visualDNA,
+        promptScene,
+        promptTone
+      );
+
+      if (references.length === 0) {
+        setDetailReferenceAnalysis(fallbackAnalysis);
+        setDetailReferenceStyle(fallbackAnalysis.referenceStyle);
+        setToastMessage('未上传参考详情图，已先用通用复刻策略创建工作流');
+        return fallbackAnalysis;
+      }
+
+      const analysisResult = await generateDetailReferenceAnalysis(
+        productBase64,
+        references.map((item) => ({ label: item.label, base64: item.base64 })),
+        userPrompt.trim(),
+        promptScene,
+        promptTone,
+        targetPlatform,
+        localUserId
+      );
+
+      const safeAnalysis =
+        analysisResult.frames.length > 0
+          ? {
+              ...analysisResult,
+              workflowSummary: analysisResult.workflowSummary || fallbackAnalysis.workflowSummary,
+              adaptationStrategy: analysisResult.adaptationStrategy || fallbackAnalysis.adaptationStrategy,
+              referenceStyle: analysisResult.referenceStyle || fallbackAnalysis.referenceStyle,
+            }
+          : fallbackAnalysis;
+
+      setDetailReferenceAnalysis(safeAnalysis);
+      setDetailReferenceStyle(safeAnalysis.referenceStyle);
+      setToastMessage(
+        analysisResult.frames.length > 0
+          ? `已完成 ${references.length} 张参考详情图的整组解析，下一步可生成 8 屏规划`
+          : '参考图解析未完整返回，已切换到通用复刻策略'
+      );
+      return safeAnalysis;
+    } catch (error: any) {
+      console.error('[handleAnalyzeDetailReferences] failed:', error);
+      const fallbackAnalysis = createFallbackDetailReferenceAnalysis(
+        detailReferenceImages.length || 1,
+        detailReferenceImages[0]?.visualDNA || visualDNA,
+        promptScene,
+        promptTone
+      );
+      setDetailReferenceAnalysis(fallbackAnalysis);
+      setDetailReferenceStyle(fallbackAnalysis.referenceStyle);
+      setToastMessage(error?.message || '参考图解析失败，已先用通用策略兜底');
+      return fallbackAnalysis;
+    } finally {
+      setIsDetailAnalyzingReferences(false);
+    }
+  };
+
   const handlePlanDetailPageStructure = async () => {
     if (!ensureAuthReady('详情页规划引擎')) return;
     if (sourceImages.length === 0) {
@@ -3194,15 +3304,29 @@ const App: React.FC = () => {
       return;
     }
 
+    let nextReferenceAnalysis = detailReferenceAnalysis;
+    if (!nextReferenceAnalysis) {
+      nextReferenceAnalysis = await handleAnalyzeDetailReferences();
+    }
+
     setIsDetailPlanning(true);
     setActiveDetailModuleId(DEFAULT_DETAIL_MODULE_ID);
     setDetailPageModules(createDetailPageSeedModules().map((module) => ({ ...module, status: 'loading' })));
 
     try {
-      const { productBase64, referenceBase64 } = await resolveDetailGenerationContext();
-      const planResult = await generateDetailPagePlan(
+      const { productBase64 } = await resolveDetailReferenceSetContext();
+      const fallbackAnalysis =
+        nextReferenceAnalysis ||
+        createFallbackDetailReferenceAnalysis(
+          detailReferenceImages.length || 1,
+          detailReferenceImages[0]?.visualDNA || visualDNA,
+          promptScene,
+          promptTone
+        );
+
+      const planResult = await generateDetailPagePlanFromAnalysis(
         productBase64,
-        referenceBase64,
+        fallbackAnalysis,
         userPrompt.trim(),
         promptScene,
         promptTone,
@@ -3214,26 +3338,38 @@ const App: React.FC = () => {
       const plannedModules =
         !usedFallbackPlan
           ? planResult.modules
-          : createFallbackDetailPagePlans(seedModules, promptScene, promptTone);
+          : createFallbackDetailPagePlans(seedModules, promptScene, promptTone, fallbackAnalysis);
       const planningVisualDNA = detailReferenceImages[0]?.visualDNA || visualDNA;
       const referenceStyle =
-        planResult.referenceStyle || createFallbackDetailReferenceStyle(planningVisualDNA, promptScene, promptTone);
+        planResult.referenceStyle || fallbackAnalysis.referenceStyle || createFallbackDetailReferenceStyle(planningVisualDNA, promptScene, promptTone);
+      const mergedModules = assignDetailReferencesFromPlan(
+        mergeDetailPagePlan(seedModules, plannedModules),
+        detailReferenceImages.map((item) => item.id)
+      );
 
+      setDetailReferenceAnalysis(fallbackAnalysis);
       setDetailReferenceStyle(referenceStyle);
-      setDetailPageModules(mergeDetailPagePlan(seedModules, plannedModules));
+      setDetailPageModules(mergedModules);
       if (!syncAssetsFromGemini()) {
         void refreshUserCredits();
       }
       setToastMessage(
         usedFallbackPlan
-          ? '参考图解析未完整返回，已用通用策略生成 8 屏规划'
-          : referenceBase64
-            ? '参考详情图解析完成，8 屏规划已生成'
+          ? '参考解析已完成，但规划未完整返回，已用通用策略生成 8 屏规划'
+          : detailReferenceImages.length > 0
+            ? '已基于整组参考解析生成 8 屏规划'
             : '已按当前商品与指令生成 8 屏规划'
       );
     } catch (error: any) {
       console.error('[handlePlanDetailPageStructure] failed:', error);
-      setDetailReferenceStyle(createFallbackDetailReferenceStyle(detailReferenceImages[0]?.visualDNA || visualDNA, promptScene, promptTone));
+      const fallbackAnalysis = createFallbackDetailReferenceAnalysis(
+        detailReferenceImages.length || 1,
+        detailReferenceImages[0]?.visualDNA || visualDNA,
+        promptScene,
+        promptTone
+      );
+      setDetailReferenceAnalysis(fallbackAnalysis);
+      setDetailReferenceStyle(fallbackAnalysis.referenceStyle || createFallbackDetailReferenceStyle(detailReferenceImages[0]?.visualDNA || visualDNA, promptScene, promptTone));
       setDetailPageModules(createDetailPageSeedModules());
       setToastMessage(error?.message || '详情页规划失败，请稍后重试');
     } finally {
@@ -3244,6 +3380,10 @@ const App: React.FC = () => {
   const generateSingleDetailModule = async (moduleId: string): Promise<boolean> => {
     const module = detailPageModules.find((item) => item.id === moduleId);
     if (!module) return false;
+    if (!module.plan) {
+      setToastMessage('请先完成“整组参考解析”和“8 屏规划”，再生成当前屏');
+      return false;
+    }
     if (!isDetailModuleSupported(module.type)) {
       setToastMessage('当前模块暂未开放真实生成');
       return false;
@@ -3416,6 +3556,14 @@ const App: React.FC = () => {
     if (isDetailGeneratingAssets) return;
     if (sourceImages.length === 0) {
       setToastMessage('请先上传商品图，再生成详情页');
+      return;
+    }
+    if (!detailReferenceAnalysis) {
+      setToastMessage('请先完成整组参考解析，再生成 8 屏图文');
+      return;
+    }
+    if (detailPageModules.some((module) => !module.plan)) {
+      setToastMessage('请先生成 8 屏规划，再开始逐屏模仿生成');
       return;
     }
     if (isDetailBatchCreditsInsufficient) {
@@ -5666,13 +5814,16 @@ const App: React.FC = () => {
         pageCount={detailPageModules.length}
         modules={detailPageModules}
         activeModuleId={activeDetailModuleId}
+        isAnalyzingReferences={isDetailAnalyzingReferences}
         isPlanning={isDetailPlanning}
         isGeneratingAssets={isDetailGeneratingAssets}
         isUploadingReferences={isDetailUploadingReferences}
+        referenceAnalysis={detailReferenceAnalysis}
         referenceStyle={detailReferenceStyle}
         referenceImages={detailReferenceImages}
         onClose={() => setIsDetailWorkbenchOpen(false)}
         onSelectModule={setActiveDetailModuleId}
+        onAnalyzeReferences={handleAnalyzeDetailReferences}
         onPlanStructure={handlePlanDetailPageStructure}
         onGenerateAssets={handleGenerateDetailPageAssets}
         onRegenerateModule={generateSingleDetailModule}

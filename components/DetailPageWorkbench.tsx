@@ -19,6 +19,7 @@ import {
   DetailPageModuleAssets,
   DetailPageModuleStatus,
   DetailPagePlatform,
+  DetailPageReferenceAnalysis,
   DetailPageReferenceImage,
   DetailPageReferenceStyle,
   DetailPageStyle,
@@ -31,13 +32,16 @@ interface DetailPageWorkbenchProps {
   pageCount: number;
   modules: DetailPageModule[];
   activeModuleId: string | null;
+  isAnalyzingReferences: boolean;
   isPlanning: boolean;
   isGeneratingAssets: boolean;
   isUploadingReferences: boolean;
+  referenceAnalysis: DetailPageReferenceAnalysis | null;
   referenceStyle: DetailPageReferenceStyle | null;
   referenceImages: DetailPageReferenceImage[];
   onClose: () => void;
   onSelectModule: (moduleId: string) => void;
+  onAnalyzeReferences: () => void;
   onPlanStructure: () => void;
   onGenerateAssets: () => void;
   onRegenerateModule: (moduleId: string) => void;
@@ -80,21 +84,32 @@ const MODULE_TYPE_COPY: Record<DetailPageModule['type'], string> = {
   cta: '总结购买理由并形成最终转化收口',
 };
 
+const MODULE_SHORT_LABELS: Record<DetailPageModule['type'], string> = {
+  hero: '封面',
+  selling_points: '卖点',
+  scene: '场景',
+  detail: '细节',
+  benefit: '效果',
+  spec: '参数',
+  trust: '信任',
+  cta: '收口',
+};
+
 const STEP_META = [
   {
     step: '01',
-    title: '挑参考',
-    description: '先上传参考详情图，告诉系统整体想复刻的版式和气质。',
+    title: '拆参考',
+    description: '先整组解析参考详情图，识别每张更适合映射到哪一类详情屏。',
   },
   {
     step: '02',
     title: '排结构',
-    description: '先规划 8 屏职责，再把参考样式映射到可控模板。',
+    description: '把参考图组的风格与节奏，映射成固定 8 屏的可控规划。',
   },
   {
     step: '03',
     title: '逐屏出图',
-    description: '当前屏优先，可单独生成、重试和导出，不必整套一起等。',
+    description: '逐屏模仿生成与重试，失败不拖整套，当前屏可随时导出。',
   },
 ] as const;
 
@@ -113,13 +128,16 @@ const DetailPageWorkbench: React.FC<DetailPageWorkbenchProps> = ({
   pageCount,
   modules,
   activeModuleId,
+  isAnalyzingReferences,
   isPlanning,
   isGeneratingAssets,
   isUploadingReferences,
+  referenceAnalysis,
   referenceStyle,
   referenceImages,
   onClose,
   onSelectModule,
+  onAnalyzeReferences,
   onPlanStructure,
   onGenerateAssets,
   onRegenerateModule,
@@ -137,8 +155,13 @@ const DetailPageWorkbench: React.FC<DetailPageWorkbenchProps> = ({
   const plannedCount = modules.filter((module) => Boolean(module.plan)).length;
   const generatedCount = modules.filter((module) => Boolean(module.assets.imageUrl)).length;
   const finishedCount = modules.filter((module) => module.status === 'success').length;
-  const activeReferenceId = activeModule?.assets.referenceImageId || referenceImages[0]?.id || null;
-  const activeReference = referenceImages.find((item) => item.id === activeReferenceId) || referenceImages[0] || null;
+  const plannedReferenceIndex = activeModule?.plan?.referenceIndex;
+  const plannedReference =
+    typeof plannedReferenceIndex === 'number'
+      ? referenceImages[plannedReferenceIndex] || null
+      : null;
+  const activeReferenceId = activeModule?.assets.referenceImageId || plannedReference?.id || referenceImages[0]?.id || null;
+  const activeReference = referenceImages.find((item) => item.id === activeReferenceId) || plannedReference || referenceImages[0] || null;
 
   if (!activeModule) return null;
 
@@ -146,6 +169,13 @@ const DetailPageWorkbench: React.FC<DetailPageWorkbenchProps> = ({
   const hasGeneratedImage = Boolean(activeModule.assets.imageUrl);
   const toneSummary = activeModule.plan?.toneHint || activeModule.assets.toneNotes || '沿用全局输入';
   const referenceSummary = activeModule.plan?.referenceHint || '当前会优先沿用通用 8 屏骨架，再吸收参考图的版式节奏。';
+  const activeFrameAnalysis =
+    typeof plannedReferenceIndex === 'number'
+      ? referenceAnalysis?.frames.find((frame) => frame.referenceIndex === plannedReferenceIndex) || null
+      : null;
+  const isBusy = isUploadingReferences || isAnalyzingReferences || isPlanning || isGeneratingAssets;
+  const referenceSummaryTitle =
+    referenceStyle?.pageStyle || referenceAnalysis?.workflowSummary || activeReference?.label || '等待解析参考详情图';
 
   return (
     <div className="fixed inset-0 z-[270] flex items-center justify-center p-3 md:p-6">
@@ -194,16 +224,20 @@ const DetailPageWorkbench: React.FC<DetailPageWorkbenchProps> = ({
 
           <div className="mt-5 grid gap-3 lg:grid-cols-3">
             {STEP_META.map((item, index) => {
-              const isDone = index === 0 ? referenceImages.length > 0 : index === 1 ? plannedCount > 0 : finishedCount > 0;
+              const isDone = index === 0 ? Boolean(referenceAnalysis) : index === 1 ? plannedCount > 0 : finishedCount > 0;
+              const isReady = index === 0 ? referenceImages.length > 0 : index === 1 ? Boolean(referenceAnalysis) : plannedCount > 0;
               return (
-                <div key={item.step} className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-4">
+                <div key={item.step} className={`rounded-2xl border px-4 py-4 ${isDone ? 'border-stone-900 bg-stone-950 text-white' : 'border-stone-200 bg-stone-50'}`}>
                   <div className="flex items-center gap-3">
-                    <div className={`flex h-9 w-9 items-center justify-center rounded-2xl text-[12px] font-black ${isDone ? 'bg-[#111827] text-white' : 'bg-white text-stone-500 border border-stone-200'}`}>
+                    <div className={`flex h-9 w-9 items-center justify-center rounded-2xl text-[12px] font-black ${isDone ? 'bg-white/12 text-white' : 'bg-white text-stone-500 border border-stone-200'}`}>
                       {item.step}
                     </div>
                     <div>
-                      <p className="text-[15px] font-black text-stone-900">{item.title}</p>
-                      <p className="mt-1 text-[12px] leading-5 text-stone-500">{item.description}</p>
+                      <p className={`text-[15px] font-black ${isDone ? 'text-white' : 'text-stone-900'}`}>{item.title}</p>
+                      <p className={`mt-1 text-[12px] leading-5 ${isDone ? 'text-white/72' : 'text-stone-500'}`}>{item.description}</p>
+                      <p className={`mt-2 text-[10px] font-bold uppercase tracking-[0.16em] ${isDone ? 'text-white/50' : isReady ? 'text-stone-500' : 'text-stone-300'}`}>
+                        {isDone ? '已完成' : isReady ? '已就绪' : '等待上一步'}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -220,7 +254,7 @@ const DetailPageWorkbench: React.FC<DetailPageWorkbenchProps> = ({
                   <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-stone-400">步骤 1 / 参考样本</p>
                   <p className="mt-2 text-[15px] font-black text-stone-900">上传参考详情图</p>
                   <p className="mt-2 text-[12px] leading-5 text-stone-500">
-                    当前屏可指定更像哪一张参考图，系统只学版式和风格，不学对方商品。
+                    建议先一次上传整组参考，系统会先拆结构与节奏，再为当前屏指定更像哪一张。
                   </p>
                 </div>
                 <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-stone-200 bg-stone-50 text-stone-500">
@@ -229,8 +263,10 @@ const DetailPageWorkbench: React.FC<DetailPageWorkbenchProps> = ({
               </div>
 
               <div className="mt-4 grid grid-cols-2 gap-3">
-                {referenceImages.map((reference) => {
+                {referenceImages.map((reference, index) => {
                   const isSelected = reference.id === activeReferenceId;
+                  const frameAnalysis =
+                    referenceAnalysis?.frames.find((frame) => frame.referenceIndex === index) || null;
                   return (
                     <div
                       key={reference.id}
@@ -249,6 +285,11 @@ const DetailPageWorkbench: React.FC<DetailPageWorkbenchProps> = ({
                         <p className="mt-1 line-clamp-2 text-[10px] leading-4 text-stone-500">
                           {reference.visualDNA?.atmosphere || '待提取风格 DNA'}
                         </p>
+                        {frameAnalysis ? (
+                          <p className="mt-2 line-clamp-2 text-[10px] font-bold leading-4 text-stone-700">
+                            适配：{frameAnalysis.suggestedModules.map((item) => MODULE_SHORT_LABELS[item]).join(' / ')}
+                          </p>
+                        ) : null}
                       </div>
                       </button>
                       <button
@@ -277,6 +318,30 @@ const DetailPageWorkbench: React.FC<DetailPageWorkbenchProps> = ({
                   {isUploadingReferences ? <Loader2 size={18} className="animate-spin" /> : <Plus size={18} />}
                   <span className="text-[11px] font-bold">添加参考</span>
                 </label>
+              </div>
+
+              <div className="mt-4 rounded-2xl border border-dashed border-stone-200 bg-stone-50/70 px-3 py-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[11px] font-black text-stone-900">
+                      {referenceAnalysis ? '参考图组已完成拆解' : '上传后先拆参考图组'}
+                    </p>
+                    <p className="mt-1 text-[11px] leading-5 text-stone-500">
+                      {referenceAnalysis
+                        ? referenceAnalysis.workflowSummary
+                        : '先理解整套节奏，再开始 8 屏规划，能显著减少每屏风格漂移。'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={onAnalyzeReferences}
+                    disabled={isBusy}
+                    className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-full bg-stone-900 px-4 text-[12px] font-bold text-white transition-colors hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isAnalyzingReferences ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />}
+                    {isAnalyzingReferences ? '解析中...' : referenceAnalysis ? '重新解析' : '先解析'}
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -355,17 +420,26 @@ const DetailPageWorkbench: React.FC<DetailPageWorkbenchProps> = ({
                   <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
-                      onClick={onPlanStructure}
-                      disabled={isPlanning || isGeneratingAssets}
+                      onClick={onAnalyzeReferences}
+                      disabled={isBusy}
                       className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#111827] px-4 text-[13px] font-bold text-white transition-colors hover:bg-[#1a2333] disabled:cursor-not-allowed disabled:opacity-60"
                     >
+                      {isAnalyzingReferences ? <Loader2 size={15} className="animate-spin" /> : <Images size={15} />}
+                      {isAnalyzingReferences ? '正在拆解参考组...' : referenceAnalysis ? '重新解析参考图组' : '先解析参考图组'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onPlanStructure}
+                      disabled={isBusy}
+                      className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-stone-200 bg-white px-4 text-[13px] font-bold text-stone-700 transition-colors hover:border-stone-300 hover:text-stone-900 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
                       {isPlanning ? <Loader2 size={15} className="animate-spin" /> : <Wand2 size={15} />}
-                      {isPlanning ? '规划中...' : '解析参考并规划'}
+                      {isPlanning ? '规划中...' : '生成 8 屏规划'}
                     </button>
                     <button
                       type="button"
                       onClick={onGenerateAssets}
-                      disabled={isPlanning || isGeneratingAssets}
+                      disabled={isBusy || plannedCount === 0}
                       className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-stone-200 bg-white px-4 text-[13px] font-bold text-stone-700 transition-colors hover:border-stone-300 hover:text-stone-900 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {isGeneratingAssets ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
@@ -374,7 +448,7 @@ const DetailPageWorkbench: React.FC<DetailPageWorkbenchProps> = ({
                     <button
                       type="button"
                       onClick={() => onRegenerateModule(activeModule.id)}
-                      disabled={isPlanning || isGeneratingAssets}
+                      disabled={isBusy || !activeModule.plan}
                       className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-stone-200 bg-white px-4 text-[13px] font-bold text-stone-700 transition-colors hover:border-stone-300 hover:text-stone-900 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       <RefreshCw size={15} />
@@ -383,7 +457,7 @@ const DetailPageWorkbench: React.FC<DetailPageWorkbenchProps> = ({
                     <button
                       type="button"
                       onClick={() => onExportModule(activeModule.id)}
-                      disabled={isPlanning || isGeneratingAssets}
+                      disabled={isBusy || !hasGeneratedImage}
                       className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-stone-200 bg-white px-4 text-[13px] font-bold text-stone-700 transition-colors hover:border-stone-300 hover:text-stone-900 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       <Download size={15} />
@@ -471,12 +545,13 @@ const DetailPageWorkbench: React.FC<DetailPageWorkbenchProps> = ({
                     <div className="rounded-[1.75rem] border border-stone-200 bg-white px-5 py-5 shadow-sm">
                       <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-stone-400">参考风格摘要</p>
                       <h4 className="mt-3 text-[19px] font-black tracking-tight text-stone-900">
-                        {referenceStyle?.pageStyle || activeReference?.label || '等待解析参考详情图'}
+                        {referenceSummaryTitle}
                       </h4>
                       <p className="mt-3 text-[13px] leading-6 text-stone-500">
-                        {referenceStyle
-                          ? `${referenceStyle.atmosphere} · ${referenceStyle.layoutRhythm}`
-                          : '暂无完整参考 token，当前会优先按商品信息与通用详情页结构生成。'}
+                        {referenceAnalysis?.adaptationStrategy
+                          || (referenceStyle
+                            ? `${referenceStyle.atmosphere} · ${referenceStyle.layoutRhythm}`
+                            : '暂无完整参考 token，当前会优先按商品信息与通用详情页结构生成。')}
                       </p>
                       {referenceStyle?.palette?.length ? (
                         <div className="mt-4 flex flex-wrap gap-2">
@@ -484,6 +559,23 @@ const DetailPageWorkbench: React.FC<DetailPageWorkbenchProps> = ({
                             <span key={`palette-token-${index}`} className="rounded-full bg-stone-100 px-2.5 py-1 text-[11px] font-bold text-stone-600">
                               {token}
                             </span>
+                          ))}
+                        </div>
+                      ) : null}
+                      {referenceAnalysis?.frames?.length ? (
+                        <div className="mt-4 space-y-2 rounded-2xl border border-stone-200 bg-stone-50 px-3 py-3">
+                          {referenceAnalysis.frames.slice(0, 4).map((frame) => (
+                            <div key={`reference-frame-${frame.referenceIndex}`} className="rounded-xl bg-white px-3 py-2">
+                              <p className="text-[11px] font-black text-stone-900">
+                                参考图 {frame.referenceIndex + 1}
+                                <span className="ml-2 text-stone-400">
+                                  {referenceImages[frame.referenceIndex]?.label || '未命名参考'}
+                                </span>
+                              </p>
+                              <p className="mt-1 text-[11px] leading-5 text-stone-500">
+                                建议映射：{frame.suggestedModules.map((item) => MODULE_SHORT_LABELS[item]).join(' / ')} ｜ {frame.layoutSignature}
+                              </p>
+                            </div>
                           ))}
                         </div>
                       ) : null}
@@ -581,6 +673,17 @@ const DetailPageWorkbench: React.FC<DetailPageWorkbenchProps> = ({
                             placeholder="如果你要微调画面构图、光感和材质，可以在这里补充"
                           />
                         </label>
+
+                        {activeFrameAnalysis ? (
+                          <div className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-4 text-[12px] leading-6 text-stone-600">
+                            <p className="font-black text-stone-900">当前屏参考映射</p>
+                            <p className="mt-2">
+                              这屏优先模仿 <span className="font-bold text-stone-900">{activeReference?.label || `参考图 ${activeFrameAnalysis.referenceIndex + 1}`}</span>，
+                              重点学习 {activeFrameAnalysis.visualFocus}，文案密度倾向 {activeFrameAnalysis.copyDensity}。
+                            </p>
+                            <p className="mt-2 text-stone-500">{activeFrameAnalysis.mappingReason}</p>
+                          </div>
+                        ) : null}
                       </div>
                     </div>
 
@@ -588,7 +691,7 @@ const DetailPageWorkbench: React.FC<DetailPageWorkbenchProps> = ({
                       <button
                         type="button"
                         onClick={onExportSuite}
-                        disabled={isPlanning || isGeneratingAssets}
+                        disabled={isBusy || generatedCount === 0}
                         className="flex h-12 items-center justify-center gap-2 rounded-2xl border border-stone-200 bg-white text-[14px] font-bold text-stone-700 transition-colors hover:border-stone-300 hover:text-stone-900 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <Images size={16} />

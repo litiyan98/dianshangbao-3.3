@@ -96,6 +96,23 @@ export interface DetailPageReferenceStyle {
   }>;
 }
 
+export interface DetailPageReferenceFrameAnalysis {
+  referenceIndex: number;
+  suggestedModules: DetailPageModuleType[];
+  layoutSignature: string;
+  headlineStyle: string;
+  copyDensity: string;
+  visualFocus: string;
+  mappingReason: string;
+}
+
+export interface DetailPageReferenceAnalysis {
+  workflowSummary: string;
+  adaptationStrategy: string;
+  referenceStyle: DetailPageReferenceStyle | null;
+  frames: DetailPageReferenceFrameAnalysis[];
+}
+
 export interface DetailPageReferenceImage {
   id: string;
   url: string;
@@ -113,6 +130,7 @@ export interface DetailPageModulePlan {
   referenceHint: string;
   sceneHint: string;
   toneHint: string;
+  referenceIndex?: number | null;
 }
 
 export interface DetailPageModuleAssets {
