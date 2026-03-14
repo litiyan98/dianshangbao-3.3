@@ -66,6 +66,12 @@ interface ReferralSummary {
     total_buyer_tokens: number;
   };
   rules?: ReferralRule[];
+  link_stats?: Array<{
+    bind_source: string;
+    registered_count: number;
+    first_paid_count: number;
+    total_referrer_tokens: number;
+  }>;
 }
 
 interface CreditModalProps {
@@ -97,7 +103,18 @@ const CreditModal: React.FC<CreditModalProps> = ({
   const [summary, setSummary] = useState<ReferralSummary | null>(null);
   const [isSummaryLoading, setIsSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState<string | null>(null);
+  const [inviteSource, setInviteSource] = useState('');
   const currentTab = activeTab ?? internalTab;
+
+  const normalizedInviteSource = useMemo(() => {
+    const clean = inviteSource
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 32);
+    return clean || 'landing';
+  }, [inviteSource]);
 
   const inviteLink = useMemo(() => {
     const code = (summary?.invite_code || inviteCode || '').trim();
@@ -105,6 +122,15 @@ const CreditModal: React.FC<CreditModalProps> = ({
     if (typeof window === 'undefined') return `/?invite=${code}`;
     return `${window.location.origin}/?invite=${code}`;
   }, [summary?.invite_code, inviteCode]);
+
+  const trackedInviteLink = useMemo(() => {
+    const code = (summary?.invite_code || inviteCode || '').trim();
+    if (!code) return '';
+    const params = new URLSearchParams({ invite: code });
+    if (normalizedInviteSource !== 'landing') params.set('channel', normalizedInviteSource);
+    if (typeof window === 'undefined') return `/?${params.toString()}`;
+    return `${window.location.origin}/?${params.toString()}`;
+  }, [summary?.invite_code, inviteCode, normalizedInviteSource]);
 
   const canNativeShare = useMemo(() => {
     return typeof navigator !== 'undefined' && typeof navigator.share === 'function';
@@ -156,13 +182,14 @@ const CreditModal: React.FC<CreditModalProps> = ({
   };
 
   const handleCopy = async () => {
-    if (!inviteLink) {
+    const targetLink = trackedInviteLink || inviteLink;
+    if (!targetLink) {
       showToast('邀请码尚未生成，请稍后重试');
       return;
     }
     try {
-      await navigator.clipboard.writeText(inviteLink);
-      showToast('邀请链接已复制');
+      await navigator.clipboard.writeText(targetLink);
+      showToast(normalizedInviteSource === 'landing' ? '邀请链接已复制' : `已复制 ${normalizedInviteSource} 渠道链接`);
     } catch (error) {
       console.error('[CreditModal] copy failed:', error);
       showToast('复制失败，请手动复制链接');
@@ -170,7 +197,8 @@ const CreditModal: React.FC<CreditModalProps> = ({
   };
 
   const handleShare = async () => {
-    if (!inviteLink) {
+    const targetLink = trackedInviteLink || inviteLink;
+    if (!targetLink) {
       showToast('邀请码尚未生成，请稍后重试');
       return;
     }
@@ -182,7 +210,7 @@ const CreditModal: React.FC<CreditModalProps> = ({
       await navigator.share({
         title: '电商宝 Pro 邀请链接',
         text: '我在用电商宝 Pro 做商品主图，注册后首充可获得额外 Token。',
-        url: inviteLink,
+        url: targetLink,
       });
     } catch (error) {
       if ((error as Error)?.name === 'AbortError') return;
@@ -206,11 +234,12 @@ const CreditModal: React.FC<CreditModalProps> = ({
     total_buyer_tokens: 0,
   };
   const rules = summary?.rules || [];
+  const linkStats = summary?.link_stats || [];
 
   return (
     <div className="fixed inset-0 z-[260] flex items-center justify-center p-4 md:p-6">
       <div className="absolute inset-0 bg-stone-900/70 backdrop-blur-sm" onClick={onClose} />
-      <div className={`relative w-full ${currentTab === 'invite' ? 'max-w-2xl' : 'max-w-5xl'} bg-white rounded-[2rem] shadow-2xl border border-stone-200 overflow-hidden`}>
+      <div className="relative w-full max-w-5xl rounded-[2rem] border border-stone-200 bg-white shadow-2xl overflow-hidden">
         <button onClick={onClose} className="absolute top-5 right-5 z-20 w-10 h-10 rounded-full border border-stone-200 bg-white/95 shadow-sm hover:bg-stone-50 hover:border-stone-300 transition-colors flex items-center justify-center">
           <X size={16} />
         </button>
@@ -276,13 +305,39 @@ const CreditModal: React.FC<CreditModalProps> = ({
                         <p className="text-[11px] uppercase tracking-[0.16em] text-stone-400 font-mono">邀请链接</p>
                         <p className="text-[13px] text-stone-700 break-all mt-2 leading-6">{inviteLink || '邀请码生成中...'}</p>
                       </div>
+                      <div className="rounded-[1.25rem] border border-stone-200 bg-stone-50 px-4 py-4">
+                        <p className="text-[11px] uppercase tracking-[0.16em] text-stone-400 font-mono">渠道标签</p>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {['wechat-group', 'xiaohongshu', 'douyin-live', 'private-chat'].map((preset) => (
+                            <button
+                              key={preset}
+                              type="button"
+                              onClick={() => setInviteSource(preset)}
+                              className={`rounded-full px-3 py-1.5 text-[12px] font-bold transition-colors ${normalizedInviteSource === preset ? 'bg-[#111827] text-white' : 'bg-white text-stone-600 border border-stone-200 hover:border-stone-300'}`}
+                            >
+                              {preset}
+                            </button>
+                          ))}
+                        </div>
+                        <input
+                          value={inviteSource}
+                          onChange={(event) => setInviteSource(event.target.value)}
+                          className="mt-3 h-11 w-full rounded-xl border border-stone-200 bg-white px-3 text-[14px] text-stone-900 outline-none focus:border-stone-400"
+                          placeholder="例如 wechat-group / xiaohongshu / live-room"
+                        />
+                        <p className="mt-3 text-[11px] leading-5 text-stone-500">留空就是默认落地链接；填不同标签后，邀请中心会按渠道统计注册数和首充数。</p>
+                      </div>
+                      <div>
+                        <p className="text-[11px] uppercase tracking-[0.16em] text-stone-400 font-mono">当前渠道链接</p>
+                        <p className="text-[13px] text-stone-700 break-all mt-2 leading-6">{trackedInviteLink || '邀请码生成中...'}</p>
+                      </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                         <button
                           onClick={handleCopy}
                           className="w-full h-11 rounded-xl bg-[#111827] text-white text-[13px] font-bold flex items-center justify-center gap-2 hover:bg-[#1a2333] transition-colors"
                         >
                           <Copy size={14} />
-                          复制链接
+                          复制当前渠道链接
                         </button>
                         {canNativeShare ? (
                           <button
@@ -297,10 +352,14 @@ const CreditModal: React.FC<CreditModalProps> = ({
                     </div>
 
                     <div className="rounded-[2rem] border border-stone-200 bg-[#fafafa] p-5 space-y-4">
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                         <div className="rounded-[1.25rem] border border-stone-200 bg-white px-4 py-3">
                           <p className="text-[11px] uppercase tracking-[0.16em] text-stone-400 font-mono">已邀请</p>
                           <p className="text-[22px] font-black text-[#1d1d1f] mt-2">{stats.registered_count}</p>
+                        </div>
+                        <div className="rounded-[1.25rem] border border-stone-200 bg-white px-4 py-3">
+                          <p className="text-[11px] uppercase tracking-[0.16em] text-stone-400 font-mono">已首充</p>
+                          <p className="text-[22px] font-black text-[#1d1d1f] mt-2">{stats.first_paid_count}</p>
                         </div>
                         <div className="rounded-[1.25rem] border border-stone-200 bg-white px-4 py-3">
                           <p className="text-[11px] uppercase tracking-[0.16em] text-stone-400 font-mono">返还</p>
@@ -321,6 +380,76 @@ const CreditModal: React.FC<CreditModalProps> = ({
                         </div>
                       </div>
                     </div>
+                  </div>
+
+                  <div className="rounded-[2rem] border border-stone-200 bg-white p-5 md:p-6">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-[11px] uppercase tracking-[0.16em] text-stone-400 font-mono">渠道效果</p>
+                        <h4 className="mt-2 text-[20px] font-black tracking-tight text-[#1d1d1f]">不同邀请链接的注册与付费</h4>
+                      </div>
+                      <div className="rounded-full bg-stone-100 px-3 py-1 text-[11px] font-bold text-stone-500">
+                        共 {linkStats.length} 个渠道
+                      </div>
+                    </div>
+
+                    {linkStats.length > 0 ? (
+                      <div className="mt-4 grid gap-3 md:grid-cols-2">
+                        {linkStats.map((item) => (
+                          <div key={item.bind_source} className="rounded-[1.5rem] border border-stone-200 bg-stone-50 px-4 py-4">
+                            <div className="flex items-center justify-between gap-3">
+                              <div>
+                                <p className="text-[11px] uppercase tracking-[0.16em] text-stone-400 font-mono">渠道</p>
+                                <p className="mt-2 text-[16px] font-black text-stone-900">{item.bind_source}</p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  const code = (summary?.invite_code || inviteCode || '').trim();
+                                  if (!code) {
+                                    showToast('邀请码尚未生成，请稍后重试');
+                                    return;
+                                  }
+                                  const params = new URLSearchParams({ invite: code });
+                                  if (item.bind_source !== 'landing') params.set('channel', item.bind_source);
+                                  const url = typeof window === 'undefined'
+                                    ? `/?${params.toString()}`
+                                    : `${window.location.origin}/?${params.toString()}`;
+                                  try {
+                                    await navigator.clipboard.writeText(url);
+                                    showToast(`已复制 ${item.bind_source} 渠道链接`);
+                                  } catch (error) {
+                                    console.error('[CreditModal] copy link stats failed:', error);
+                                    showToast('复制失败，请手动复制');
+                                  }
+                                }}
+                                className="rounded-full border border-stone-200 bg-white px-3 py-1.5 text-[12px] font-bold text-stone-600 transition-colors hover:border-stone-300 hover:text-stone-900"
+                              >
+                                复制链接
+                              </button>
+                            </div>
+                            <div className="mt-4 grid grid-cols-3 gap-3">
+                              <div className="rounded-[1rem] border border-stone-200 bg-white px-3 py-3">
+                                <p className="text-[11px] text-stone-400">注册</p>
+                                <p className="mt-2 text-[20px] font-black text-stone-900">{item.registered_count}</p>
+                              </div>
+                              <div className="rounded-[1rem] border border-stone-200 bg-white px-3 py-3">
+                                <p className="text-[11px] text-stone-400">首充</p>
+                                <p className="mt-2 text-[20px] font-black text-stone-900">{item.first_paid_count}</p>
+                              </div>
+                              <div className="rounded-[1rem] border border-stone-200 bg-white px-3 py-3">
+                                <p className="text-[11px] text-stone-400">返还</p>
+                                <p className="mt-2 text-[20px] font-black text-stone-900">{item.total_referrer_tokens}</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="mt-4 rounded-[1.5rem] border border-dashed border-stone-300 bg-stone-50 px-5 py-6 text-[13px] leading-6 text-stone-500">
+                        还没有渠道明细。先为不同场景复制不同的带标签链接，例如 `wechat-group`、`xiaohongshu`、`douyin-live`，后续就能看到每个链接带来的注册数和首充数。
+                      </div>
+                    )}
                   </div>
                 </>
               )}

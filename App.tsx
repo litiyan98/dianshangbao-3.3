@@ -2169,8 +2169,10 @@ const App: React.FC = () => {
     try {
       const searchParams = new URLSearchParams(window.location.search);
       const inviteCode = searchParams.get('invite')?.trim() || '';
-      const query = new URLSearchParams({ userId: localUserId, debugAdmin: '1' });
+      const inviteSource = searchParams.get('channel')?.trim() || searchParams.get('source')?.trim() || '';
+      const query = new URLSearchParams({ userId: localUserId });
       if (inviteCode) query.set('inviteCode', inviteCode);
+      if (inviteSource) query.set('inviteSource', inviteSource);
 
       const token = localStorage.getItem('authing_token');
       const resolvedPhone = resolveUserPhone(userInfo) || resolvePhoneFromToken(token);
@@ -2192,9 +2194,6 @@ const App: React.FC = () => {
       const quota = Number(data?.image_quota ?? data?.credits);
       if (!Number.isFinite(quota)) {
         throw new Error('资产数据格式异常');
-      }
-      if (data?.admin_debug) {
-        console.info('[admin-debug] /api/user', data.admin_debug);
       }
       setUserCredits(quota);
       setUserVipExpireDate(data?.vip_expire_date ? String(data.vip_expire_date) : null);
@@ -3418,7 +3417,12 @@ const App: React.FC = () => {
       return;
     }
     if (isDetailBatchCreditsInsufficient) {
-      setToastMessage(`生图算力不足，生成整套 8 屏至少需要 ${detailBatchImageCost} 点额度`);
+      const canStillGenerateSingle = hasCreditsValue && userCredits >= 1;
+      setToastMessage(
+        canStillGenerateSingle
+          ? `整套生成至少需要 ${detailBatchImageCost} 点额度，你当前仍可单独生成某一屏（1 点额度）`
+          : `生图算力不足，生成整套 8 屏至少需要 ${detailBatchImageCost} 点额度`
+      );
       openPaymentModalForAssetError('INSUFFICIENT_QUOTA');
       return;
     }

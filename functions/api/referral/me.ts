@@ -52,6 +52,7 @@ export async function onRequestGet(context: { request: Request; env: Env }): Pro
     let totalReferrerTokens = 0;
     let totalBuyerTokens = 0;
     let recentRewards: Array<Record<string, unknown>> = [];
+    let linkStats: Array<Record<string, unknown>> = [];
 
     if (hasBindingsTable) {
       const registeredRow = (await env.DB
@@ -59,6 +60,53 @@ export async function onRequestGet(context: { request: Request; env: Env }): Pro
         .bind(userId)
         .first()) as { total?: number | null } | null;
       registeredCount = Number(registeredRow?.total || 0);
+
+      const perLinkResp = hasGrantsTable
+        ? await env.DB
+            .prepare(
+              `SELECT
+                 COALESCE(rb.bind_source, 'landing') AS bind_source,
+                 COUNT(1) AS registered_count,
+                 SUM(CASE WHEN grants.referred_user_id IS NOT NULL THEN 1 ELSE 0 END) AS first_paid_count,
+                 COALESCE(SUM(COALESCE(grants.referrer_bonus_tokens, 0)), 0) AS total_referrer_tokens
+               FROM ReferralBindings rb
+               LEFT JOIN (
+                 SELECT referred_user_id, referrer_user_id, SUM(referrer_bonus_tokens) AS referrer_bonus_tokens
+                 FROM ReferralRewardGrants
+                 WHERE status = 'RELEASED'
+                 GROUP BY referred_user_id, referrer_user_id
+               ) grants
+                 ON grants.referred_user_id = rb.referred_user_id
+                AND grants.referrer_user_id = rb.referrer_user_id
+               WHERE rb.referrer_user_id = ?1
+               GROUP BY COALESCE(rb.bind_source, 'landing')
+               ORDER BY registered_count DESC, first_paid_count DESC, bind_source ASC
+               LIMIT 20`
+            )
+            .bind(userId)
+            .all()
+        : await env.DB
+            .prepare(
+              `SELECT
+                 COALESCE(bind_source, 'landing') AS bind_source,
+                 COUNT(1) AS registered_count,
+                 0 AS first_paid_count,
+                 0 AS total_referrer_tokens
+               FROM ReferralBindings
+               WHERE referrer_user_id = ?1
+               GROUP BY COALESCE(bind_source, 'landing')
+               ORDER BY registered_count DESC, bind_source ASC
+               LIMIT 20`
+            )
+            .bind(userId)
+            .all();
+      const linkRows = Array.isArray(perLinkResp?.results) ? perLinkResp.results : [];
+      linkStats = linkRows.map((row: any) => ({
+        bind_source: String(row.bind_source || 'landing'),
+        registered_count: Number(row.registered_count || 0),
+        first_paid_count: Number(row.first_paid_count || 0),
+        total_referrer_tokens: Number(row.total_referrer_tokens || 0),
+      }));
     }
 
     if (hasGrantsTable) {
@@ -124,6 +172,7 @@ export async function onRequestGet(context: { request: Request; env: Env }): Pro
       },
       rules: await getReferralRewardRules(env),
       recent_rewards: recentRewards,
+      link_stats: linkStats,
     });
   } catch (error: any) {
     console.error('[/api/referral/me] unexpected error:', error);

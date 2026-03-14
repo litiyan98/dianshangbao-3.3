@@ -60,19 +60,37 @@ function isImageModelUrl(url: string) {
   return /model=gemini-[^&]*flash-image/.test(url);
 }
 
+function shouldDebugGemini() {
+  if (typeof window === 'undefined') return false;
+  try {
+    return window.localStorage.getItem('gemini_debug') === '1';
+  } catch {
+    return false;
+  }
+}
+
 async function safeFetchJson(url: string, payload: any, timeoutMs: number = 30000) {
   const maxAutoRetries = 2;
   const isImageRequest = isImageModelUrl(url);
+  const debugEnabled = shouldDebugGemini();
 
   for (let attempt = 0; attempt <= maxAutoRetries; attempt++) {
+    if (typeof navigator !== 'undefined' && 'onLine' in navigator && navigator.onLine === false) {
+      throw new Error('网络连接已中断，请恢复网络后再试。');
+    }
+
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
-      console.warn(`[safeFetchJson] Request timeout for ${url} after ${timeoutMs}ms`);
+      if (debugEnabled) {
+        console.warn(`[safeFetchJson] Request timeout for ${url} after ${timeoutMs}ms`);
+      }
       controller.abort();
     }, timeoutMs);
 
     try {
-      console.log(`[safeFetchJson] Fetching ${url}...`);
+      if (debugEnabled) {
+        console.log(`[safeFetchJson] Fetching ${url}...`);
+      }
       const token = localStorage.getItem('authing_token');
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (token && token !== "undefined" && token !== "null") headers['Authorization'] = `Bearer ${token}`;
@@ -118,7 +136,9 @@ async function safeFetchJson(url: string, payload: any, timeoutMs: number = 3000
         const shouldAutoRetryHere = !isImageRequest && (response.status === 429 || response.status === 503) && attempt < maxAutoRetries;
         if (shouldAutoRetryHere) {
           const retryDelayMs = getAutoRetryDelayMs(response.status, attempt, url);
-          console.warn(`[safeFetchJson] ${response.status} detected, auto retry ${attempt + 1}/${maxAutoRetries} after ${retryDelayMs}ms`);
+          if (debugEnabled) {
+            console.warn(`[safeFetchJson] ${response.status} detected, auto retry ${attempt + 1}/${maxAutoRetries} after ${retryDelayMs}ms`);
+          }
           await new Promise(resolve => setTimeout(resolve, retryDelayMs));
           continue;
         }
@@ -142,16 +162,22 @@ async function safeFetchJson(url: string, payload: any, timeoutMs: number = 3000
         captureLatestAssetSnapshot(parsed);
         return parsed;
       } catch (e) {
-        console.error("[safeFetchJson] JSON Parse Error:", e, "Text:", text);
+        if (debugEnabled) {
+          console.error("[safeFetchJson] JSON Parse Error:", e, "Text:", text);
+        }
         throw new Error("云端算力节点波动，数据流传输中断，请点击重试。");
       }
     } catch (error: any) {
       clearTimeout(timeoutId);
       if (error.name === 'AbortError') {
-        console.error("[safeFetchJson] AbortError caught");
+        if (debugEnabled) {
+          console.error("[safeFetchJson] AbortError caught");
+        }
         throw new Error("请求超时，云端算力响应过慢，请稍后重试。");
       }
-      console.error("[safeFetchJson] Catch block error:", error);
+      if (debugEnabled) {
+        console.error("[safeFetchJson] Catch block error:", error);
+      }
       throw new Error(error.message || "请求发送失败，请检查网络");
     }
   }
@@ -1272,19 +1298,19 @@ export async function generateScenarioImage(
 
   const timeoutByModel = imageRequestProfile === 'stable'
     ? {
-        "gemini-2.5-flash-image": 70000,
-        "gemini-3.1-flash-image-preview": 22000
+        "gemini-2.5-flash-image": 115000,
+        "gemini-3.1-flash-image-preview": 45000
       }
     : {
-        "gemini-3.1-flash-image-preview": 22000,
-        "gemini-2.5-flash-image": 60000
+        "gemini-3.1-flash-image-preview": 40000,
+        "gemini-2.5-flash-image": 90000
       };
 
-  // 📸 生图请求给予 60s 宽容度，失败自动回落下一个模型
+  // 📸 生图请求给更长超时，尽量减少前端先超时、服务端后成功的体感失败
   const data = await fetchGeminiWithFallback(
     fullPayload,
     imageModelChain,
-    60000,
+    90000,
     1,
     "生图引擎",
     timeoutByModel

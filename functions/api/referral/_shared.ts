@@ -46,6 +46,16 @@ export function normalizeInviteCode(value: string | null): string | null {
   return clean || null;
 }
 
+export function normalizeBindSource(value: string | null): string {
+  const clean = String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 32);
+  return clean || 'landing';
+}
+
 export function normalizePackageType(value: unknown): string {
   return String(value || '').trim().toLowerCase();
 }
