@@ -9,9 +9,11 @@ import {
   GenerationMode,
   MarketAnalysis,
   ScenarioType,
+  TargetPlatform,
   TextConfig,
   VisualDNA,
 } from "../types";
+import { buildPlatformPolicyPrompt, buildPlatformPolicySummary } from "./platformPolicy";
 
 let latestAssetSnapshot: { image_quota?: number | null; vip_expire_date?: string | null } | null = null;
 
@@ -382,7 +384,9 @@ export async function generateMasterImagePrompt(
   currentText?: string,
   userId?: string,
   sceneSetting?: string,
-  toneSetting?: string
+  toneSetting?: string,
+  targetPlatform: TargetPlatform = '通用电商',
+  scenario: ScenarioType = ScenarioType.STUDIO_WHITE
 ): Promise<string> {
   if (!productBase64) {
     throw new Error("未获取到商品主体图，请先上传商品图。");
@@ -392,6 +396,7 @@ export async function generateMasterImagePrompt(
   const safeInput = userInput?.replace(/`/g, "'") || "";
   const safeScene = sceneSetting?.trim() || '未指定';
   const safeTone = toneSetting?.trim() || '未指定';
+  const platformPolicyPrompt = buildPlatformPolicyPrompt(targetPlatform, { scenario });
 
   const systemInstruction = `你是一个精通商业产品摄影、广告美术指导与电商场景设计的顶级 AI 提示词专家。
 【任务】：我会提供商品图、可选的风格参考图、用户已写好的导演指令、预选的场景设定与画面色调。请你融合这些信息，输出一段极致专业、纯中文、适合直接生图的提示词。
@@ -403,9 +408,13 @@ export async function generateMasterImagePrompt(
 4. 场景设定与画面色调是稳定约束：它们负责限定环境类型与整体色温倾向，除非与商品识别或用户明确指令冲突，否则必须体现在结果里。
 
 【当前控制条件】：
+- 目标平台：${targetPlatform}
 - 场景设定：${safeScene}
 - 画面色调：${safeTone}
 - 用户导演指令：${safeInput ? `【${safeInput}】` : '未填写'}
+
+【平台规则】：
+${platformPolicyPrompt}
 
 【生成目标】：
 1. 最终提示词必须少写商品、多写环境。商品描述只保留必要锚点，用一句话锁定主体即可。
@@ -568,7 +577,7 @@ export async function generateDetailPagePlan(
   userInstruction: string,
   sceneSetting: string,
   toneSetting: string,
-  platform: string,
+  platform: TargetPlatform,
   userId?: string
 ): Promise<{ referenceStyle: DetailPageReferenceStyle | null; modules: DetailPageModulePlan[] }> {
   const productImage = {
@@ -596,6 +605,7 @@ hero, selling_points, scene, detail, benefit, spec, trust, cta
 
 【当前约束】
 - 平台类型：${platform}
+- 平台规则：${buildPlatformPolicySummary(platform, { isDetailPage: true })}
 - 场景设定：${sceneSetting}
 - 画面色调：${toneSetting}
 - 用户指令：${userInstruction || '未填写'}
@@ -689,7 +699,7 @@ export async function generateDetailReferenceAnalysis(
   userInstruction: string,
   sceneSetting: string,
   toneSetting: string,
-  platform: string,
+  platform: TargetPlatform,
   userId?: string
 ): Promise<DetailPageReferenceAnalysis> {
   const productImage = {
@@ -713,6 +723,7 @@ hero, selling_points, scene, detail, benefit, spec, trust, cta
 
 【当前约束】
 - 平台：${platform}
+- 平台规则：${buildPlatformPolicySummary(platform, { isDetailPage: true })}
 - 用户指令：${userInstruction || '未填写'}
 - 场景设定：${sceneSetting}
 - 画面色调：${toneSetting}
@@ -822,7 +833,7 @@ export async function generateDetailPagePlanFromAnalysis(
   userInstruction: string,
   sceneSetting: string,
   toneSetting: string,
-  platform: string,
+  platform: TargetPlatform,
   userId?: string
 ): Promise<{ referenceStyle: DetailPageReferenceStyle | null; modules: DetailPageModulePlan[] }> {
   const productImage = {
@@ -837,6 +848,7 @@ export async function generateDetailPagePlanFromAnalysis(
 
 【当前约束】
 - 平台：${platform}
+- 平台规则：${buildPlatformPolicySummary(platform, { isDetailPage: true })}
 - 场景设定：${sceneSetting}
 - 画面色调：${toneSetting}
 - 用户指令：${userInstruction || '未填写'}
@@ -913,7 +925,7 @@ export async function generateDetailPageModuleCopy(
   userInstruction: string,
   sceneSetting: string,
   toneSetting: string,
-  platform: string,
+  platform: TargetPlatform,
   userId?: string
 ): Promise<{
   headline: string;
@@ -1010,6 +1022,7 @@ export async function generateDetailPageModuleCopy(
 
 【当前约束】
 - 平台：${platform}
+- 平台规则：${buildPlatformPolicySummary(platform, { moduleType, isDetailPage: true })}
 - 场景：${sceneSetting}
 - 色调：${toneSetting}
 - 用户指令：${userInstruction || '未填写'}
@@ -1018,7 +1031,7 @@ export async function generateDetailPageModuleCopy(
 1. 只输出 JSON。
 2. headline 6-14 字；subheadline 10-24 字；body 32-90 字。
 3. sellingPoints 输出 3 到 4 条短句数组。
-4. generatedPrompt 必须是可直接给生图引擎使用的中文视觉指令，重点写画面结构、环境、光影、材质和商品位置。
+4. generatedPrompt 必须是可直接给生图引擎使用的中文视觉指令，重点写画面结构、环境、光影、材质和商品位置，并显式满足当前平台规则。
 5. styleNotes 与 toneNotes 用来给右侧编辑面板展示，写成简短可编辑的中文短语。
 6. 绝不借用参考图里的商品、品牌和原文案。
 
@@ -1338,7 +1351,7 @@ function buildEnhancedPrompt(
   aspectRatio: AspectRatio = '1:1', 
   layout: CompositionLayout = 'center',
   redesignPrompt?: string,
-  targetPlatform: string = '通用电商',
+  targetPlatform: TargetPlatform = '通用电商',
   productLockLevel: 'strict' | 'balanced' | 'editorial' = 'strict'
 ): string {
   let ratioDirective = "";
@@ -1352,21 +1365,7 @@ function buildEnhancedPrompt(
 
   const AESTHETIC_BASE = `${ratioDirective}\n[GLOBAL AESTHETIC MASTER-CLASS] Award-winning commercial product photography, shot on Hasselblad H6D-100c or Sony A7R IV, 85mm f/1.8 lens. Raw unedited aesthetic, extreme macro texture detail, authentic physical lighting. No digitized CGI look, absolutely no text, no watermarks, flawless commercial packshot.`;
 
-  // [全新] 平台专属视觉转化率算法引擎
-  let platformDirective = "";
-  switch (targetPlatform) {
-    case '亚马逊爆款':
-      platformDirective = `\n[PLATFORM OPTIMIZATION: AMAZON A9 ALGORITHM] Strictly adhere to Amazon main image standards. Extreme product clarity, hyper-realistic macro details, neutral or pure white premium background. Focus 100% on product material and functional detail. Zero distracting lifestyle elements. High CTR optimized.`;
-      break;
-    case '小红书种草':
-      platformDirective = `\n[PLATFORM OPTIMIZATION: XIAOHONGSHU VIRAL AESTHETIC] Follow Xiaohongshu (Little Red Book) viral UGC aesthetic. Strong emotional value, authentic lifestyle context, highly aesthetic and breathable composition, dappled light, cozy and premium vibe. Make it highly shareable and trendy.`;
-      break;
-    case '抖音/TikTok':
-      platformDirective = `\n[PLATFORM OPTIMIZATION: TIKTOK THUMBNAIL] High visual impact, extremely vibrant colors, dynamic composition, stop-scrolling thumbnail style, high contrast, energetic atmosphere. Optimized for mobile vertical viewing hook.`;
-      break;
-    default:
-      platformDirective = `\n[PLATFORM OPTIMIZATION: GENERAL E-COMMERCE] High commercial viability, clear product display, visually appealing and balanced composition.`;
-  }
+  const platformDirective = `\n${buildPlatformPolicyPrompt(targetPlatform, { scenario })}`;
 
   const cameraSpecs = "[CAMERA & RENDER] Hasselblad H6D-100c, 100mm Macro lens, f/8. 8k resolution, Octane Render, global illumination, Ray Tracing, ultra-detailed textures.";
   
@@ -1450,7 +1449,7 @@ WARNING: Apply ONLY the lighting, color, and vibe. Do NOT introduce any new obje
   }
 
   // 将新的 compositionRules 加入到最终 Prompt 中
-  return `${AESTHETIC_BASE}${platformDirective}\nYou are a Top-tier Commercial E-commerce Photographer.\n${cameraSpecs}\n[SCENE VIBE] ${vibe}\n${compositionRules}${layoutDirective}\n${guardrails}${productIdentityLock}\n${dnaDirective}${redesignDirective}${finalRedesignOverride}${styleDirective}${variationDirective}[USER DIRECTIVE] ${userIntent}\n[SAFETY] NO TEXT. NO WATERMARKS. NO FLOATING OBJECTS.`.trim();
+  return `${AESTHETIC_BASE}${platformDirective}\nYou are a Top-tier Commercial E-commerce Photographer.\n${cameraSpecs}\n[SCENE VIBE] ${vibe}\n${compositionRules}${layoutDirective}\n${guardrails}${productIdentityLock}\n${dnaDirective}${redesignDirective}${finalRedesignOverride}${styleDirective}${variationDirective}[USER DIRECTIVE] ${userIntent}\n[SAFETY] NO TEXT. NO WATERMARKS. NO FLOATING OBJECTS. Keep the final image fully compliant with the platform policy above.`.trim();
 }
 
 // 2. 底层生图引擎（绝对纯净的 Payload 构建）
@@ -1467,7 +1466,7 @@ export async function generateScenarioImage(
   aspectRatio: any = '1:1', 
   layout: any = 'center',
   redesignPrompt?: string,
-  targetPlatform: string = '通用电商',
+  targetPlatform: TargetPlatform = '通用电商',
   maskImageBase64?: string | null,
   isRedesignMode: boolean = false,
   userId?: string,

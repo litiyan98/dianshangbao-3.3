@@ -17,6 +17,7 @@ import {
   ScenarioType,
   StickerConfig,
   TextConfig,
+  TargetPlatform,
   VisualDNA,
 } from './types';
 import { SCENARIO_CONFIGS, DEFAULT_STICKERS } from './constants';
@@ -503,7 +504,7 @@ const App: React.FC = () => {
   const [promptScene, setPromptScene] = useState('真实生活代入');
   const [redesignPrompt, setRedesignPrompt] = useState('');
   const [textLayout, setTextLayout] = useState<TextPresetId>('magazine');
-  const [targetPlatform, setTargetPlatform] = useState('通用电商');
+  const [targetPlatform, setTargetPlatform] = useState<TargetPlatform>('通用电商');
   const [highlightCopy, setHighlightCopy] = useState(false);
   const [isAutoTextContrast, setIsAutoTextContrast] = useState(true);
   const [isRedesignEnabled, setIsRedesignEnabled] = useState(false);
@@ -2859,7 +2860,9 @@ const App: React.FC = () => {
             userPrompt.trim(),
             localUserId,
             promptScene,
-            promptTone
+            promptTone,
+            targetPlatform,
+            selectedScenario
           );
           const normalized = raw.trim();
           if (!normalized) throw new Error('模型返回为空，请稍后重试。');
@@ -5469,7 +5472,7 @@ const App: React.FC = () => {
                           { id: '亚马逊爆款', label: '📦 亚马逊', sub: 'Amazon' },
                           { id: '小红书种草', label: '📕 小红书', sub: 'XHS' },
                           { id: '抖音/TikTok', label: '🎵 抖音/TK', sub: 'TikTok' }
-                        ].map(platform => (
+                        ] as const).map(platform => (
                           <button 
                             key={platform.id} 
                             onClick={() => setTargetPlatform(platform.id)}

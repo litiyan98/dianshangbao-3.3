@@ -8,8 +8,10 @@ import {
   DetailPageModuleType,
   DetailPageReferenceStyle,
   ScenarioType,
+  TargetPlatform,
   VisualDNA,
 } from '../types';
+import { buildPlatformPolicySummary } from './platformPolicy';
 
 const DETAIL_PAGE_BLUEPRINTS: Array<
   Omit<DetailPageModule, 'status' | 'plan' | 'assets'>
@@ -388,7 +390,7 @@ export function getDetailModuleLockLevel(type: DetailPageModuleType): 'strict' |
 
 export function buildDetailModuleImageIntent(
   module: DetailPageModule,
-  platform: string,
+  platform: TargetPlatform,
   sceneSetting: string,
   toneSetting: string,
   referenceStyle: DetailPageReferenceStyle | null
@@ -401,6 +403,7 @@ export function buildDetailModuleImageIntent(
   return [
     `这是电商详情页的第 ${module.order} 屏，模块类型为 ${module.name}。`,
     `目标平台：${platform}。`,
+    `平台规则：${buildPlatformPolicySummary(platform, { moduleType: module.type, isDetailPage: true })}`,
     `核心目标：${plan?.objective || module.title}。`,
     `视觉任务：${plan?.visualTask || module.imageGoal}。`,
     `版式建议：${plan?.layoutPreset || module.layoutPreset}。`,

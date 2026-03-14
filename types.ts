@@ -9,6 +9,8 @@ export enum ScenarioType {
 
 export type GenerationMode = 'precision' | 'creative';
 
+export type TargetPlatform = '通用电商' | '亚马逊爆款' | '小红书种草' | '抖音/TikTok';
+
 export type AspectRatio = '1:1' | '3:4' | '4:3' | '9:16' | '16:9';
 
 export type CompositionLayout = 'center' | 'left_space' | 'right_space' | 'top_space';
