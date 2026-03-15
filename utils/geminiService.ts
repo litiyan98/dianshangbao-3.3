@@ -209,8 +209,9 @@ const IMAGE_MODEL_CHAIN_PRECISION = [
 ];
 
 const TEMP_MODEL_SKIP_MS = 30 * 60 * 1000;
-const TEMP_MODEL_SKIP_MS_UNSTABLE_IMAGE = 10 * 60 * 1000;
-const TEMP_MODEL_SKIP_MS_RATE_LIMIT_IMAGE = 90 * 1000;
+const TEMP_MODEL_SKIP_MS_UNSTABLE_IMAGE = 2 * 60 * 1000;
+const TEMP_MODEL_SKIP_MS_RATE_LIMIT_IMAGE = 75 * 1000;
+const TEMP_MODEL_SKIP_MS_BUSY_IMAGE = 45 * 1000;
 const temporaryUnavailableModels = new Map<string, number>();
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -294,6 +295,7 @@ async function fetchGeminiWithFallback(
         return await safeFetchJson(`/api/gemini?model=${model}&t=${Date.now()}`, payload, currentTimeout);
       } catch (error: any) {
         const message = String(error?.message || "");
+        const lowerMessage = message.toLowerCase();
         const statusCode = parseStatusCodeFromError(message);
         const retryable = isRetryableModelError(message, statusCode);
         const modelNotFound = isModelNotFoundError(message, statusCode);
@@ -313,6 +315,23 @@ async function fetchGeminiWithFallback(
           isImageFlow &&
           model.includes("flash-image") &&
           statusCode === 429;
+        const isBusyImageModel =
+          isImageFlow &&
+          model.includes("flash-image") &&
+          (
+            statusCode === 503 ||
+            lowerMessage.includes("high demand") ||
+            lowerMessage.includes("unavailable")
+          );
+        const isTimeoutImageModel =
+          isImageFlow &&
+          model.includes("flash-image") &&
+          (
+            statusCode === 504 ||
+            lowerMessage.includes("timeout") ||
+            lowerMessage.includes("aborterror") ||
+            message.includes("超时")
+          );
         const isUnstableImageModel =
           isImageFlow &&
           model.includes("flash-image") &&
@@ -320,15 +339,37 @@ async function fetchGeminiWithFallback(
           (
             statusCode === 500 ||
             statusCode === 502 ||
-            statusCode === 503 ||
-            statusCode === 504 ||
-            message.toLowerCase().includes("failed to fetch") ||
-            message.includes("超时")
+            lowerMessage.includes("failed to fetch") ||
+            lowerMessage.includes("connection reset")
           );
+
+        const canRetrySameImageModel =
+          (isRateLimitedImageModel || isBusyImageModel || isTimeoutImageModel || isUnstableImageModel) &&
+          retryable &&
+          attempt < retriesPerModel;
+
+        if (canRetrySameImageModel) {
+          const backoffMs =
+            1200 +
+            attempt * 1200 +
+            Math.floor(Math.random() * 600) +
+            (isRateLimitedImageModel ? 600 : 0) +
+            (isBusyImageModel ? 900 : 0);
+          await sleep(backoffMs);
+          continue;
+        }
 
         // 图像模型限流：短时间跳过被打爆的模型，避免三图同一时刻继续撞 429
         if (isRateLimitedImageModel) {
           temporaryUnavailableModels.set(model, Date.now() + TEMP_MODEL_SKIP_MS_RATE_LIMIT_IMAGE);
+        }
+
+        if (isBusyImageModel) {
+          temporaryUnavailableModels.set(model, Date.now() + TEMP_MODEL_SKIP_MS_BUSY_IMAGE);
+        }
+
+        if (isTimeoutImageModel) {
+          temporaryUnavailableModels.set(model, Date.now() + TEMP_MODEL_SKIP_MS_UNSTABLE_IMAGE);
         }
 
         // 图像模型熔断：短时间内跳过异常模型，避免套图流程反复卡在同一故障模型
@@ -336,7 +377,7 @@ async function fetchGeminiWithFallback(
           temporaryUnavailableModels.set(model, Date.now() + TEMP_MODEL_SKIP_MS_UNSTABLE_IMAGE);
         }
 
-        if (isRateLimitedImageModel || isUnstableImageModel) {
+        if (isRateLimitedImageModel || isBusyImageModel || isTimeoutImageModel || isUnstableImageModel) {
           break;
         }
 
@@ -1301,13 +1342,18 @@ export async function analyzeProduct(base64Images: string[], userId?: string): P
   };
 
   try {
-    // 物理参数解析用于辅助，不应长时间阻塞主流程：单模型 18s，失败即降级到兜底参数继续生图
+    // 物理参数解析只作为辅助信息，不值得为它阻塞几十秒；
+    // 但高峰时单模型硬等也不稳，因此改成“首模 + 备模”的柔性窗口。
     const data = await fetchGeminiWithFallback(
       payload,
-      ANALYZE_MODEL_FALLBACK_CHAIN,
-      18000,
+      ANALYZE_MODEL_FALLBACK_CHAIN.slice(0, 2),
+      10000,
       0,
-      "物理参数解析"
+      "物理参数解析",
+      {
+        [ANALYZE_MODEL_FALLBACK_CHAIN[0]]: 10000,
+        [ANALYZE_MODEL_FALLBACK_CHAIN[1]]: 6000,
+      }
     );
     const rawText = collectGeminiText(data) || "{}";
     const cleanJson = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();

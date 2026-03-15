@@ -282,7 +282,7 @@ const TEXT_GEN_COUNT_KEY = 'visionEngine_textCount';
 const TEXT_GEN_LOCK_KEY = 'visionEngine_textLock';
 const UNSUPPORTED_COLOR_FN_RE = /\b(oklch|oklab)\(/i;
 type TextGlowState = 'idle' | 'generating' | 'success';
-type SuiteSlotState = 'idle' | 'loading' | 'success' | 'error';
+type SuiteSlotState = 'idle' | 'queued' | 'loading' | 'success' | 'error';
 type MatrixLockLevel = 'strict' | 'balanced' | 'editorial';
 type MatrixRequestProfile = 'default' | 'stable';
 
@@ -297,14 +297,14 @@ const MATRIX_PROFILES: Array<{
     lockLevel: 'strict',
     requestProfile: 'default',
     startDelayMs: 0,
-    taskRetries: 0,
+    taskRetries: 1,
     variationPrompt: 'Commercial product photography, studio lighting, high contrast, clean background, highly detailed, eye-catching. Keep the exact uploaded product identity, bottle shape, label layout, and packaging artwork unchanged. No camera angle change. Only optimize lighting, reflections, and peripheral splash details around the same product.',
   },
   {
     lockLevel: 'balanced',
-    requestProfile: 'default',
+    requestProfile: 'stable',
     startDelayMs: 900,
-    taskRetries: 0,
+    taskRetries: 1,
     variationPrompt: 'Lifestyle photography in a warm real-world environment, natural sunlight, cinematic lighting, depth of field, cozy atmosphere. Keep the exact uploaded product identity, bottle shape, label layout, and packaging artwork unchanged. Allow only a subtle perspective change of the same bottle and premium material polish such as clearer liquid, improved condensation, and refined highlights.',
   },
   {
@@ -457,6 +457,8 @@ const App: React.FC = () => {
   
   const [resultImages, setResultImages] = useState<string[]>([]);
   const [suiteSlotStates, setSuiteSlotStates] = useState<SuiteSlotState[]>([]);
+  const [suiteSlotMessages, setSuiteSlotMessages] = useState<string[]>([]);
+  const [generationBillingSummary, setGenerationBillingSummary] = useState<string | null>(null);
   const [styleReferenceImage, setStyleReferenceImage] = useState<string | null>(null);
   const [visualDNA, setVisualDNA] = useState<VisualDNA | null>(null);
   const [isExtractingDNA, setIsExtractingDNA] = useState(false);
@@ -2777,6 +2779,46 @@ const App: React.FC = () => {
     throw lastError || new Error(timeoutMessage);
   };
 
+  const buildFriendlyImageFailureMessage = (error: unknown, index?: number) => {
+    const rawMessage = String((error as any)?.message || error || '模型波动，请稍后重试');
+    const slotPrefix = typeof index === 'number' ? `第 ${index + 1} 张` : '当前图片';
+
+    if (rawMessage.includes('INSUFFICIENT_QUOTA')) {
+      return `${slotPrefix}未生成成功，本次未扣费；请先补充额度。`;
+    }
+    if (rawMessage.includes('VIP_EXPIRED')) {
+      return `${slotPrefix}未生成成功，本次未扣费；请先续费会员。`;
+    }
+    if (rawMessage.includes('503') || rawMessage.includes('UNAVAILABLE') || rawMessage.includes('high demand')) {
+      return `${slotPrefix}遇到模型高峰拥堵，已停止此张，本次未扣费。`;
+    }
+    if (rawMessage.includes('429') || rawMessage.includes('限流')) {
+      return `${slotPrefix}遇到模型限流，已停止此张，本次未扣费。`;
+    }
+    if (rawMessage.includes('超时') || rawMessage.includes('timeout') || rawMessage.includes('AbortError')) {
+      return `${slotPrefix}响应超时，已停止此张，本次未扣费。`;
+    }
+    if (isAuthErrorMessage(rawMessage)) {
+      return `${slotPrefix}因登录状态失效而中断，本次未扣费。`;
+    }
+    return `${slotPrefix}未生成成功，本次未扣费。`;
+  };
+
+  const isRetryableImageGenerationError = (error: unknown) => {
+    const rawMessage = String((error as any)?.message || error || '');
+    return (
+      rawMessage.includes('503') ||
+      rawMessage.includes('UNAVAILABLE') ||
+      rawMessage.includes('high demand') ||
+      rawMessage.includes('429') ||
+      rawMessage.includes('限流') ||
+      rawMessage.includes('超时') ||
+      rawMessage.includes('timeout') ||
+      rawMessage.includes('AbortError') ||
+      rawMessage.includes('稍后重试')
+    );
+  };
+
   const resolvePromptProductImageUrl = (): string | null => {
     if (sourceImages.length > 0 && sourceImages[0]) return sourceImages[0];
     return resolveCopyTargetImageUrl();
@@ -3654,8 +3696,9 @@ const App: React.FC = () => {
       return;
     }
     setActiveGenerateCount(1);
-    setIsProcessing(true); setStep('result'); setResultImages([]); setSuiteSlotStates([]); setIsSuiteMode(false);
-    setGenerationProgress('✨ AI 视觉神经元正在为您注入顶级商业摄影参数...');
+    setIsProcessing(true); setStep('result'); setResultImages([]); setSuiteSlotStates([]); setSuiteSlotMessages([]); setIsSuiteMode(false);
+    setGenerationBillingSummary(null);
+    setGenerationProgress('✨ 正在解析商品参数并准备单图生图...');
     // 安全瘦身：保留后端契约字段，但固定为安全默认值，避免 UI 移除后触发 400/500
     const safeRedesignPrompt: string | undefined = undefined;
     const safeMaskImageBase64: string | null = null;
@@ -3666,48 +3709,67 @@ const App: React.FC = () => {
     
     try {
       const currentAnalysis = analysis || await analyzeProduct([sourceImages[0].split(',')[1]], localUserId);
-      
-      // 【核心修复：严格对齐 15 个参数，确保 VisualDNA 注入与参数顺序正确】
-      const aiResultRaw = await generateScenarioImage(
-        [sourceImages[0].split(',')[1]], // 1. base64Images
-        selectedScenario,                // 2. scenario
-        currentAnalysis,                 // 3. analysis
-        userPrompt,                      // 4. userIntent
-        textConfig,                      // 5. textConfig
-        mode,                            // 6. mode
-        styleReferenceImage ? styleReferenceImage.split(',')[1] : undefined, // 7. styleImageBase64
-        visualDNA,                       // 8. visualDNA
-        undefined,                       // 9. variationPrompt
-        aspectRatio,                     // 10. aspectRatio
-        layout,                          // 11. layout
-        safeRedesignPrompt,             // 12. redesignPrompt (安全默认值)
-        targetPlatform,                  // 13. targetPlatform
-        safeMaskImageBase64,             // 14. maskImageBase64 (安全默认值)
-        safeIsRedesignMode,              // 15. isRedesignMode (固定 false)
-        localUserId,                     // 16. userId (计费)
-        1                                // 17. count (单图扣 1 点)
+      setGenerationProgress('🎨 正在调用生图引擎...');
+
+      const requestSingleImage = (requestProfile: MatrixRequestProfile) => generateScenarioImage(
+        [sourceImages[0].split(',')[1]],
+        selectedScenario,
+        currentAnalysis,
+        userPrompt,
+        textConfig,
+        mode,
+        styleReferenceImage ? styleReferenceImage.split(',')[1] : undefined,
+        visualDNA,
+        undefined,
+        aspectRatio,
+        layout,
+        safeRedesignPrompt,
+        targetPlatform,
+        safeMaskImageBase64,
+        safeIsRedesignMode,
+        localUserId,
+        1,
+        true,
+        'strict',
+        requestProfile
       );
+
+      let aiResultRaw: string | string[];
+      try {
+        aiResultRaw = await requestSingleImage('default');
+      } catch (primaryImageError) {
+        if (!isRetryableImageGenerationError(primaryImageError)) throw primaryImageError;
+        setGenerationProgress('🛟 模型拥堵，正在切换更稳线路补偿重试...');
+        await new Promise(resolve => setTimeout(resolve, 900));
+        aiResultRaw = await requestSingleImage('stable');
+      }
       const aiResultUrl = Array.isArray(aiResultRaw) ? aiResultRaw[0] : aiResultRaw;
       if (!aiResultUrl) {
         throw new Error('精修单图生成失败，请稍后重试');
       }
 
-      // 【核心修复：严格对齐 8 个参数】
       const textFreeConfig = { ...textConfig, title: '', detail: '' };
-      const finalUrl = await processFinalImage(
-        aiResultUrl,                     // 1. aiResultUrl
-        sourceImages[0],                 // 2. originalImageBase64
-        currentAnalysis,                 // 3. analysis
-        mode,                            // 4. mode
-        textFreeConfig,                  // 5. textConfig (底图阶段不固化文字，保留生成后可调)
-        safeLogoImage,                   // 6. logoImageBase64 (安全默认值)
-        aspectRatio,                     // 7. aspectRatio
-        safeStickerConfig,               // 8. stickerConfig (安全默认值)
-        safeLogoConfig                   // 9. logoConfig (安全默认值)
-      );
+      let normalizedFinalUrl = aiResultUrl;
+      try {
+        const finalUrl = await processFinalImage(
+          aiResultUrl,
+          sourceImages[0],
+          currentAnalysis,
+          mode,
+          textFreeConfig,
+          safeLogoImage,
+          aspectRatio,
+          safeStickerConfig,
+          safeLogoConfig
+        );
 
-      const normalizedFinalUrl = await enforceAspectRatio(finalUrl, aspectRatio);
+        normalizedFinalUrl = await enforceAspectRatio(finalUrl, aspectRatio);
+      } catch (postProcessError) {
+        console.warn('[handleGenerate] post-process fallback to raw ai image:', postProcessError);
+        setToastMessage('后处理波动，已为你保留原始生成图');
+      }
       setResultImages([normalizedFinalUrl]);
+      setGenerationBillingSummary('本次成功生成 1 张，已扣 1 Token。');
       resetTextGenCapability();
       if (!syncAssetsFromGemini()) {
         void refreshUserCredits();
@@ -3725,7 +3787,8 @@ const App: React.FC = () => {
         setToastMessage('登录状态尚未就绪或已失效，请重新登录后再试。');
         setStep('upload');
       } else {
-        alert(err.message);
+        setGenerationBillingSummary(buildFriendlyImageFailureMessage(err));
+        setToastMessage(buildFriendlyImageFailureMessage(err));
         setStep('upload');
       }
     } finally {
@@ -3748,8 +3811,9 @@ const App: React.FC = () => {
       return;
     }
     setActiveGenerateCount(3);
-    setIsProcessing(true); setStep('result'); setResultImages(['', '', '']); setSuiteSlotStates(['loading', 'loading', 'loading']); setIsSuiteMode(true);
-    setGenerationProgress('🚀 正在顺序渲染：第 1 张高转化主图即将开始...');
+    setIsProcessing(true); setStep('result'); setResultImages(['', '', '']); setSuiteSlotStates(['loading', 'queued', 'queued']); setSuiteSlotMessages(['正在解析商品参数...', '等待前一张完成', '等待前一张完成']); setIsSuiteMode(true);
+    setGenerationBillingSummary(null);
+    setGenerationProgress('🚀 正在解析商品参数，第 1 张高转化主图即将开始...');
     // 安全瘦身：保留后端契约字段，但固定为安全默认值，避免 UI 移除后触发 400/500
     const safeRedesignPrompt: string | undefined = undefined;
     const safeMaskImageBase64: string | null = null;
@@ -3766,15 +3830,26 @@ const App: React.FC = () => {
       let successCount = 0;
 
       const runMatrixTask = async ({ variationPrompt, lockLevel, requestProfile, startDelayMs, taskRetries }: typeof MATRIX_PROFILES[number], index: number) => {
-        const attemptDelays = [0, 7000];
+        const attemptDelays = [0, 3200];
         for (let attempt = 0; attempt <= taskRetries; attempt++) {
           try {
+            const activeRequestProfile: MatrixRequestProfile = attempt === 0 ? requestProfile : 'stable';
             const delayMs = (attempt === 0 ? startDelayMs : 0) + (attemptDelays[attempt] || 0);
             if (delayMs > 0) {
               await new Promise(resolve => setTimeout(resolve, delayMs));
             }
 
             setGenerationProgress(`营销矩阵顺序渲染中：正在处理第 ${index + 1}/3 张...`);
+            setSuiteSlotStates((prev) => {
+              const next: SuiteSlotState[] = prev.length === 3 ? [...prev] : ['queued', 'queued', 'queued'];
+              next[index] = 'loading';
+              return next;
+            });
+            setSuiteSlotMessages((prev) => {
+              const next = prev.length === 3 ? [...prev] : ['等待开始', '等待开始', '等待开始'];
+              next[index] = attempt === 0 ? '正在调用生图引擎...' : '正在切换备用线路补偿重试...';
+              return next;
+            });
 
             const aiResult = await generateScenarioImage(
               [sourceImages[0].split(',')[1]],
@@ -3796,25 +3871,31 @@ const App: React.FC = () => {
               1,
               true,
               lockLevel,
-              requestProfile
+              activeRequestProfile
             );
 
             if (typeof aiResult !== 'string' || !aiResult) {
               throw new Error(`营销矩阵第 ${index + 1} 张未返回有效图片`);
             }
 
-            const finalResult = await processFinalImage(
-              aiResult,
-              sourceImages[0],
-              currentAnalysis,
-              mode,
-              currentRenderConfig,
-              safeLogoImage,
-              aspectRatio,
-              safeStickerConfig,
-              safeLogoConfig
-            );
-            const normalizedResult = await enforceAspectRatio(finalResult, aspectRatio);
+            let normalizedResult = aiResult;
+            try {
+              const finalResult = await processFinalImage(
+                aiResult,
+                sourceImages[0],
+                currentAnalysis,
+                mode,
+                currentRenderConfig,
+                safeLogoImage,
+                aspectRatio,
+                safeStickerConfig,
+                safeLogoConfig
+              );
+              normalizedResult = await enforceAspectRatio(finalResult, aspectRatio);
+            } catch (postProcessError) {
+              console.warn(`[handleGenerateSuite] slot ${index + 1} post-process fallback to raw ai image:`, postProcessError);
+              setToastMessage(`第 ${index + 1} 张后处理波动，已保留原始生成图`);
+            }
 
             successCount += 1;
             setResultImages((prev) => {
@@ -3823,8 +3904,16 @@ const App: React.FC = () => {
               return next;
             });
             setSuiteSlotStates((prev) => {
-              const next: SuiteSlotState[] = prev.length === 3 ? [...prev] : ['loading', 'loading', 'loading'];
+              const next: SuiteSlotState[] = prev.length === 3 ? [...prev] : ['queued', 'queued', 'queued'];
               next[index] = 'success';
+              return next;
+            });
+            setSuiteSlotMessages((prev) => {
+              const next = prev.length === 3 ? [...prev] : ['', '', ''];
+              next[index] = '生成成功 · 已扣 1 Token';
+              if (index + 1 < next.length && !next[index + 1]) {
+                next[index + 1] = '等待上一张完成';
+              }
               return next;
             });
             setGenerationProgress(`营销矩阵顺序渲染中：已完成 ${successCount}/3`);
@@ -3833,12 +3922,22 @@ const App: React.FC = () => {
           } catch (error) {
             if (attempt < taskRetries) {
               setGenerationProgress(`营销矩阵顺序渲染中：第 ${index + 1} 张进入稳态补偿重试...`);
+              setSuiteSlotMessages((prev) => {
+                const next = prev.length === 3 ? [...prev] : ['', '', ''];
+                next[index] = '模型波动，正在自动重试...';
+                return next;
+              });
               continue;
             }
 
             setSuiteSlotStates((prev) => {
-              const next: SuiteSlotState[] = prev.length === 3 ? [...prev] : ['loading', 'loading', 'loading'];
+              const next: SuiteSlotState[] = prev.length === 3 ? [...prev] : ['queued', 'queued', 'queued'];
               next[index] = 'error';
+              return next;
+            });
+            setSuiteSlotMessages((prev) => {
+              const next = prev.length === 3 ? [...prev] : ['', '', ''];
+              next[index] = buildFriendlyImageFailureMessage(error, index);
               return next;
             });
             return { status: 'rejected' as const, reason: error };
@@ -3874,8 +3973,10 @@ const App: React.FC = () => {
       flashButtonDone('genMatrix');
       if (failedCount > 0) {
         setToastMessage(`营销矩阵已完成 ${fulfilledCount}/3 张，${failedCount} 张因超时或模型波动未成功返回。`);
+        setGenerationBillingSummary(`营销矩阵成功 ${fulfilledCount}/3 张，已扣 ${fulfilledCount} Token；失败 ${failedCount} 张未扣费。`);
         setGenerationProgress(`营销矩阵部分完成：${fulfilledCount}/3`);
       } else {
+        setGenerationBillingSummary('营销矩阵 3 张全部成功，已扣 3 Token。');
         setGenerationProgress('营销矩阵渲染完成！');
       }
     } catch (err: any) { 
@@ -3886,14 +3987,17 @@ const App: React.FC = () => {
       } else if (errMessage.includes('VIP_EXPIRED')) {
         openPaymentModalForAssetError('VIP_EXPIRED');
         setStep('upload');
-      } else {
-        alert(err.message);
+      } else if (isAuthErrorMessage(errMessage)) {
+        setToastMessage('登录状态尚未就绪或已失效，请重新登录后再试。');
         setStep('upload');
+      } else {
+        setGenerationBillingSummary('营销矩阵 0/3 成功，未扣费。');
+        setToastMessage(buildFriendlyImageFailureMessage(err));
       }
     } finally { 
       setIsProcessing(false); 
       setLoadingBrief('');
-      setTimeout(() => setGenerationProgress(''), 1800);
+      setGenerationProgress('');
     }
   };
 
@@ -4945,6 +5049,11 @@ const App: React.FC = () => {
           <span className="render-status-text inline-block text-gray-500">{logMessages[logIndex]}</span>
         </p>
       </div>
+      {generationProgress ? (
+        <p className="mt-4 text-center text-[12px] font-medium tracking-wide text-stone-500">
+          {generationProgress}
+        </p>
+      ) : null}
     </div>
   );
 
@@ -5627,41 +5736,49 @@ const App: React.FC = () => {
                     {renderLoadingMonitor()}
                   </div>
                 ) : (
-                  <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 w-full gap-4">
-                    <h2 className="flex items-center gap-2.5 select-none text-xl md:text-2xl">
-                      <span className="font-medium text-gray-300 tracking-wide">06</span>
-                      <span className="font-light text-violet-400">/</span>
-                      <span className="font-bold text-[#1d1d1f] tracking-tight">视觉资产已就绪</span>
-                    </h2>
-                    <div className="flex items-center gap-4 mt-4 md:mt-0">
-                      <button
-                        onClick={() => { setStep('upload'); setResultImages([]); setSuiteSlotStates([]); }}
-                        className="px-6 py-2.5 bg-transparent border border-gray-200 hover:border-gray-300 text-gray-600 hover:text-[#1d1d1f] rounded-xl font-medium text-[14px] transition-all"
-                      >
-                        返回重构
-                      </button>
-                      <button
-                        onClick={async () => {
-                          if (availableResultEntries.length === 1) {
-                            const packed = await composeResultDownloadDataUrl(availableResultEntries[0]?.url || '');
-                            if (!packed) return;
-                            await triggerDownload(packed, buildDownloadFileName('单图'));
-                            return;
-                          }
-                          for (const entry of availableResultEntries) {
-                            const packed = await composeResultDownloadDataUrl(entry.url);
-                            await triggerDownload(packed, buildDownloadFileName(`套图${entry.index + 1}`));
-                            await new Promise(r => setTimeout(r, 320));
-                          }
-                        }}
-                        className="px-6 py-2.5 bg-[#1d1d1f] hover:bg-[#2d2d2f] text-white rounded-xl font-medium text-[14px] shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-violet-400">
-                          <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                        {availableResultEntries.length > 1 ? '一键打包全套' : '下载单张大图'}
-                      </button>
+                  <div className="mb-8 w-full space-y-4">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between w-full gap-4">
+                      <h2 className="flex items-center gap-2.5 select-none text-xl md:text-2xl">
+                        <span className="font-medium text-gray-300 tracking-wide">06</span>
+                        <span className="font-light text-violet-400">/</span>
+                        <span className="font-bold text-[#1d1d1f] tracking-tight">视觉资产已就绪</span>
+                      </h2>
+                      <div className="flex items-center gap-4 mt-4 md:mt-0">
+                        <button
+                          onClick={() => { setStep('upload'); setResultImages([]); setSuiteSlotStates([]); setSuiteSlotMessages([]); setGenerationBillingSummary(null); }}
+                          className="px-6 py-2.5 bg-transparent border border-gray-200 hover:border-gray-300 text-gray-600 hover:text-[#1d1d1f] rounded-xl font-medium text-[14px] transition-all"
+                        >
+                          返回重构
+                        </button>
+                        <button
+                          onClick={async () => {
+                            if (availableResultEntries.length === 1) {
+                              const packed = await composeResultDownloadDataUrl(availableResultEntries[0]?.url || '');
+                              if (!packed) return;
+                              await triggerDownload(packed, buildDownloadFileName('单图'));
+                              return;
+                            }
+                            for (const entry of availableResultEntries) {
+                              const packed = await composeResultDownloadDataUrl(entry.url);
+                              await triggerDownload(packed, buildDownloadFileName(`套图${entry.index + 1}`));
+                              await new Promise(r => setTimeout(r, 320));
+                            }
+                          }}
+                          className="px-6 py-2.5 bg-[#1d1d1f] hover:bg-[#2d2d2f] text-white rounded-xl font-medium text-[14px] shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-violet-400">
+                            <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                          {availableResultEntries.length > 1 ? '一键打包全套' : '下载单张大图'}
+                        </button>
+                      </div>
                     </div>
+                    {generationBillingSummary ? (
+                      <div className="inline-flex max-w-full items-center gap-2 rounded-2xl border border-stone-200 bg-white/80 px-4 py-3 text-[13px] font-medium text-stone-600 shadow-sm">
+                        <span className="text-stone-900">计费说明</span>
+                        <span>{generationBillingSummary}</span>
+                      </div>
+                    ) : null}
                   </div>
                 )}
 
@@ -5671,6 +5788,7 @@ const App: React.FC = () => {
                     {Array.from({ length: 3 }).map((_, index) => {
                       const img = resultImages[index];
                       const slotState = suiteSlotStates[index] || (img ? 'success' : 'loading');
+                      const slotMessage = suiteSlotMessages[index];
                       const labels = ['🔥 高转化主图', '🛋️ 沉浸生活感', '✨ 极简高级感'];
                       
                       return (
@@ -5723,14 +5841,26 @@ const App: React.FC = () => {
                               <span className="render-status-text relative z-20 text-[12px] font-mono text-gray-500 tracking-[0.18em] uppercase [text-shadow:0_1px_10px_rgba(255,255,255,0.7)]">
                                 Retry Needed
                               </span>
-                              <span className="render-status-text relative z-20 mt-3 text-[12px] text-gray-500">
-                                该张因模型波动未完成
+                              <span className="render-status-text relative z-20 mt-3 max-w-[82%] text-center text-[12px] text-gray-500">
+                                {slotMessage || '该张因模型波动未完成，本次未扣费'}
+                              </span>
+                            </div>
+                          ) : slotState === 'queued' ? (
+                            <div className="render-canvas render-canvas-neutral relative w-full h-full rounded-[32px] flex flex-col items-center justify-center">
+                              <span className="render-status-text relative z-20 text-[12px] font-mono text-gray-500 tracking-[0.18em] uppercase [text-shadow:0_1px_10px_rgba(255,255,255,0.7)]">
+                                Queued...
+                              </span>
+                              <span className="render-status-text relative z-20 mt-3 max-w-[82%] text-center text-[12px] text-gray-500">
+                                {slotMessage || '等待上一张完成后开始'}
                               </span>
                             </div>
                           ) : (
                             <div className="render-canvas render-canvas-neutral relative w-full h-full rounded-[32px] flex flex-col items-center justify-center">
                               <span className="render-status-text relative z-20 text-[12px] font-mono text-gray-500 tracking-[0.18em] uppercase [text-shadow:0_1px_10px_rgba(255,255,255,0.7)]">
                                 Rendering...
+                              </span>
+                              <span className="render-status-text relative z-20 mt-3 max-w-[82%] text-center text-[12px] text-gray-500">
+                                {slotMessage || '正在调用模型生成中'}
                               </span>
                             </div>
                           )}
