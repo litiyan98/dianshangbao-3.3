@@ -5576,7 +5576,7 @@ const App: React.FC = () => {
                         目标投放平台
                       </label>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 p-1.5 bg-[#f5f5f7] rounded-xl">
-                        {[
+                        {([
                           { id: '通用电商', label: '🛒 通用电商', sub: 'General' },
                           { id: '亚马逊爆款', label: '📦 亚马逊', sub: 'Amazon' },
                           { id: '小红书种草', label: '📕 小红书', sub: 'XHS' },
