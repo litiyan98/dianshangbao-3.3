@@ -9,8 +9,6 @@ export enum ScenarioType {
 
 export type GenerationMode = 'precision' | 'creative';
 
-export type TargetPlatform = '通用电商' | '亚马逊爆款' | '小红书种草' | '抖音/TikTok';
-
 export type AspectRatio = '1:1' | '3:4' | '4:3' | '9:16' | '16:9';
 
 export type CompositionLayout = 'center' | 'left_space' | 'right_space' | 'top_space';
@@ -98,23 +96,6 @@ export interface DetailPageReferenceStyle {
   }>;
 }
 
-export interface DetailPageReferenceFrameAnalysis {
-  referenceIndex: number;
-  suggestedModules: DetailPageModuleType[];
-  layoutSignature: string;
-  headlineStyle: string;
-  copyDensity: string;
-  visualFocus: string;
-  mappingReason: string;
-}
-
-export interface DetailPageReferenceAnalysis {
-  workflowSummary: string;
-  adaptationStrategy: string;
-  referenceStyle: DetailPageReferenceStyle | null;
-  frames: DetailPageReferenceFrameAnalysis[];
-}
-
 export interface DetailPageReferenceImage {
   id: string;
   url: string;
@@ -132,7 +113,6 @@ export interface DetailPageModulePlan {
   referenceHint: string;
   sceneHint: string;
   toneHint: string;
-  referenceIndex?: number | null;
 }
 
 export interface DetailPageModuleAssets {
@@ -161,6 +141,19 @@ export interface DetailPageModule {
   isGeneratable: boolean;
   plan: DetailPageModulePlan | null;
   assets: DetailPageModuleAssets;
+}
+
+export interface DetailPageBatchProgress {
+  isRunning: boolean;
+  currentModuleId: string | null;
+  lastCompletedModuleId: string | null;
+  lastFailedModuleId: string | null;
+  priorityReadyCount: number;
+  priorityTotalCount: number;
+  isPriorityPhaseComplete: boolean;
+  successCount: number;
+  attemptedCount: number;
+  totalCount: number;
 }
 
 export interface UserAssetProfile {

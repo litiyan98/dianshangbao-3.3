@@ -5,9 +5,9 @@ import {
 import {
   AspectRatio,
   CompositionLayout,
+  DetailPageBatchProgress,
   DetailPageModule,
   DetailPageModuleAssets,
-  DetailPageReferenceAnalysis,
   DetailPageReferenceImage,
   DetailPageReferenceStyle,
   FontStyle,
@@ -17,17 +17,17 @@ import {
   ScenarioType,
   StickerConfig,
   TextConfig,
-  TargetPlatform,
   VisualDNA,
 } from './types';
 import { SCENARIO_CONFIGS, DEFAULT_STICKERS } from './constants';
 import {
   analyzeProduct,
+  createGenerationJob,
   consumeLatestAssetSnapshot,
   extractVisualDNA,
-  generateDetailReferenceAnalysis,
   generateDetailPageModuleCopy,
-  generateDetailPagePlanFromAnalysis,
+  generateDetailPagePlan,
+  getGenerationJob,
   generateMasterImagePrompt,
   generateMasterMarketingCopy,
   generateScenarioImage,
@@ -45,10 +45,10 @@ import { useAppleReveal } from './hooks/useAppleReveal';
 import LiquidMetalBackground from './components/LiquidMetalBackground';
 import GloveIcon from './components/GloveIcon';
 import DetailPageWorkbench from './components/DetailPageWorkbench';
+import DetailPagePlanPreview from './components/DetailPagePlanPreview';
+import DetailPageWizard from './components/DetailPageWizard';
 import { exportDetailPageModuleImage, exportDetailPageSuiteImage } from './utils/detailPageExport';
 import {
-  assignDetailReferencesFromPlan,
-  createFallbackDetailReferenceAnalysis,
   buildDetailModuleImageIntent,
   createFallbackDetailPagePlans,
   createDetailPageSeedModules,
@@ -125,6 +125,9 @@ const FONT_STYLE_OPTIONS: Array<{ id: FontStyle; label: string }> = [
 const ENABLE_CREDITS_OVERDRAFT = true;
 
 const DEFAULT_DETAIL_MODULE_ID = createDetailPageSeedModules()[0]?.id ?? null;
+const DETAIL_PRIORITY_MODULE_IDS = createDetailPageSeedModules()
+  .slice(0, 3)
+  .map((module) => module.id);
 const DETAIL_PRIMARY_REFERENCE_ID = 'detail-primary-reference';
 
 function buildPrimaryDetailReference(url: string, dna: VisualDNA | null): DetailPageReferenceImage {
@@ -283,38 +286,39 @@ const TEXT_GEN_LOCK_KEY = 'visionEngine_textLock';
 const UNSUPPORTED_COLOR_FN_RE = /\b(oklch|oklab)\(/i;
 type TextGlowState = 'idle' | 'generating' | 'success';
 type SuiteSlotState = 'idle' | 'queued' | 'loading' | 'success' | 'error';
-type MatrixLockLevel = 'strict' | 'balanced' | 'editorial';
-type MatrixRequestProfile = 'default' | 'stable';
+type GenerationStageKey = 'idle' | 'analyze' | 'generate' | 'retry' | 'postprocess' | 'complete' | 'error';
 
-const MATRIX_PROFILES: Array<{
-  variationPrompt: string;
-  lockLevel: MatrixLockLevel;
-  requestProfile: MatrixRequestProfile;
-  startDelayMs: number;
-  taskRetries: number;
-}> = [
-  {
-    lockLevel: 'strict',
-    requestProfile: 'default',
-    startDelayMs: 0,
-    taskRetries: 1,
-    variationPrompt: 'Commercial product photography, studio lighting, high contrast, clean background, highly detailed, eye-catching. Keep the exact uploaded product identity, bottle shape, label layout, and packaging artwork unchanged. No camera angle change. Only optimize lighting, reflections, and peripheral splash details around the same product.',
-  },
-  {
-    lockLevel: 'balanced',
-    requestProfile: 'stable',
-    startDelayMs: 900,
-    taskRetries: 1,
-    variationPrompt: 'Lifestyle photography in a warm real-world environment, natural sunlight, cinematic lighting, depth of field, cozy atmosphere. Keep the exact uploaded product identity, bottle shape, label layout, and packaging artwork unchanged. Allow only a subtle perspective change of the same bottle and premium material polish such as clearer liquid, improved condensation, and refined highlights.',
-  },
-  {
-    lockLevel: 'editorial',
-    requestProfile: 'stable',
-    startDelayMs: 2600,
-    taskRetries: 1,
-    variationPrompt: 'Minimalist high-end aesthetic, geometric background, premium art direction, controlled props, soft diffuse reflection, and refined material details. Keep the exact uploaded product identity and packaging design immediately recognizable. Allow a moderate camera angle shift and editorial scene design, but never replace or redesign the bottle, label system, or package artwork.',
-  },
-];
+interface GenerationMetricEntry {
+  label: string;
+  durationMs: number;
+  status: 'done' | 'fallback' | 'failed';
+  detail?: string;
+}
+
+function createEmptyDetailBatchProgress(): DetailPageBatchProgress {
+  return {
+    isRunning: false,
+    currentModuleId: null,
+    lastCompletedModuleId: null,
+    lastFailedModuleId: null,
+    priorityReadyCount: 0,
+    priorityTotalCount: DETAIL_PRIORITY_MODULE_IDS.length,
+    isPriorityPhaseComplete: false,
+    successCount: 0,
+    attemptedCount: 0,
+    totalCount: 0,
+  };
+}
+
+const GENERATION_STAGE_META: Record<GenerationStageKey, { label: string; icon: string; progress: number }> = {
+  idle: { label: '等待开始', icon: '○', progress: 0 },
+  analyze: { label: '解析商品', icon: '①', progress: 18 },
+  generate: { label: '生成图片', icon: '②', progress: 62 },
+  retry: { label: '稳态补偿', icon: '③', progress: 76 },
+  postprocess: { label: '精修输出', icon: '④', progress: 90 },
+  complete: { label: '生成完成', icon: '✓', progress: 100 },
+  error: { label: '等待重试', icon: '!', progress: 100 },
+};
 
 type StepHaloTitleProps = {
   step: string;
@@ -367,17 +371,23 @@ const App: React.FC = () => {
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [authTokenReady, setAuthTokenReady] = useState(false);
   const [scrollCueVisible, setScrollCueVisible] = useState(true);
+  const [isDetailWizardOpen, setIsDetailWizardOpen] = useState(false);
+  const [isDetailPlanPreviewOpen, setIsDetailPlanPreviewOpen] = useState(false);
   const [isDetailWorkbenchOpen, setIsDetailWorkbenchOpen] = useState(false);
-  const [isDetailAnalyzingReferences, setIsDetailAnalyzingReferences] = useState(false);
   const [isDetailPlanning, setIsDetailPlanning] = useState(false);
   const [isDetailGeneratingAssets, setIsDetailGeneratingAssets] = useState(false);
   const [isDetailUploadingReferences, setIsDetailUploadingReferences] = useState(false);
-  const [detailReferenceAnalysis, setDetailReferenceAnalysis] = useState<DetailPageReferenceAnalysis | null>(null);
   const [detailReferenceStyle, setDetailReferenceStyle] = useState<DetailPageReferenceStyle | null>(null);
   const [detailReferenceImages, setDetailReferenceImages] = useState<DetailPageReferenceImage[]>([]);
   const [detailPageModules, setDetailPageModules] = useState<DetailPageModule[]>(() => createDetailPageSeedModules());
+  const [detailBatchProgress, setDetailBatchProgress] = useState<DetailPageBatchProgress>(() => createEmptyDetailBatchProgress());
   const [activeDetailModuleId, setActiveDetailModuleId] = useState<string | null>(DEFAULT_DETAIL_MODULE_ID);
   const [generationProgress, setGenerationProgress] = useState<string>("");
+  const [generationStageKey, setGenerationStageKey] = useState<GenerationStageKey>('idle');
+  const [generationTraceId, setGenerationTraceId] = useState<string | null>(null);
+  const [generationStartedAt, setGenerationStartedAt] = useState<number | null>(null);
+  const [generationElapsedSec, setGenerationElapsedSec] = useState(0);
+  const [generationMetrics, setGenerationMetrics] = useState<GenerationMetricEntry[]>([]);
   const [loadingBrief, setLoadingBrief] = useState('');
 
   const [step, setStep] = useState<'upload' | 'result'>('upload');
@@ -388,12 +398,153 @@ const App: React.FC = () => {
   const handleNextImage = () => {
     setCurrentIndex((prev) => (prev + 1) % HERO_GALLERY_IMAGES.length);
   };
+
+  const createGenerationTraceId = (modeLabel: 'single' | 'matrix' | 'detail' = 'single') =>
+    `${modeLabel}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+
+  const startGenerationTrace = (modeLabel: 'single' | 'matrix') => {
+    const traceId = createGenerationTraceId(modeLabel);
+    const startedAt = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    generationTraceIdRef.current = traceId;
+    setGenerationTraceId(traceId);
+    setGenerationStartedAt(startedAt);
+    setGenerationElapsedSec(0);
+    setGenerationMetrics([]);
+    setGenerationStageKey('analyze');
+    console.info(`[generation-trace] start ${traceId}`, { mode: modeLabel });
+    return { traceId, startedAt };
+  };
+
+  const recordGenerationMetric = (
+    label: string,
+    startedAt: number,
+    status: GenerationMetricEntry['status'] = 'done',
+    detail?: string,
+  ) => {
+    const endedAt = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    const durationMs = Math.max(0, Math.round(endedAt - startedAt));
+    setGenerationMetrics((prev) => [...prev, { label, durationMs, status, detail }]);
+    if (generationTraceIdRef.current) {
+      console.info(`[generation-trace] ${generationTraceIdRef.current} · ${label}`, { durationMs, status, detail });
+    }
+    return endedAt;
+  };
+
+  const finishGenerationTrace = (finalStage: 'complete' | 'error') => {
+    setGenerationStageKey(finalStage);
+    if (generationTraceIdRef.current && generationStartedAt !== null) {
+      const endedAt = typeof performance !== 'undefined' ? performance.now() : Date.now();
+      console.info(`[generation-trace] finish ${generationTraceIdRef.current}`, {
+        totalDurationMs: Math.max(0, Math.round(endedAt - generationStartedAt)),
+        finalStage,
+      });
+    }
+    generationTraceIdRef.current = null;
+  };
+
+  const pushGenerationFailureMetric = (label: string, detail?: string) => {
+    if (generationStartedAt === null) return;
+    const endedAt = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    setGenerationMetrics((prev) => [
+      ...prev,
+      {
+        label,
+        durationMs: Math.max(0, Math.round(endedAt - generationStartedAt)),
+        status: 'failed',
+        detail,
+      },
+    ]);
+  };
+
+  const applyGenerationJobSnapshot = (snapshot: {
+    traceId?: string | null;
+    stage?: 'queued' | 'analyze' | 'generate' | 'retry' | 'completed' | 'failed';
+    progress?: number;
+    message?: string;
+    metrics?: Array<{ label: string; durationMs: number; status: 'done' | 'fallback' | 'failed'; detail?: string }>;
+    state?: {
+      suiteSlotStates?: Array<'idle' | 'queued' | 'loading' | 'success' | 'error'>;
+      suiteSlotMessages?: string[];
+      generationBillingSummary?: string | null;
+    };
+  }) => {
+    if (snapshot.traceId) {
+      generationTraceIdRef.current = snapshot.traceId;
+      setGenerationTraceId(snapshot.traceId);
+    }
+
+    if (typeof snapshot.progress === 'number') {
+      setProgress(snapshot.progress);
+    }
+
+    if (snapshot.message) {
+      setGenerationProgress(snapshot.message);
+    }
+
+    if (snapshot.metrics) {
+      setGenerationMetrics(snapshot.metrics);
+    }
+
+    switch (snapshot.stage) {
+      case 'queued':
+        setGenerationStageKey('analyze');
+        break;
+      case 'analyze':
+        setGenerationStageKey('analyze');
+        break;
+      case 'generate':
+        setGenerationStageKey('generate');
+        break;
+      case 'retry':
+        setGenerationStageKey('retry');
+        break;
+      case 'completed':
+        setGenerationStageKey('generate');
+        break;
+      case 'failed':
+        setGenerationStageKey('error');
+        break;
+      default:
+        break;
+    }
+
+    if (snapshot.state?.suiteSlotStates) {
+      setSuiteSlotStates(snapshot.state.suiteSlotStates);
+    }
+    if (snapshot.state?.suiteSlotMessages) {
+      setSuiteSlotMessages(snapshot.state.suiteSlotMessages);
+    }
+    if (snapshot.state?.generationBillingSummary) {
+      setGenerationBillingSummary(snapshot.state.generationBillingSummary);
+    }
+  };
+
+  const pollGenerationJobUntilSettled = async (jobId: string) => {
+    const maxPollCount = 120;
+    for (let pollIndex = 0; pollIndex < maxPollCount; pollIndex++) {
+      const snapshot = await getGenerationJob(jobId, localUserId);
+      applyGenerationJobSnapshot(snapshot);
+
+      if (snapshot.result?.analysis && !analysis) {
+        setAnalysis(snapshot.result.analysis);
+      }
+
+      if (snapshot.status === 'COMPLETED' || snapshot.status === 'FAILED') {
+        return snapshot;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+    }
+
+    throw new Error('任务轮询超时，请稍后查看结果或重新发起');
+  };
   
   // 支付相关状态
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [selectedRechargePackage, setSelectedRechargePackage] = useState<RechargePackage | null>(null);
   const resultRef = useRef<HTMLDivElement>(null);
   const suiteRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const generationTraceIdRef = useRef<string | null>(null);
   const { ref: sceneRef, isVisible: isSceneVisible } = useAppleReveal<HTMLElement>(0.15);
   const { ref: outputRef, isVisible: isOutputVisible } = useAppleReveal<HTMLElement>(0.15);
   const { ref: posterRef, isVisible: isPosterVisible } = useAppleReveal<HTMLElement>(0.15);
@@ -506,7 +657,7 @@ const App: React.FC = () => {
   const [promptScene, setPromptScene] = useState('真实生活代入');
   const [redesignPrompt, setRedesignPrompt] = useState('');
   const [textLayout, setTextLayout] = useState<TextPresetId>('magazine');
-  const [targetPlatform, setTargetPlatform] = useState<TargetPlatform>('通用电商');
+  const [targetPlatform, setTargetPlatform] = useState('通用电商');
   const [highlightCopy, setHighlightCopy] = useState(false);
   const [isAutoTextContrast, setIsAutoTextContrast] = useState(true);
   const [isRedesignEnabled, setIsRedesignEnabled] = useState(false);
@@ -2178,12 +2329,8 @@ const App: React.FC = () => {
     try {
       const searchParams = new URLSearchParams(window.location.search);
       const inviteCode = searchParams.get('invite')?.trim() || '';
-      const inviteLinkId = searchParams.get('linkId')?.trim() || '';
-      const inviteSource = searchParams.get('channel')?.trim() || searchParams.get('source')?.trim() || '';
-      const query = new URLSearchParams({ userId: localUserId });
+      const query = new URLSearchParams({ userId: localUserId, debugAdmin: '1' });
       if (inviteCode) query.set('inviteCode', inviteCode);
-      if (inviteLinkId) query.set('inviteLinkId', inviteLinkId);
-      if (inviteSource) query.set('inviteSource', inviteSource);
 
       const token = localStorage.getItem('authing_token');
       const resolvedPhone = resolveUserPhone(userInfo) || resolvePhoneFromToken(token);
@@ -2205,6 +2352,9 @@ const App: React.FC = () => {
       const quota = Number(data?.image_quota ?? data?.credits);
       if (!Number.isFinite(quota)) {
         throw new Error('资产数据格式异常');
+      }
+      if (data?.admin_debug) {
+        console.info('[admin-debug] /api/user', data.admin_debug);
       }
       setUserCredits(quota);
       setUserVipExpireDate(data?.vip_expire_date ? String(data.vip_expire_date) : null);
@@ -2323,39 +2473,33 @@ const App: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // 进度条模拟逻辑
   useEffect(() => {
-    let interval: number;
-    if (isProcessing) {
-      setProgress(0);
-      const phases = [
-        "👀 正在仔细端详您的商品细节...", 
-        "🛠️ 正在搭建百万级商业摄影棚...", 
-        "💡 灯光师已就位，疯狂打光中...", 
-        "👗 正在布置高级背景与氛围道具...",
-        "✨ 正在注入灵魂，生成最终大片..."
-      ];
-      let step = 0;
-      setProgressText(phases[0]);
-
-      interval = window.setInterval(() => {
-        setProgress(p => {
-          if (p >= 99) return 99; // 强行锁死最高进度为 99%
-          const nextP = p + (Math.random() * 5 + 1);
-          if (nextP > 20 && step === 0) { step = 1; setProgressText(phases[1]); }
-          if (nextP > 40 && step === 1) { step = 2; setProgressText(phases[2]); }
-          if (nextP > 60 && step === 2) { step = 3; setProgressText(phases[3]); }
-          if (nextP > 80 && step === 3) { step = 4; setProgressText(phases[4]); }
-          return nextP > 99 ? 99 : nextP;
-        });
-      }, 600);
-    } else {
-      setProgress(100);
-      setProgressText("渲染完成！");
-      setTimeout(() => setProgress(0), 1000);
+    if (!isProcessing) {
+      setProgress(generationStageKey === 'complete' || generationStageKey === 'error' ? 100 : 0);
+      setProgressText(generationStageKey === 'complete' ? '渲染完成！' : generationStageKey === 'error' ? '等待重试' : '');
+      return;
     }
-    return () => clearInterval(interval);
-  }, [isProcessing]);
+
+    const stageMeta = GENERATION_STAGE_META[generationStageKey] || GENERATION_STAGE_META.analyze;
+    setProgress(stageMeta.progress);
+    setProgressText(stageMeta.label);
+  }, [generationStageKey, isProcessing]);
+
+  useEffect(() => {
+    if (!isProcessing || generationStartedAt === null) {
+      setGenerationElapsedSec(0);
+      return;
+    }
+
+    const tick = () => {
+      const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+      setGenerationElapsedSec(Math.max(0, Math.floor((now - generationStartedAt) / 1000)));
+    };
+
+    tick();
+    const interval = window.setInterval(tick, 1000);
+    return () => window.clearInterval(interval);
+  }, [generationStartedAt, isProcessing]);
 
   useEffect(() => {
     let intervalId: any;
@@ -2804,21 +2948,6 @@ const App: React.FC = () => {
     return `${slotPrefix}未生成成功，本次未扣费。`;
   };
 
-  const isRetryableImageGenerationError = (error: unknown) => {
-    const rawMessage = String((error as any)?.message || error || '');
-    return (
-      rawMessage.includes('503') ||
-      rawMessage.includes('UNAVAILABLE') ||
-      rawMessage.includes('high demand') ||
-      rawMessage.includes('429') ||
-      rawMessage.includes('限流') ||
-      rawMessage.includes('超时') ||
-      rawMessage.includes('timeout') ||
-      rawMessage.includes('AbortError') ||
-      rawMessage.includes('稍后重试')
-    );
-  };
-
   const resolvePromptProductImageUrl = (): string | null => {
     if (sourceImages.length > 0 && sourceImages[0]) return sourceImages[0];
     return resolveCopyTargetImageUrl();
@@ -2902,9 +3031,7 @@ const App: React.FC = () => {
             userPrompt.trim(),
             localUserId,
             promptScene,
-            promptTone,
-            targetPlatform,
-            selectedScenario
+            promptTone
           );
           const normalized = raw.trim();
           if (!normalized) throw new Error('模型返回为空，请稍后重试。');
@@ -3132,18 +3259,44 @@ const App: React.FC = () => {
   };
 
   const resetDetailPagePlan = () => {
-    setIsDetailAnalyzingReferences(false);
     setIsDetailPlanning(false);
     setIsDetailGeneratingAssets(false);
-    setDetailReferenceAnalysis(null);
     setDetailReferenceStyle(null);
     setDetailPageModules(createDetailPageSeedModules());
+    setDetailBatchProgress(createEmptyDetailBatchProgress());
     setActiveDetailModuleId(DEFAULT_DETAIL_MODULE_ID);
+  };
+
+  const openDetailPageWizard = () => {
+    setIsDetailPlanPreviewOpen(false);
+    setIsDetailWorkbenchOpen(false);
+    setIsDetailWizardOpen(true);
   };
 
   const openDetailPageWorkbench = () => {
     setIsDetailWorkbenchOpen(true);
     setActiveDetailModuleId((current) => current ?? DEFAULT_DETAIL_MODULE_ID);
+  };
+
+  const handleStartDetailPageWizard = async () => {
+    setIsDetailWizardOpen(false);
+    setIsDetailPlanPreviewOpen(true);
+    await handlePlanDetailPageStructure();
+  };
+
+  const handleBackToDetailWizard = () => {
+    if (isDetailPlanning || isDetailGeneratingAssets) return;
+    setIsDetailPlanPreviewOpen(false);
+    setIsDetailWorkbenchOpen(false);
+    setIsDetailWizardOpen(true);
+  };
+
+  const handleOpenWorkbenchFromPreview = (moduleId?: string) => {
+    if (moduleId) {
+      setActiveDetailModuleId(moduleId);
+    }
+    setIsDetailPlanPreviewOpen(false);
+    openDetailPageWorkbench();
   };
 
   const handleAddDetailReferenceImages = async (files: File[]) => {
@@ -3175,9 +3328,6 @@ const App: React.FC = () => {
         });
       }
 
-      setDetailReferenceAnalysis(null);
-      setDetailReferenceStyle(null);
-      setDetailPageModules(createDetailPageSeedModules());
       setDetailReferenceImages((prev) => [...prev, ...nextReferences]);
       setToastMessage(nextReferences.length === 1 ? '已添加 1 张参考详情图' : `已添加 ${nextReferences.length} 张参考详情图`);
     } catch (error: any) {
@@ -3189,8 +3339,6 @@ const App: React.FC = () => {
   };
 
   const handleRemoveDetailReferenceImage = (referenceId: string) => {
-    setDetailReferenceAnalysis(null);
-    setDetailReferenceStyle(null);
     setDetailReferenceImages((prev) => prev.filter((item) => item.id !== referenceId));
     setDetailPageModules((prev) =>
       prev.map((module) =>
@@ -3218,29 +3366,6 @@ const App: React.FC = () => {
     patchDetailModuleAssets(moduleId, { referenceImageId: referenceId });
   };
 
-  const resolveDetailReferenceSetContext = async () => {
-    if (sourceImages.length === 0 || !sourceImages[0]) {
-      throw new Error('请先上传商品图，再开始详情页复刻');
-    }
-    if (!localUserId) {
-      throw new Error('用户身份初始化中，请稍后重试');
-    }
-
-    const productBase64 = await fetchImageAsBase64(sourceImages[0]);
-    const references = await Promise.all(
-      detailReferenceImages.map(async (item) => ({
-        id: item.id,
-        label: item.label,
-        base64: await fetchImageAsBase64(item.url),
-      }))
-    );
-
-    return {
-      productBase64,
-      references,
-    };
-  };
-
   const resolveDetailGenerationContext = async (referenceImageUrl?: string) => {
     if (sourceImages.length === 0 || !sourceImages[0]) {
       throw new Error('请先上传商品图，再生成详情页');
@@ -3264,80 +3389,6 @@ const App: React.FC = () => {
     };
   };
 
-  const handleAnalyzeDetailReferences = async (): Promise<DetailPageReferenceAnalysis | null> => {
-    if (!ensureAuthReady('详情页参考解析引擎')) return null;
-    if (sourceImages.length === 0) {
-      setToastMessage('请先上传商品图，再开始详情页复刻');
-      return null;
-    }
-    if (!localUserId) {
-      setToastMessage('用户身份初始化中，请稍后重试');
-      return null;
-    }
-
-    setIsDetailAnalyzingReferences(true);
-
-    try {
-      const { productBase64, references } = await resolveDetailReferenceSetContext();
-      const fallbackAnalysis = createFallbackDetailReferenceAnalysis(
-        references.length || detailReferenceImages.length || 1,
-        detailReferenceImages[0]?.visualDNA || visualDNA,
-        promptScene,
-        promptTone
-      );
-
-      if (references.length === 0) {
-        setDetailReferenceAnalysis(fallbackAnalysis);
-        setDetailReferenceStyle(fallbackAnalysis.referenceStyle);
-        setToastMessage('未上传参考详情图，已先用通用复刻策略创建工作流');
-        return fallbackAnalysis;
-      }
-
-      const analysisResult = await generateDetailReferenceAnalysis(
-        productBase64,
-        references.map((item) => ({ label: item.label, base64: item.base64 })),
-        userPrompt.trim(),
-        promptScene,
-        promptTone,
-        targetPlatform,
-        localUserId
-      );
-
-      const safeAnalysis =
-        analysisResult.frames.length > 0
-          ? {
-              ...analysisResult,
-              workflowSummary: analysisResult.workflowSummary || fallbackAnalysis.workflowSummary,
-              adaptationStrategy: analysisResult.adaptationStrategy || fallbackAnalysis.adaptationStrategy,
-              referenceStyle: analysisResult.referenceStyle || fallbackAnalysis.referenceStyle,
-            }
-          : fallbackAnalysis;
-
-      setDetailReferenceAnalysis(safeAnalysis);
-      setDetailReferenceStyle(safeAnalysis.referenceStyle);
-      setToastMessage(
-        analysisResult.frames.length > 0
-          ? `已完成 ${references.length} 张参考详情图的整组解析，下一步可生成 8 屏规划`
-          : '参考图解析未完整返回，已切换到通用复刻策略'
-      );
-      return safeAnalysis;
-    } catch (error: any) {
-      console.error('[handleAnalyzeDetailReferences] failed:', error);
-      const fallbackAnalysis = createFallbackDetailReferenceAnalysis(
-        detailReferenceImages.length || 1,
-        detailReferenceImages[0]?.visualDNA || visualDNA,
-        promptScene,
-        promptTone
-      );
-      setDetailReferenceAnalysis(fallbackAnalysis);
-      setDetailReferenceStyle(fallbackAnalysis.referenceStyle);
-      setToastMessage(error?.message || '参考图解析失败，已先用通用策略兜底');
-      return fallbackAnalysis;
-    } finally {
-      setIsDetailAnalyzingReferences(false);
-    }
-  };
-
   const handlePlanDetailPageStructure = async () => {
     if (!ensureAuthReady('详情页规划引擎')) return;
     if (sourceImages.length === 0) {
@@ -3349,29 +3400,16 @@ const App: React.FC = () => {
       return;
     }
 
-    let nextReferenceAnalysis = detailReferenceAnalysis;
-    if (!nextReferenceAnalysis) {
-      nextReferenceAnalysis = await handleAnalyzeDetailReferences();
-    }
-
     setIsDetailPlanning(true);
+    setDetailBatchProgress(createEmptyDetailBatchProgress());
     setActiveDetailModuleId(DEFAULT_DETAIL_MODULE_ID);
     setDetailPageModules(createDetailPageSeedModules().map((module) => ({ ...module, status: 'loading' })));
 
     try {
-      const { productBase64 } = await resolveDetailReferenceSetContext();
-      const fallbackAnalysis =
-        nextReferenceAnalysis ||
-        createFallbackDetailReferenceAnalysis(
-          detailReferenceImages.length || 1,
-          detailReferenceImages[0]?.visualDNA || visualDNA,
-          promptScene,
-          promptTone
-        );
-
-      const planResult = await generateDetailPagePlanFromAnalysis(
+      const { productBase64, referenceBase64 } = await resolveDetailGenerationContext();
+      const planResult = await generateDetailPagePlan(
         productBase64,
-        fallbackAnalysis,
+        referenceBase64,
         userPrompt.trim(),
         promptScene,
         promptTone,
@@ -3383,38 +3421,26 @@ const App: React.FC = () => {
       const plannedModules =
         !usedFallbackPlan
           ? planResult.modules
-          : createFallbackDetailPagePlans(seedModules, promptScene, promptTone, fallbackAnalysis);
+          : createFallbackDetailPagePlans(seedModules, promptScene, promptTone);
       const planningVisualDNA = detailReferenceImages[0]?.visualDNA || visualDNA;
       const referenceStyle =
-        planResult.referenceStyle || fallbackAnalysis.referenceStyle || createFallbackDetailReferenceStyle(planningVisualDNA, promptScene, promptTone);
-      const mergedModules = assignDetailReferencesFromPlan(
-        mergeDetailPagePlan(seedModules, plannedModules),
-        detailReferenceImages.map((item) => item.id)
-      );
+        planResult.referenceStyle || createFallbackDetailReferenceStyle(planningVisualDNA, promptScene, promptTone);
 
-      setDetailReferenceAnalysis(fallbackAnalysis);
       setDetailReferenceStyle(referenceStyle);
-      setDetailPageModules(mergedModules);
+      setDetailPageModules(mergeDetailPagePlan(seedModules, plannedModules));
       if (!syncAssetsFromGemini()) {
         void refreshUserCredits();
       }
       setToastMessage(
         usedFallbackPlan
-          ? '参考解析已完成，但规划未完整返回，已用通用策略生成 8 屏规划'
-          : detailReferenceImages.length > 0
-            ? '已基于整组参考解析生成 8 屏规划'
+          ? '参考图解析未完整返回，已用通用策略生成 8 屏规划'
+          : referenceBase64
+            ? '参考详情图解析完成，8 屏规划已生成'
             : '已按当前商品与指令生成 8 屏规划'
       );
     } catch (error: any) {
       console.error('[handlePlanDetailPageStructure] failed:', error);
-      const fallbackAnalysis = createFallbackDetailReferenceAnalysis(
-        detailReferenceImages.length || 1,
-        detailReferenceImages[0]?.visualDNA || visualDNA,
-        promptScene,
-        promptTone
-      );
-      setDetailReferenceAnalysis(fallbackAnalysis);
-      setDetailReferenceStyle(fallbackAnalysis.referenceStyle || createFallbackDetailReferenceStyle(detailReferenceImages[0]?.visualDNA || visualDNA, promptScene, promptTone));
+      setDetailReferenceStyle(createFallbackDetailReferenceStyle(detailReferenceImages[0]?.visualDNA || visualDNA, promptScene, promptTone));
       setDetailPageModules(createDetailPageSeedModules());
       setToastMessage(error?.message || '详情页规划失败，请稍后重试');
     } finally {
@@ -3422,13 +3448,14 @@ const App: React.FC = () => {
     }
   };
 
-  const generateSingleDetailModule = async (moduleId: string): Promise<boolean> => {
+  const generateSingleDetailModule = async (
+    moduleId: string,
+    options?: {
+      focus?: boolean;
+    }
+  ): Promise<boolean> => {
     const module = detailPageModules.find((item) => item.id === moduleId);
     if (!module) return false;
-    if (!module.plan) {
-      setToastMessage('请先完成“整组参考解析”和“8 屏规划”，再生成当前屏');
-      return false;
-    }
     if (!isDetailModuleSupported(module.type)) {
       setToastMessage('当前模块暂未开放真实生成');
       return false;
@@ -3440,7 +3467,9 @@ const App: React.FC = () => {
       return false;
     }
 
-    setActiveDetailModuleId(moduleId);
+    if (options?.focus !== false) {
+      setActiveDetailModuleId(moduleId);
+    }
     setDetailPageModules((prev) =>
       prev.map((item) =>
         item.id === moduleId
@@ -3563,6 +3592,10 @@ const App: React.FC = () => {
             : item
         )
       );
+      setDetailBatchProgress((prev) => ({
+        ...prev,
+        lastCompletedModuleId: moduleId,
+      }));
       if (!syncAssetsFromGemini()) {
         void refreshUserCredits();
       }
@@ -3583,6 +3616,10 @@ const App: React.FC = () => {
             : item
         )
       );
+      setDetailBatchProgress((prev) => ({
+        ...prev,
+        lastFailedModuleId: moduleId,
+      }));
 
       if (message.includes('INSUFFICIENT_QUOTA')) {
         openPaymentModalForAssetError('INSUFFICIENT_QUOTA');
@@ -3603,21 +3640,8 @@ const App: React.FC = () => {
       setToastMessage('请先上传商品图，再生成详情页');
       return;
     }
-    if (!detailReferenceAnalysis) {
-      setToastMessage('请先完成整组参考解析，再生成 8 屏图文');
-      return;
-    }
-    if (detailPageModules.some((module) => !module.plan)) {
-      setToastMessage('请先生成 8 屏规划，再开始逐屏模仿生成');
-      return;
-    }
     if (isDetailBatchCreditsInsufficient) {
-      const canStillGenerateSingle = hasCreditsValue && userCredits >= 1;
-      setToastMessage(
-        canStillGenerateSingle
-          ? `整套生成至少需要 ${detailBatchImageCost} 点额度，你当前仍可单独生成某一屏（1 点额度）`
-          : `生图算力不足，生成整套 8 屏至少需要 ${detailBatchImageCost} 点额度`
-      );
+      setToastMessage(`生图算力不足，生成整套 8 屏至少需要 ${detailBatchImageCost} 点额度`);
       openPaymentModalForAssetError('INSUFFICIENT_QUOTA');
       return;
     }
@@ -3630,19 +3654,95 @@ const App: React.FC = () => {
       return;
     }
 
+    const priorityModuleIds = targetModules.filter((moduleId) => DETAIL_PRIORITY_MODULE_IDS.includes(moduleId));
+    const remainingModuleIds = targetModules.filter((moduleId) => !DETAIL_PRIORITY_MODULE_IDS.includes(moduleId));
+    const orderedModuleIds = [...priorityModuleIds, ...remainingModuleIds];
+
     let successCount = 0;
+    let prioritySuccessCount = 0;
+    let lastPriorityCompletedModuleId: string | null = null;
+    let didAutoSurfacePriority = false;
     try {
-      for (const moduleId of targetModules) {
-        const ok = await generateSingleDetailModule(moduleId);
-        if (ok) successCount += 1;
+      setDetailBatchProgress({
+        isRunning: true,
+        currentModuleId: null,
+        lastCompletedModuleId: null,
+        lastFailedModuleId: null,
+        priorityReadyCount: 0,
+        priorityTotalCount: priorityModuleIds.length,
+        isPriorityPhaseComplete: priorityModuleIds.length === 0,
+        successCount: 0,
+        attemptedCount: 0,
+        totalCount: orderedModuleIds.length,
+      });
+      for (let index = 0; index < orderedModuleIds.length; index += 1) {
+        const moduleId = orderedModuleIds[index];
+        const isPriorityModule = priorityModuleIds.includes(moduleId);
+        setDetailBatchProgress((prev) => ({
+          ...prev,
+          isRunning: true,
+          currentModuleId: moduleId,
+          totalCount: orderedModuleIds.length,
+        }));
+        const ok = await generateSingleDetailModule(moduleId, {
+          focus: isPriorityModule,
+        });
+        if (ok) {
+          successCount += 1;
+          if (isPriorityModule) {
+            prioritySuccessCount += 1;
+            lastPriorityCompletedModuleId = moduleId;
+          }
+        }
+        const isPriorityPhaseComplete = priorityModuleIds.length > 0 && index >= priorityModuleIds.length - 1;
+        setDetailBatchProgress((prev) => ({
+          ...prev,
+          isRunning: true,
+          currentModuleId: null,
+          attemptedCount: prev.attemptedCount + 1,
+          successCount: prev.successCount + (ok ? 1 : 0),
+          priorityReadyCount: prev.priorityReadyCount + (ok && isPriorityModule ? 1 : 0),
+          priorityTotalCount: priorityModuleIds.length,
+          isPriorityPhaseComplete: prev.isPriorityPhaseComplete || isPriorityPhaseComplete,
+          lastCompletedModuleId: ok ? moduleId : prev.lastCompletedModuleId,
+          lastFailedModuleId: ok ? prev.lastFailedModuleId : moduleId,
+          totalCount: orderedModuleIds.length,
+        }));
+
+        if (!didAutoSurfacePriority && isPriorityPhaseComplete) {
+          didAutoSurfacePriority = true;
+          const preferredPriorityModuleId =
+            lastPriorityCompletedModuleId || priorityModuleIds[0] || orderedModuleIds[0] || DEFAULT_DETAIL_MODULE_ID;
+
+          if (preferredPriorityModuleId) {
+            setActiveDetailModuleId(preferredPriorityModuleId);
+          }
+
+          if (isDetailPlanPreviewOpen) {
+            setIsDetailPlanPreviewOpen(false);
+            openDetailPageWorkbench();
+          }
+
+          setToastMessage(
+            prioritySuccessCount > 0
+              ? `前三屏已优先完成 ${prioritySuccessCount}/${priorityModuleIds.length} 屏，已为你打开编辑台；后续模块继续生成中`
+              : '前三屏已完成首轮尝试，已进入编辑台；后续模块继续生成中'
+          );
+        }
       }
       setToastMessage(
-        successCount === targetModules.length
+        successCount === orderedModuleIds.length
           ? '整套 8 屏图文已全部生成完成'
-          : `当前已完成 ${successCount}/${targetModules.length} 屏，可对失败屏单独重试`
+          : `当前已完成 ${successCount}/${orderedModuleIds.length} 屏，可对失败屏单独重试`
       );
     } finally {
       setIsDetailGeneratingAssets(false);
+      setDetailBatchProgress((prev) => ({
+        ...prev,
+        isRunning: false,
+        currentModuleId: null,
+        totalCount: orderedModuleIds.length,
+      }));
     }
   };
 
@@ -3695,59 +3795,47 @@ const App: React.FC = () => {
       setToastMessage('用户身份初始化中，请稍后重试');
       return;
     }
+    const { traceId } = startGenerationTrace('single');
     setActiveGenerateCount(1);
     setIsProcessing(true); setStep('result'); setResultImages([]); setSuiteSlotStates([]); setSuiteSlotMessages([]); setIsSuiteMode(false);
     setGenerationBillingSummary(null);
-    setGenerationProgress('✨ 正在解析商品参数并准备单图生图...');
-    // 安全瘦身：保留后端契约字段，但固定为安全默认值，避免 UI 移除后触发 400/500
-    const safeRedesignPrompt: string | undefined = undefined;
-    const safeMaskImageBase64: string | null = null;
-    const safeIsRedesignMode = false;
+    setGenerationProgress('✨ 正在创建云端任务...');
     const safeLogoImage: string | null = null;
     const safeStickerConfig: StickerConfig = { url: null, positionX: 85, positionY: 15, scale: 20 };
     const safeLogoConfig: LogoConfig = { positionX: 12, positionY: 12, scale: 15 };
     
     try {
-      const currentAnalysis = analysis || await analyzeProduct([sourceImages[0].split(',')[1]], localUserId);
-      setGenerationProgress('🎨 正在调用生图引擎...');
-
-      const requestSingleImage = (requestProfile: MatrixRequestProfile) => generateScenarioImage(
-        [sourceImages[0].split(',')[1]],
-        selectedScenario,
-        currentAnalysis,
+      const sourceImageBase64 = sourceImages[0].split(',')[1];
+      const createdJob = await createGenerationJob({
+        userId: localUserId,
+        traceId,
+        mode: 'single',
+        sourceImageBase64,
+        styleImageBase64: styleReferenceImage ? styleReferenceImage.split(',')[1] : undefined,
         userPrompt,
         textConfig,
-        mode,
-        styleReferenceImage ? styleReferenceImage.split(',')[1] : undefined,
-        visualDNA,
-        undefined,
         aspectRatio,
         layout,
-        safeRedesignPrompt,
+        generationMode: mode,
         targetPlatform,
-        safeMaskImageBase64,
-        safeIsRedesignMode,
-        localUserId,
-        1,
-        true,
-        'strict',
-        requestProfile
-      );
+        scenario: selectedScenario,
+        visualDNA,
+        analysis,
+      });
+      applyGenerationJobSnapshot(createdJob);
 
-      let aiResultRaw: string | string[];
-      try {
-        aiResultRaw = await requestSingleImage('default');
-      } catch (primaryImageError) {
-        if (!isRetryableImageGenerationError(primaryImageError)) throw primaryImageError;
-        setGenerationProgress('🛟 模型拥堵，正在切换更稳线路补偿重试...');
-        await new Promise(resolve => setTimeout(resolve, 900));
-        aiResultRaw = await requestSingleImage('stable');
-      }
-      const aiResultUrl = Array.isArray(aiResultRaw) ? aiResultRaw[0] : aiResultRaw;
-      if (!aiResultUrl) {
-        throw new Error('精修单图生成失败，请稍后重试');
+      const settledJob = await pollGenerationJobUntilSettled(createdJob.jobId);
+      const currentAnalysis = settledJob.result?.analysis || analysis || await analyzeProduct([sourceImageBase64], localUserId, traceId);
+
+      if (settledJob.status !== 'COMPLETED' || !settledJob.result?.images?.[0]) {
+        throw new Error(settledJob.errorMessage || settledJob.state?.generationBillingSummary || '本次单图暂未生成成功，未扣费。');
       }
 
+      let stageStartedAt = typeof performance !== 'undefined' ? performance.now() : Date.now();
+      setGenerationProgress('🪄 云端生图已完成，正在前端精修输出...');
+      setGenerationStageKey('postprocess');
+
+      const aiResultUrl = settledJob.result.images[0];
       const textFreeConfig = { ...textConfig, title: '', detail: '' };
       let normalizedFinalUrl = aiResultUrl;
       try {
@@ -3764,12 +3852,16 @@ const App: React.FC = () => {
         );
 
         normalizedFinalUrl = await enforceAspectRatio(finalUrl, aspectRatio);
+        recordGenerationMetric('后处理与比例修正', stageStartedAt, 'done');
       } catch (postProcessError) {
         console.warn('[handleGenerate] post-process fallback to raw ai image:', postProcessError);
+        recordGenerationMetric('后处理与比例修正', stageStartedAt, 'fallback', '保留原始生成图');
         setToastMessage('后处理波动，已为你保留原始生成图');
       }
+
       setResultImages([normalizedFinalUrl]);
-      setGenerationBillingSummary('本次成功生成 1 张，已扣 1 Token。');
+      setGenerationBillingSummary(settledJob.state?.generationBillingSummary || '本次成功生成 1 张，已扣 1 Token。');
+      finishGenerationTrace('complete');
       resetTextGenCapability();
       if (!syncAssetsFromGemini()) {
         void refreshUserCredits();
@@ -3777,6 +3869,7 @@ const App: React.FC = () => {
       flashButtonDone('genSingle');
     } catch (err: any) {
       const errMessage = String(err?.message || '');
+      pushGenerationFailureMetric('单图任务失败', buildFriendlyImageFailureMessage(err));
       if (errMessage.includes('INSUFFICIENT_QUOTA')) {
         openPaymentModalForAssetError('INSUFFICIENT_QUOTA');
         setStep('upload');
@@ -3787,10 +3880,12 @@ const App: React.FC = () => {
         setToastMessage('登录状态尚未就绪或已失效，请重新登录后再试。');
         setStep('upload');
       } else {
-        setGenerationBillingSummary(buildFriendlyImageFailureMessage(err));
-        setToastMessage(buildFriendlyImageFailureMessage(err));
-        setStep('upload');
+        const friendlyMessage = buildFriendlyImageFailureMessage(err);
+        setGenerationBillingSummary(friendlyMessage);
+        setToastMessage(friendlyMessage);
+        setStep('result');
       }
+      finishGenerationTrace('error');
     } finally {
       setIsProcessing(false);
       setLoadingBrief('');
@@ -3810,159 +3905,80 @@ const App: React.FC = () => {
       setToastMessage('用户身份初始化中，请稍后重试');
       return;
     }
+    const { traceId } = startGenerationTrace('matrix');
     setActiveGenerateCount(3);
     setIsProcessing(true); setStep('result'); setResultImages(['', '', '']); setSuiteSlotStates(['loading', 'queued', 'queued']); setSuiteSlotMessages(['正在解析商品参数...', '等待前一张完成', '等待前一张完成']); setIsSuiteMode(true);
     setGenerationBillingSummary(null);
-    setGenerationProgress('🚀 正在解析商品参数，第 1 张高转化主图即将开始...');
-    // 安全瘦身：保留后端契约字段，但固定为安全默认值，避免 UI 移除后触发 400/500
-    const safeRedesignPrompt: string | undefined = undefined;
-    const safeMaskImageBase64: string | null = null;
-    const safeIsRedesignMode = false;
+    setGenerationProgress('🚀 正在创建营销矩阵任务...');
     const safeLogoImage: string | null = null;
     const safeStickerConfig: StickerConfig = { url: null, positionX: 85, positionY: 15, scale: 20 };
     const safeLogoConfig: LogoConfig = { positionX: 12, positionY: 12, scale: 15 };
 
     try {
-      const currentAnalysis = analysis || await analyzeProduct([sourceImages[0].split(',')[1]], localUserId);
-      if (!analysis) setAnalysis(currentAnalysis);
+      const sourceImageBase64 = sourceImages[0].split(',')[1];
+      const createdJob = await createGenerationJob({
+        userId: localUserId,
+        traceId,
+        mode: 'matrix',
+        sourceImageBase64,
+        styleImageBase64: styleReferenceImage ? styleReferenceImage.split(',')[1] : undefined,
+        userPrompt,
+        textConfig,
+        aspectRatio,
+        layout,
+        generationMode: mode,
+        targetPlatform,
+        scenario: selectedScenario,
+        visualDNA,
+        analysis,
+      });
+      applyGenerationJobSnapshot(createdJob);
 
-      const currentRenderConfig = { ...textConfig, title: '', detail: '' };
-      let successCount = 0;
-
-      const runMatrixTask = async ({ variationPrompt, lockLevel, requestProfile, startDelayMs, taskRetries }: typeof MATRIX_PROFILES[number], index: number) => {
-        const attemptDelays = [0, 3200];
-        for (let attempt = 0; attempt <= taskRetries; attempt++) {
-          try {
-            const activeRequestProfile: MatrixRequestProfile = attempt === 0 ? requestProfile : 'stable';
-            const delayMs = (attempt === 0 ? startDelayMs : 0) + (attemptDelays[attempt] || 0);
-            if (delayMs > 0) {
-              await new Promise(resolve => setTimeout(resolve, delayMs));
-            }
-
-            setGenerationProgress(`营销矩阵顺序渲染中：正在处理第 ${index + 1}/3 张...`);
-            setSuiteSlotStates((prev) => {
-              const next: SuiteSlotState[] = prev.length === 3 ? [...prev] : ['queued', 'queued', 'queued'];
-              next[index] = 'loading';
-              return next;
-            });
-            setSuiteSlotMessages((prev) => {
-              const next = prev.length === 3 ? [...prev] : ['等待开始', '等待开始', '等待开始'];
-              next[index] = attempt === 0 ? '正在调用生图引擎...' : '正在切换备用线路补偿重试...';
-              return next;
-            });
-
-            const aiResult = await generateScenarioImage(
-              [sourceImages[0].split(',')[1]],
-              selectedScenario,
-              currentAnalysis,
-              userPrompt,
-              textConfig,
-              mode,
-              styleReferenceImage ? styleReferenceImage.split(',')[1] : undefined,
-              visualDNA,
-              variationPrompt,
-              aspectRatio,
-              layout,
-              safeRedesignPrompt,
-              targetPlatform,
-              safeMaskImageBase64,
-              safeIsRedesignMode,
-              localUserId,
-              1,
-              true,
-              lockLevel,
-              activeRequestProfile
-            );
-
-            if (typeof aiResult !== 'string' || !aiResult) {
-              throw new Error(`营销矩阵第 ${index + 1} 张未返回有效图片`);
-            }
-
-            let normalizedResult = aiResult;
-            try {
-              const finalResult = await processFinalImage(
-                aiResult,
-                sourceImages[0],
-                currentAnalysis,
-                mode,
-                currentRenderConfig,
-                safeLogoImage,
-                aspectRatio,
-                safeStickerConfig,
-                safeLogoConfig
-              );
-              normalizedResult = await enforceAspectRatio(finalResult, aspectRatio);
-            } catch (postProcessError) {
-              console.warn(`[handleGenerateSuite] slot ${index + 1} post-process fallback to raw ai image:`, postProcessError);
-              setToastMessage(`第 ${index + 1} 张后处理波动，已保留原始生成图`);
-            }
-
-            successCount += 1;
-            setResultImages((prev) => {
-              const next = prev.length === 3 ? [...prev] : ['', '', ''];
-              next[index] = normalizedResult;
-              return next;
-            });
-            setSuiteSlotStates((prev) => {
-              const next: SuiteSlotState[] = prev.length === 3 ? [...prev] : ['queued', 'queued', 'queued'];
-              next[index] = 'success';
-              return next;
-            });
-            setSuiteSlotMessages((prev) => {
-              const next = prev.length === 3 ? [...prev] : ['', '', ''];
-              next[index] = '生成成功 · 已扣 1 Token';
-              if (index + 1 < next.length && !next[index + 1]) {
-                next[index + 1] = '等待上一张完成';
-              }
-              return next;
-            });
-            setGenerationProgress(`营销矩阵顺序渲染中：已完成 ${successCount}/3`);
-
-            return { status: 'fulfilled' as const, value: normalizedResult };
-          } catch (error) {
-            if (attempt < taskRetries) {
-              setGenerationProgress(`营销矩阵顺序渲染中：第 ${index + 1} 张进入稳态补偿重试...`);
-              setSuiteSlotMessages((prev) => {
-                const next = prev.length === 3 ? [...prev] : ['', '', ''];
-                next[index] = '模型波动，正在自动重试...';
-                return next;
-              });
-              continue;
-            }
-
-            setSuiteSlotStates((prev) => {
-              const next: SuiteSlotState[] = prev.length === 3 ? [...prev] : ['queued', 'queued', 'queued'];
-              next[index] = 'error';
-              return next;
-            });
-            setSuiteSlotMessages((prev) => {
-              const next = prev.length === 3 ? [...prev] : ['', '', ''];
-              next[index] = buildFriendlyImageFailureMessage(error, index);
-              return next;
-            });
-            return { status: 'rejected' as const, reason: error };
-          }
-        }
-
-        return { status: 'rejected' as const, reason: new Error(`营销矩阵第 ${index + 1} 张补偿重试后仍未成功返回`) };
-      };
-
-      const settledResults: PromiseSettledResult<string>[] = [];
-      for (let index = 0; index < MATRIX_PROFILES.length; index++) {
-        const taskResult = await runMatrixTask(MATRIX_PROFILES[index], index);
-        if (taskResult.status === 'fulfilled') {
-          settledResults.push({ status: 'fulfilled', value: taskResult.value });
-        } else {
-          settledResults.push({ status: 'rejected', reason: taskResult.reason });
-        }
-      }
-
-      const fulfilledCount = settledResults.filter((item): item is PromiseFulfilledResult<string> => item.status === 'fulfilled').length;
-      const failedCount = settledResults.length - fulfilledCount;
+      const settledJob = await pollGenerationJobUntilSettled(createdJob.jobId);
+      const currentAnalysis = settledJob.result?.analysis || analysis || await analyzeProduct([sourceImageBase64], localUserId, traceId);
+      const rawImages = settledJob.result?.images || ['', '', ''];
+      const fulfilledCount = rawImages.filter(Boolean).length;
+      const failedCount = Math.max(0, 3 - fulfilledCount);
 
       if (fulfilledCount === 0) {
-        const firstRejected = settledResults.find((item): item is PromiseRejectedResult => item.status === 'rejected');
-        throw firstRejected?.reason || new Error('营销矩阵生图失败：3 张图片均未成功返回');
+        throw new Error(settledJob.errorMessage || settledJob.state?.generationBillingSummary || '营销矩阵 0/3 成功，未扣费。');
+      }
+
+      const currentRenderConfig = { ...textConfig, title: '', detail: '' };
+      setGenerationProgress('🪄 云端生图已完成，正在前端精修输出...');
+      setGenerationStageKey('postprocess');
+
+      for (let index = 0; index < rawImages.length; index++) {
+        const rawImage = rawImages[index];
+        if (!rawImage) continue;
+
+        let imageStageStartedAt = typeof performance !== 'undefined' ? performance.now() : Date.now();
+        let normalizedResult = rawImage;
+        try {
+          const finalResult = await processFinalImage(
+            rawImage,
+            sourceImages[0],
+            currentAnalysis,
+            mode,
+            currentRenderConfig,
+            safeLogoImage,
+            aspectRatio,
+            safeStickerConfig,
+            safeLogoConfig
+          );
+          normalizedResult = await enforceAspectRatio(finalResult, aspectRatio);
+          recordGenerationMetric(`第 ${index + 1} 张后处理`, imageStageStartedAt, 'done');
+        } catch (postProcessError) {
+          console.warn(`[handleGenerateSuite] slot ${index + 1} post-process fallback to raw ai image:`, postProcessError);
+          recordGenerationMetric(`第 ${index + 1} 张后处理`, imageStageStartedAt, 'fallback', '保留原始生成图');
+          setToastMessage(`第 ${index + 1} 张后处理波动，已保留原始生成图`);
+        }
+
+        setResultImages((prev) => {
+          const next = prev.length === 3 ? [...prev] : ['', '', ''];
+          next[index] = normalizedResult;
+          return next;
+        });
       }
 
       resetTextGenCapability();
@@ -3971,29 +3987,33 @@ const App: React.FC = () => {
       }
 
       flashButtonDone('genMatrix');
+      setGenerationBillingSummary(
+        settledJob.state?.generationBillingSummary ||
+          (failedCount > 0
+            ? `营销矩阵成功 ${fulfilledCount}/3 张，已扣 ${fulfilledCount} Token；失败 ${failedCount} 张未扣费。`
+            : '营销矩阵 3 张全部成功，已扣 3 Token。')
+      );
       if (failedCount > 0) {
         setToastMessage(`营销矩阵已完成 ${fulfilledCount}/3 张，${failedCount} 张因超时或模型波动未成功返回。`);
-        setGenerationBillingSummary(`营销矩阵成功 ${fulfilledCount}/3 张，已扣 ${fulfilledCount} Token；失败 ${failedCount} 张未扣费。`);
         setGenerationProgress(`营销矩阵部分完成：${fulfilledCount}/3`);
       } else {
-        setGenerationBillingSummary('营销矩阵 3 张全部成功，已扣 3 Token。');
         setGenerationProgress('营销矩阵渲染完成！');
       }
+      finishGenerationTrace('complete');
     } catch (err: any) { 
       const errMessage = String(err?.message || '');
+      pushGenerationFailureMetric('营销矩阵任务失败', buildFriendlyImageFailureMessage(err));
       if (errMessage.includes('INSUFFICIENT_QUOTA')) {
         openPaymentModalForAssetError('INSUFFICIENT_QUOTA');
         setStep('upload');
       } else if (errMessage.includes('VIP_EXPIRED')) {
         openPaymentModalForAssetError('VIP_EXPIRED');
         setStep('upload');
-      } else if (isAuthErrorMessage(errMessage)) {
-        setToastMessage('登录状态尚未就绪或已失效，请重新登录后再试。');
-        setStep('upload');
       } else {
         setGenerationBillingSummary('营销矩阵 0/3 成功，未扣费。');
         setToastMessage(buildFriendlyImageFailureMessage(err));
       }
+      finishGenerationTrace('error');
     } finally { 
       setIsProcessing(false); 
       setLoadingBrief('');
@@ -5054,6 +5074,59 @@ const App: React.FC = () => {
           {generationProgress}
         </p>
       ) : null}
+      <div className="mt-5 w-full max-w-2xl rounded-[24px] border border-stone-200/80 bg-white/80 px-4 py-4 shadow-[0_16px_36px_rgba(15,23,42,0.05)] backdrop-blur-xl">
+        <div className="flex items-center justify-between gap-4 text-[11px] font-medium text-stone-500">
+          <span>{progressText || GENERATION_STAGE_META[generationStageKey].label}</span>
+          <span>{generationElapsedSec}s</span>
+        </div>
+        <div className="mt-3 h-2 overflow-hidden rounded-full bg-stone-100">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-[#002FA7] via-sky-500 to-violet-500 transition-[width] duration-500 ease-out"
+            style={{ width: `${Math.max(6, progress)}%` }}
+          />
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-4">
+          {(['analyze', 'generate', 'retry', 'postprocess'] as GenerationStageKey[]).map((stageKey) => {
+            const meta = GENERATION_STAGE_META[stageKey];
+            const isActive = generationStageKey === stageKey;
+            const isDone = progress >= meta.progress || generationStageKey === 'complete';
+            return (
+              <div
+                key={stageKey}
+                className={`rounded-2xl border px-3 py-2 text-left transition-all ${
+                  isActive
+                    ? 'border-[#002FA7]/30 bg-[#eef4ff] text-[#002FA7]'
+                    : isDone
+                      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                      : 'border-stone-200 bg-stone-50 text-stone-400'
+                }`}
+              >
+                <div className="text-[10px] font-black tracking-[0.18em] uppercase">{meta.icon}</div>
+                <div className="mt-1 text-[12px] font-semibold tracking-wide">{meta.label}</div>
+              </div>
+            );
+          })}
+        </div>
+        {generationMetrics.length > 0 ? (
+          <div className="mt-4 space-y-2 border-t border-stone-100 pt-3">
+            {generationMetrics.slice(-3).map((metric, index) => (
+              <div key={`${metric.label}-${index}`} className="flex items-center justify-between gap-4 text-[11px] text-stone-500">
+                <span className="truncate">
+                  {metric.status === 'fallback' ? '↻ ' : metric.status === 'failed' ? '! ' : '• '}
+                  {metric.label}
+                  {metric.detail ? ` · ${metric.detail}` : ''}
+                </span>
+                <span className="shrink-0 font-medium text-stone-700">{metric.durationMs}ms</span>
+              </div>
+            ))}
+          </div>
+        ) : null}
+        {generationTraceId ? (
+          <div className="mt-3 text-[10px] font-mono tracking-[0.16em] text-stone-400">
+            TRACE · {generationTraceId}
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 
@@ -5576,12 +5649,12 @@ const App: React.FC = () => {
                         目标投放平台
                       </label>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 p-1.5 bg-[#f5f5f7] rounded-xl">
-                        {([
+                        {[
                           { id: '通用电商', label: '🛒 通用电商', sub: 'General' },
                           { id: '亚马逊爆款', label: '📦 亚马逊', sub: 'Amazon' },
                           { id: '小红书种草', label: '📕 小红书', sub: 'XHS' },
                           { id: '抖音/TikTok', label: '🎵 抖音/TK', sub: 'TikTok' }
-                        ] as const).map(platform => (
+                        ].map(platform => (
                           <button 
                             key={platform.id} 
                             onClick={() => setTargetPlatform(platform.id)}
@@ -5701,14 +5774,14 @@ const App: React.FC = () => {
                   <div className="relative group cursor-pointer flex flex-col items-center">
                     <button
                       type="button"
-                      onClick={openDetailPageWorkbench}
+                      onClick={openDetailPageWizard}
                       disabled={isProcessing || sourceImages.length === 0 || !authReady}
                       className="relative z-10 flex items-center justify-center gap-2 w-[300px] py-4 bg-white border border-stone-200 hover:border-stone-300 text-stone-700 hover:text-stone-900 rounded-2xl font-medium text-lg transition-all duration-300 shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
                     >
-                      生成整套详情页
+                      参考图复刻详情页
                     </button>
                     <span className="mt-4 text-[13px] text-gray-400 font-mono tracking-widest">
-                      MVP · 8 SCREENS
+                      上传商品图 + 参考图
                     </span>
                   </div>
                 </div>              </div>
@@ -5777,6 +5850,25 @@ const App: React.FC = () => {
                       <div className="inline-flex max-w-full items-center gap-2 rounded-2xl border border-stone-200 bg-white/80 px-4 py-3 text-[13px] font-medium text-stone-600 shadow-sm">
                         <span className="text-stone-900">计费说明</span>
                         <span>{generationBillingSummary}</span>
+                      </div>
+                    ) : null}
+                    {generationMetrics.length > 0 ? (
+                      <div className="flex max-w-full flex-wrap items-center gap-2">
+                        {generationMetrics.slice(-4).map((metric, index) => (
+                          <span
+                            key={`${metric.label}-${index}`}
+                            className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white/70 px-3 py-1.5 text-[11px] font-medium text-stone-500 shadow-sm"
+                          >
+                            <span>{metric.status === 'fallback' ? '↻' : metric.status === 'failed' ? '!' : '•'}</span>
+                            <span>{metric.label}</span>
+                            <span className="font-mono text-stone-700">{metric.durationMs}ms</span>
+                          </span>
+                        ))}
+                        {generationTraceId ? (
+                          <span className="inline-flex items-center rounded-full border border-dashed border-stone-200 px-3 py-1.5 text-[10px] font-mono tracking-[0.14em] text-stone-400">
+                            {generationTraceId}
+                          </span>
+                        ) : null}
                       </div>
                     ) : null}
                   </div>
@@ -5879,34 +5971,64 @@ const App: React.FC = () => {
                           {aspectRatio}
                         </div>
                       </div>
-                      <div ref={resultRef} className="relative overflow-hidden rounded-[32px] shadow-2xl border-4 border-white" style={{ aspectRatio: currentAspectRatio }}>
-                        <img
-                          src={resultImages[0]}
-                          className="w-full h-full object-contain cursor-zoom-in"
-                          alt="Generated Result"
-                          onClick={() => openLightboxEditor({ url: resultImages[0], index: 0, label: '单图预览' })}
-                        />
-                        <button
-                          onClick={() => openLightboxEditor({ url: resultImages[0], index: 0, label: '单图预览' })}
-                          className="absolute top-4 right-4 z-20 w-9 h-9 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition-all"
-                        >
-                          <ZoomIn size={16} />
-                        </button>
-                        {renderLiveLogoOverlay()}
-                        {renderLiveImageLayerOverlay(0)}
-                        
-                        {renderLiveTextOverlay(false)}
-                      </div>
-                      <button 
-                        onClick={async () => {
-                          if (!resultImages[0]) return;
-                          const packed = await composeResultDownloadDataUrl(resultImages[0]);
-                          await triggerDownload(packed, buildDownloadFileName('单图高清'));
-                        }}
-                        className="w-full py-4 bg-[#002FA7] text-white rounded-2xl text-[12px] font-black uppercase tracking-widest hover:bg-[#002FA7]/90 transition-all active:scale-95 flex items-center justify-center gap-3 shadow-xl shadow-[#002FA7]/20">
-                        <Download size={18} /> 导出高清商业资产
-                      </button>
-                      {renderResultTextEditor()}
+                      {resultImages[0] ? (
+                        <>
+                          <div ref={resultRef} className="relative overflow-hidden rounded-[32px] shadow-2xl border-4 border-white" style={{ aspectRatio: currentAspectRatio }}>
+                            <img
+                              src={resultImages[0]}
+                              className="w-full h-full object-contain cursor-zoom-in"
+                              alt="Generated Result"
+                              onClick={() => openLightboxEditor({ url: resultImages[0], index: 0, label: '单图预览' })}
+                            />
+                            <button
+                              onClick={() => openLightboxEditor({ url: resultImages[0], index: 0, label: '单图预览' })}
+                              className="absolute top-4 right-4 z-20 w-9 h-9 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition-all"
+                            >
+                              <ZoomIn size={16} />
+                            </button>
+                            {renderLiveLogoOverlay()}
+                            {renderLiveImageLayerOverlay(0)}
+                            
+                            {renderLiveTextOverlay(false)}
+                          </div>
+                          <button 
+                            onClick={async () => {
+                              if (!resultImages[0]) return;
+                              const packed = await composeResultDownloadDataUrl(resultImages[0]);
+                              await triggerDownload(packed, buildDownloadFileName('单图高清'));
+                            }}
+                            className="w-full py-4 bg-[#002FA7] text-white rounded-2xl text-[12px] font-black uppercase tracking-widest hover:bg-[#002FA7]/90 transition-all active:scale-95 flex items-center justify-center gap-3 shadow-xl shadow-[#002FA7]/20">
+                            <Download size={18} /> 导出高清商业资产
+                          </button>
+                          {renderResultTextEditor()}
+                        </>
+                      ) : (
+                        <div className="rounded-[32px] border border-dashed border-rose-200 bg-rose-50/80 px-8 py-14 text-center shadow-inner">
+                          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-white text-2xl shadow-sm">
+                            !
+                          </div>
+                          <h3 className="mt-5 text-[22px] font-bold tracking-tight text-stone-900">
+                            本次单图暂未生成成功
+                          </h3>
+                          <p className="mx-auto mt-3 max-w-xl text-[14px] leading-7 text-stone-500">
+                            {generationBillingSummary || '模型高峰或网络波动导致当前单图未返回，本次未扣费。'}
+                          </p>
+                          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                            <button
+                              onClick={handleGenerate}
+                              className="inline-flex items-center justify-center rounded-2xl bg-[#1d1d1f] px-6 py-3 text-[13px] font-black tracking-[0.2em] text-white transition-all hover:bg-[#002FA7]"
+                            >
+                              重新生成
+                            </button>
+                            <button
+                              onClick={() => setStep('upload')}
+                              className="inline-flex items-center justify-center rounded-2xl border border-stone-200 px-6 py-3 text-[13px] font-bold text-stone-600 transition-all hover:border-stone-300 hover:text-stone-900"
+                            >
+                              返回调整素材
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -5940,23 +6062,55 @@ const App: React.FC = () => {
         onToast={(message) => setToastMessage(message)}
       />
 
+      <DetailPageWizard
+        open={isDetailWizardOpen}
+        sourceImageUrl={sourceImages[0] || null}
+        referenceImages={detailReferenceImages}
+        isUploadingReferences={isDetailUploadingReferences}
+        isPlanning={isDetailPlanning}
+        targetPlatform={targetPlatform}
+        sceneValue={promptScene}
+        toneValue={promptTone}
+        instructionValue={userPrompt}
+        onClose={() => setIsDetailWizardOpen(false)}
+        onAddReferenceImages={handleAddDetailReferenceImages}
+        onRemoveReferenceImage={handleRemoveDetailReferenceImage}
+        onTargetPlatformChange={setTargetPlatform}
+        onSceneChange={setPromptScene}
+        onToneChange={setPromptTone}
+        onInstructionChange={setUserPrompt}
+        onStart={handleStartDetailPageWizard}
+      />
+
+      <DetailPagePlanPreview
+        open={isDetailPlanPreviewOpen}
+        modules={detailPageModules}
+        batchProgress={detailBatchProgress}
+        isPlanning={isDetailPlanning}
+        isGeneratingAssets={isDetailGeneratingAssets}
+        referenceStyle={detailReferenceStyle}
+        referenceImages={detailReferenceImages}
+        onClose={() => setIsDetailPlanPreviewOpen(false)}
+        onBackToWizard={handleBackToDetailWizard}
+        onGenerateAssets={handleGenerateDetailPageAssets}
+        onOpenWorkbench={handleOpenWorkbenchFromPreview}
+      />
+
       <DetailPageWorkbench
         open={isDetailWorkbenchOpen}
         platform="universal"
         style="hybrid"
         pageCount={detailPageModules.length}
         modules={detailPageModules}
+        batchProgress={detailBatchProgress}
         activeModuleId={activeDetailModuleId}
-        isAnalyzingReferences={isDetailAnalyzingReferences}
         isPlanning={isDetailPlanning}
         isGeneratingAssets={isDetailGeneratingAssets}
         isUploadingReferences={isDetailUploadingReferences}
-        referenceAnalysis={detailReferenceAnalysis}
         referenceStyle={detailReferenceStyle}
         referenceImages={detailReferenceImages}
         onClose={() => setIsDetailWorkbenchOpen(false)}
         onSelectModule={setActiveDetailModuleId}
-        onAnalyzeReferences={handleAnalyzeDetailReferences}
         onPlanStructure={handlePlanDetailPageStructure}
         onGenerateAssets={handleGenerateDetailPageAssets}
         onRegenerateModule={generateSingleDetailModule}
