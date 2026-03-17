@@ -31,7 +31,6 @@ import {
   getAdminRefundAppealDetail,
   getAdminRefundAppealList,
   analyzeProduct,
-  createGenerationJob,
   consumeLatestAssetSnapshot,
   extractVisualDNA,
   getAdminGenerationReviewDetail,
@@ -79,6 +78,27 @@ const BARRAGE_TEXTS = [
   '影棚级光影 ✦',
   '极简操作 ✦',
   '商用级高画质 ✦',
+];
+
+const DIRECT_MATRIX_VARIANTS = [
+  {
+    label: '高转化主图',
+    lockLevel: 'strict' as const,
+    variationPrompt:
+      'Commercial product photography, studio lighting, high contrast, clean background, highly detailed, eye-catching. Keep the exact uploaded product identity, bottle shape, label layout, and packaging artwork unchanged. No camera angle change. Only optimize lighting, reflections, and peripheral splash details around the same product.',
+  },
+  {
+    label: '沉浸生活感',
+    lockLevel: 'balanced' as const,
+    variationPrompt:
+      'Lifestyle photography in a warm real-world environment, natural sunlight, cinematic lighting, depth of field, cozy atmosphere. Keep the exact uploaded product identity, bottle shape, label layout, and packaging artwork unchanged. Allow only a subtle perspective change of the same bottle and premium material polish such as clearer liquid, improved condensation, and refined highlights.',
+  },
+  {
+    label: '极简高级感',
+    lockLevel: 'editorial' as const,
+    variationPrompt:
+      'Minimalist high-end aesthetic, geometric background, premium art direction, controlled props, soft diffuse reflection, and refined material details. Keep the exact uploaded product identity and packaging design immediately recognizable. Allow a moderate camera angle shift and editorial scene design, but never replace or redesign the bottle, label system, or package artwork.',
+  },
 ];
 
 const HERO_GALLERY_IMAGES = [
@@ -3976,36 +3996,52 @@ const App: React.FC = () => {
     
     try {
       const sourceImageBase64 = sourceImages[0].split(',')[1];
-      const createdJob = await createGenerationJob({
-        userId: localUserId,
-        traceId,
-        mode: 'single',
-        sourceImageBase64,
-        styleImageBase64: styleReferenceImage ? styleReferenceImage.split(',')[1] : undefined,
+      setProgress(12);
+      const analysisStartedAt = typeof performance !== 'undefined' ? performance.now() : Date.now();
+      const currentAnalysis =
+        analysis || await analyzeProduct([sourceImageBase64], localUserId, traceId);
+      recordGenerationMetric('商品解析', analysisStartedAt, 'done', analysis ? '命中前端缓存' : '直连分析完成');
+      if (!analysis) {
+        setAnalysis(currentAnalysis);
+      }
+
+      setProgress(44);
+      setGenerationStageKey('generate');
+      setGenerationProgress('🎨 正在调用稳定生图主链...');
+      const generateStartedAt = typeof performance !== 'undefined' ? performance.now() : Date.now();
+      const aiResult = await generateScenarioImage(
+        [sourceImageBase64],
+        selectedScenario,
+        currentAnalysis,
         userPrompt,
         textConfig,
+        mode,
+        styleReferenceImage ? styleReferenceImage.split(',')[1] : undefined,
+        visualDNA,
+        undefined,
         aspectRatio,
         layout,
-        generationMode: mode,
+        undefined,
         targetPlatform,
-        scenario: selectedScenario,
-        visualDNA,
-        analysis,
-      });
-      applyGenerationJobSnapshot(createdJob);
-
-      const settledJob = await pollGenerationJobUntilSettled(createdJob.jobId);
-      const currentAnalysis = settledJob.result?.analysis || analysis || await analyzeProduct([sourceImageBase64], localUserId, traceId);
-
-      if (settledJob.status !== 'COMPLETED' || !settledJob.result?.images?.[0]) {
-        throw new Error(settledJob.errorMessage || settledJob.state?.generationBillingSummary || '本次单图暂未生成成功，未扣费。');
-      }
+        null,
+        false,
+        localUserId,
+        1,
+        true,
+        'strict',
+        'stable',
+        traceId,
+      );
+      recordGenerationMetric('主链生图', generateStartedAt, 'done', '直连 /api/gemini');
 
       let stageStartedAt = typeof performance !== 'undefined' ? performance.now() : Date.now();
       setGenerationProgress('🪄 云端生图已完成，正在前端精修输出...');
       setGenerationStageKey('postprocess');
 
-      const aiResultUrl = settledJob.result.images[0];
+      const aiResultUrl = Array.isArray(aiResult) ? aiResult[0] : aiResult;
+      if (!aiResultUrl) {
+        throw new Error('生图主链未返回有效图片，未扣费。');
+      }
       const textFreeConfig = { ...textConfig, title: '', detail: '' };
       let normalizedFinalUrl = aiResultUrl;
       try {
@@ -4030,7 +4066,7 @@ const App: React.FC = () => {
       }
 
       setResultImages([normalizedFinalUrl]);
-      setGenerationBillingSummary(settledJob.state?.generationBillingSummary || '本次成功生成 1 张，已扣 1 Token。');
+      setGenerationBillingSummary('本次成功生成 1 张，已扣 1 Token。');
       finishGenerationTrace('complete');
       resetTextGenCapability();
       if (!syncAssetsFromGemini()) {
@@ -4086,69 +4122,117 @@ const App: React.FC = () => {
 
     try {
       const sourceImageBase64 = sourceImages[0].split(',')[1];
-      const createdJob = await createGenerationJob({
-        userId: localUserId,
-        traceId,
-        mode: 'matrix',
-        sourceImageBase64,
-        styleImageBase64: styleReferenceImage ? styleReferenceImage.split(',')[1] : undefined,
-        userPrompt,
-        textConfig,
-        aspectRatio,
-        layout,
-        generationMode: mode,
-        targetPlatform,
-        scenario: selectedScenario,
-        visualDNA,
-        analysis,
-      });
-      applyGenerationJobSnapshot(createdJob);
+      const styleBase64 = styleReferenceImage ? styleReferenceImage.split(',')[1] : undefined;
+      const slotStates: Array<'idle' | 'queued' | 'loading' | 'success' | 'error'> = ['loading', 'queued', 'queued'];
+      const slotMessages = ['正在解析商品参数...', '等待上一张完成', '等待上一张完成'];
+      const normalizedImages = ['', '', ''];
+      let fulfilledCount = 0;
+      let failedCount = 0;
 
-      const settledJob = await pollGenerationJobUntilSettled(createdJob.jobId);
-      const currentAnalysis = settledJob.result?.analysis || analysis || await analyzeProduct([sourceImageBase64], localUserId, traceId);
-      const rawImages = settledJob.result?.images || ['', '', ''];
-      const fulfilledCount = rawImages.filter(Boolean).length;
-      const failedCount = Math.max(0, 3 - fulfilledCount);
-
-      if (fulfilledCount === 0) {
-        throw new Error(settledJob.errorMessage || settledJob.state?.generationBillingSummary || '营销矩阵 0/3 成功，未扣费。');
+      setProgress(10);
+      const analysisStartedAt = typeof performance !== 'undefined' ? performance.now() : Date.now();
+      const currentAnalysis =
+        analysis || await analyzeProduct([sourceImageBase64], localUserId, traceId);
+      recordGenerationMetric('商品解析', analysisStartedAt, 'done', analysis ? '命中前端缓存' : '直连分析完成');
+      if (!analysis) {
+        setAnalysis(currentAnalysis);
       }
 
       const currentRenderConfig = { ...textConfig, title: '', detail: '' };
-      setGenerationProgress('🪄 云端生图已完成，正在前端精修输出...');
-      setGenerationStageKey('postprocess');
+      setProgress(20);
+      setGenerationStageKey('generate');
+      setGenerationProgress('🚀 正在顺序渲染：高转化主图 / 沉浸场景 / 极简海报...');
+      setSuiteSlotStates([...slotStates]);
+      setSuiteSlotMessages([...slotMessages]);
 
-      for (let index = 0; index < rawImages.length; index++) {
-        const rawImage = rawImages[index];
-        if (!rawImage) continue;
-
-        let imageStageStartedAt = typeof performance !== 'undefined' ? performance.now() : Date.now();
-        let normalizedResult = rawImage;
-        try {
-          const finalResult = await processFinalImage(
-            rawImage,
-            sourceImages[0],
-            currentAnalysis,
-            mode,
-            currentRenderConfig,
-            safeLogoImage,
-            aspectRatio,
-            safeStickerConfig,
-            safeLogoConfig
-          );
-          normalizedResult = await enforceAspectRatio(finalResult, aspectRatio);
-          recordGenerationMetric(`第 ${index + 1} 张后处理`, imageStageStartedAt, 'done');
-        } catch (postProcessError) {
-          console.warn(`[handleGenerateSuite] slot ${index + 1} post-process fallback to raw ai image:`, postProcessError);
-          recordGenerationMetric(`第 ${index + 1} 张后处理`, imageStageStartedAt, 'fallback', '保留原始生成图');
-          setToastMessage(`第 ${index + 1} 张后处理波动，已保留原始生成图`);
+      for (let index = 0; index < DIRECT_MATRIX_VARIANTS.length; index++) {
+        const variant = DIRECT_MATRIX_VARIANTS[index];
+        const generateStartedAt = typeof performance !== 'undefined' ? performance.now() : Date.now();
+        slotStates[index] = 'loading';
+        slotMessages[index] = `正在生成${variant.label}...`;
+        if (index + 1 < DIRECT_MATRIX_VARIANTS.length && slotStates[index + 1] === 'queued') {
+          slotMessages[index + 1] = '等待上一张完成';
         }
+        setSuiteSlotStates([...slotStates]);
+        setSuiteSlotMessages([...slotMessages]);
+        setProgress(24 + index * 22);
+        setGenerationStageKey('generate');
+        setGenerationProgress(`🎨 正在生成第 ${index + 1}/3 张：${variant.label}`);
 
-        setResultImages((prev) => {
-          const next = prev.length === 3 ? [...prev] : ['', '', ''];
-          next[index] = normalizedResult;
-          return next;
-        });
+        try {
+          const aiResult = await generateScenarioImage(
+            [sourceImageBase64],
+            selectedScenario,
+            currentAnalysis,
+            userPrompt,
+            textConfig,
+            mode,
+            styleBase64,
+            visualDNA,
+            variant.variationPrompt,
+            aspectRatio,
+            layout,
+            undefined,
+            targetPlatform,
+            null,
+            false,
+            localUserId,
+            1,
+            true,
+            variant.lockLevel,
+            'stable',
+            `${traceId}_slot_${index + 1}`,
+          );
+          const rawImage = Array.isArray(aiResult) ? aiResult[0] : aiResult;
+          if (!rawImage) {
+            throw new Error('生图返回空图');
+          }
+          recordGenerationMetric(`第 ${index + 1} 张生图`, generateStartedAt, 'done', variant.label);
+
+          let normalizedResult = rawImage;
+          const imageStageStartedAt = typeof performance !== 'undefined' ? performance.now() : Date.now();
+          try {
+            setGenerationStageKey('postprocess');
+            setGenerationProgress(`🪄 正在精修第 ${index + 1}/3 张：${variant.label}`);
+            const finalResult = await processFinalImage(
+              rawImage,
+              sourceImages[0],
+              currentAnalysis,
+              mode,
+              currentRenderConfig,
+              safeLogoImage,
+              aspectRatio,
+              safeStickerConfig,
+              safeLogoConfig
+            );
+            normalizedResult = await enforceAspectRatio(finalResult, aspectRatio);
+            recordGenerationMetric(`第 ${index + 1} 张后处理`, imageStageStartedAt, 'done');
+          } catch (postProcessError) {
+            console.warn(`[handleGenerateSuite] slot ${index + 1} post-process fallback to raw ai image:`, postProcessError);
+            recordGenerationMetric(`第 ${index + 1} 张后处理`, imageStageStartedAt, 'fallback', '保留原始生成图');
+            setToastMessage(`第 ${index + 1} 张后处理波动，已保留原始生成图`);
+          }
+
+          normalizedImages[index] = normalizedResult;
+          fulfilledCount += 1;
+          slotStates[index] = 'success';
+          slotMessages[index] = '生成成功 · 已扣 1 Token';
+          setResultImages([...normalizedImages]);
+          setSuiteSlotStates([...slotStates]);
+          setSuiteSlotMessages([...slotMessages]);
+        } catch (error: any) {
+          const friendlyMessage = buildFriendlyImageFailureMessage(error, index);
+          failedCount += 1;
+          slotStates[index] = 'error';
+          slotMessages[index] = friendlyMessage;
+          recordGenerationMetric(`第 ${index + 1} 张生图`, generateStartedAt, 'failed', friendlyMessage);
+          setSuiteSlotStates([...slotStates]);
+          setSuiteSlotMessages([...slotMessages]);
+        }
+      }
+
+      if (fulfilledCount === 0) {
+        throw new Error('营销矩阵 0/3 成功，未扣费。');
       }
 
       resetTextGenCapability();
@@ -4158,10 +4242,9 @@ const App: React.FC = () => {
 
       flashButtonDone('genMatrix');
       setGenerationBillingSummary(
-        settledJob.state?.generationBillingSummary ||
-          (failedCount > 0
-            ? `营销矩阵成功 ${fulfilledCount}/3 张，已扣 ${fulfilledCount} Token；失败 ${failedCount} 张未扣费。`
-            : '营销矩阵 3 张全部成功，已扣 3 Token。')
+        failedCount > 0
+          ? `营销矩阵成功 ${fulfilledCount}/3 张，已扣 ${fulfilledCount} Token；失败 ${failedCount} 张未扣费。`
+          : '营销矩阵 3 张全部成功，已扣 3 Token。'
       );
       if (failedCount > 0) {
         setToastMessage(`营销矩阵已完成 ${fulfilledCount}/3 张，${failedCount} 张因超时或模型波动未成功返回。`);
