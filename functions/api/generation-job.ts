@@ -114,14 +114,14 @@ const CORS_HEADERS: Record<string, string> = {
 };
 
 const ANALYZE_MODEL_CHAIN = ['gemini-2.5-flash-lite', 'gemini-2.5-flash'];
-const IMAGE_MODEL_CHAIN_DEFAULT = ['gemini-3.1-flash-image-preview', 'gemini-2.5-flash-image'];
+const IMAGE_MODEL_CHAIN_DEFAULT = ['gemini-2.5-flash-image', 'gemini-3.1-flash-image-preview'];
 const IMAGE_MODEL_CHAIN_STABLE = ['gemini-2.5-flash-image', 'gemini-3.1-flash-image-preview'];
 
 const MATRIX_PROFILES = [
   {
     label: '高转化主图',
     lockLevel: 'strict' as const,
-    requestProfile: 'default' as const,
+    requestProfile: 'stable' as const,
     variationPrompt: 'Commercial product photography, studio lighting, high contrast, clean background, highly detailed, eye-catching. Keep the exact uploaded product identity, bottle shape, label layout, and packaging artwork unchanged. No camera angle change. Only optimize lighting, reflections, and peripheral splash details around the same product.',
   },
   {
@@ -653,8 +653,8 @@ async function requestImageWithFallback(
 ) {
   const modelChain = payload.requestProfile === 'stable' ? IMAGE_MODEL_CHAIN_STABLE : IMAGE_MODEL_CHAIN_DEFAULT;
   const timeoutByModel = payload.requestProfile === 'stable'
-    ? { 'gemini-2.5-flash-image': 85000, 'gemini-3.1-flash-image-preview': 32000 }
-    : { 'gemini-3.1-flash-image-preview': 30000, 'gemini-2.5-flash-image': 80000 };
+    ? { 'gemini-2.5-flash-image': 70000, 'gemini-3.1-flash-image-preview': 30000 }
+    : { 'gemini-2.5-flash-image': 65000, 'gemini-3.1-flash-image-preview': 28000 };
 
   const imagePayload = {
     userId: payload.userId,
@@ -756,7 +756,7 @@ async function processSingleJob(
     styleImageBase64: payload.styleImageBase64,
     prompt,
     aspectRatio: payload.aspectRatio,
-    requestProfile: 'default',
+    requestProfile: 'stable',
   });
 
   metrics.push({

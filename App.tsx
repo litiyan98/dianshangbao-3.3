@@ -550,7 +550,7 @@ const App: React.FC = () => {
   };
 
   const pollGenerationJobUntilSettled = async (jobId: string) => {
-    const maxPollCount = 120;
+    const maxPollCount = activeGenerateCount === 3 ? 360 : 180;
     for (let pollIndex = 0; pollIndex < maxPollCount; pollIndex++) {
       const snapshot = await getGenerationJob(jobId, localUserId);
       applyGenerationJobSnapshot(snapshot);
@@ -566,7 +566,7 @@ const App: React.FC = () => {
       await new Promise((resolve) => setTimeout(resolve, 1500));
     }
 
-    throw new Error('任务轮询超时，请稍后查看结果或重新发起');
+    throw new Error(activeGenerateCount === 3 ? '营销矩阵仍在云端处理中，请稍后刷新结果或重新发起' : '单图任务仍在云端处理中，请稍后刷新结果或重新发起');
   };
   
   // 支付相关状态
@@ -4172,6 +4172,7 @@ const App: React.FC = () => {
       finishGenerationTrace('complete');
     } catch (err: any) { 
       const errMessage = String(err?.message || '');
+      const friendlyMessage = buildFriendlyImageFailureMessage(err);
       pushGenerationFailureMetric('营销矩阵任务失败', buildFriendlyImageFailureMessage(err));
       if (errMessage.includes('INSUFFICIENT_QUOTA')) {
         openPaymentModalForAssetError('INSUFFICIENT_QUOTA');
@@ -4180,8 +4181,8 @@ const App: React.FC = () => {
         openPaymentModalForAssetError('VIP_EXPIRED');
         setStep('upload');
       } else {
-        setGenerationBillingSummary('营销矩阵 0/3 成功，未扣费。');
-        setToastMessage(buildFriendlyImageFailureMessage(err));
+        setGenerationBillingSummary(errMessage || friendlyMessage || '营销矩阵暂未生成成功，未扣费。');
+        setToastMessage(friendlyMessage);
       }
       finishGenerationTrace('error');
     } finally { 
