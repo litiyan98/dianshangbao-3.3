@@ -2,20 +2,62 @@ import {
   AspectRatio,
   CompositionLayout,
   DetailPageModulePlan,
-  DetailPageReferenceAnalysis,
   DetailPageModuleType,
   DetailPageReferenceStyle,
   FontStyle,
   GenerationMode,
   MarketAnalysis,
   ScenarioType,
-  TargetPlatform,
   TextConfig,
   VisualDNA,
 } from "../types";
-import { buildPlatformPolicyPrompt, buildPlatformPolicySummary } from "./platformPolicy";
+import { buildEnhancedPrompt } from "./generationPrompt";
 
 let latestAssetSnapshot: { image_quota?: number | null; vip_expire_date?: string | null } | null = null;
+const LOCAL_SERVICE_CACHE_PREFIX = 'visionEngineCache';
+const LOCAL_SERVICE_CACHE_MAX_AGE = {
+  analysis: 12 * 60 * 60 * 1000,
+  visual_dna: 7 * 24 * 60 * 60 * 1000,
+  detail_plan: 6 * 60 * 60 * 1000,
+} as const;
+const inMemoryServiceCache = new Map<string, { expiresAt: number; data: any }>();
+
+export interface GenerationJobMetric {
+  label: string;
+  durationMs: number;
+  status: 'done' | 'fallback' | 'failed';
+  detail?: string;
+}
+
+export interface GenerationJobState {
+  suiteSlotStates?: Array<'idle' | 'queued' | 'loading' | 'success' | 'error'>;
+  suiteSlotMessages?: string[];
+  generationBillingSummary?: string | null;
+}
+
+export interface GenerationJobResult {
+  analysis?: MarketAnalysis;
+  images?: string[];
+  image_quota?: number | null;
+  vip_expire_date?: string | null;
+  fulfilledCount?: number;
+  failedCount?: number;
+}
+
+export interface GenerationJobSnapshot {
+  success: boolean;
+  jobId: string;
+  traceId?: string | null;
+  mode?: 'single' | 'matrix';
+  status: 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'FAILED';
+  stage: 'queued' | 'analyze' | 'generate' | 'retry' | 'completed' | 'failed';
+  progress: number;
+  message: string;
+  metrics: GenerationJobMetric[];
+  state: GenerationJobState;
+  result: GenerationJobResult;
+  errorMessage?: string | null;
+}
 
 function emitAuthExpired(message: string) {
   if (typeof window === 'undefined') return;
@@ -37,6 +79,82 @@ export function consumeLatestAssetSnapshot() {
   const snapshot = latestAssetSnapshot;
   latestAssetSnapshot = null;
   return snapshot;
+}
+
+function createStableHash(input: string): string {
+  let hashA = 5381;
+  let hashB = 52711;
+  for (let index = 0; index < input.length; index++) {
+    const code = input.charCodeAt(index);
+    hashA = ((hashA << 5) + hashA) ^ code;
+    hashB = ((hashB << 5) + hashB) ^ (code + index);
+  }
+  return `${(hashA >>> 0).toString(36)}${(hashB >>> 0).toString(36)}`;
+}
+
+function buildLocalCacheKey(namespace: keyof typeof LOCAL_SERVICE_CACHE_MAX_AGE, identity: string) {
+  return `${LOCAL_SERVICE_CACHE_PREFIX}:${namespace}:${createStableHash(identity)}`;
+}
+
+function readLocalServiceCache<T>(cacheKey: string): T | null {
+  const memEntry = inMemoryServiceCache.get(cacheKey);
+  if (memEntry && memEntry.expiresAt > Date.now()) {
+    return memEntry.data as T;
+  }
+
+  if (typeof window === 'undefined') return null;
+
+  try {
+    const raw = window.localStorage.getItem(cacheKey);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { expiresAt?: number; data?: T };
+    if (!parsed?.expiresAt || parsed.expiresAt <= Date.now()) {
+      window.localStorage.removeItem(cacheKey);
+      inMemoryServiceCache.delete(cacheKey);
+      return null;
+    }
+    inMemoryServiceCache.set(cacheKey, { expiresAt: parsed.expiresAt, data: parsed.data });
+    return parsed.data ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function writeLocalServiceCache<T>(namespace: keyof typeof LOCAL_SERVICE_CACHE_MAX_AGE, cacheKey: string, data: T) {
+  const expiresAt = Date.now() + LOCAL_SERVICE_CACHE_MAX_AGE[namespace];
+  inMemoryServiceCache.set(cacheKey, { expiresAt, data });
+
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(cacheKey, JSON.stringify({ expiresAt, data }));
+  } catch {
+    // ignore quota overflow
+  }
+}
+
+export async function createGenerationJob(payload: {
+  userId: string;
+  traceId: string;
+  mode: 'single' | 'matrix';
+  sourceImageBase64: string;
+  styleImageBase64?: string;
+  userPrompt: string;
+  textConfig: TextConfig;
+  aspectRatio: AspectRatio;
+  layout: CompositionLayout;
+  generationMode: GenerationMode;
+  targetPlatform: string;
+  scenario: ScenarioType;
+  visualDNA?: VisualDNA | null;
+  analysis?: MarketAnalysis | null;
+}): Promise<GenerationJobSnapshot> {
+  return safeFetchJson(`/api/generation-job?t=${Date.now()}`, payload, 15000);
+}
+
+export async function getGenerationJob(jobId: string, userId: string): Promise<GenerationJobSnapshot> {
+  const data = await safeGetJson(`/api/generation-job?jobId=${encodeURIComponent(jobId)}&userId=${encodeURIComponent(userId)}&t=${Date.now()}`, 15000);
+  captureLatestAssetSnapshot(data?.result);
+  return data;
 }
 
 // ==========================================
@@ -63,37 +181,20 @@ function isImageModelUrl(url: string) {
   return /model=gemini-[^&]*flash-image/.test(url);
 }
 
-function shouldDebugGemini() {
-  if (typeof window === 'undefined') return false;
-  try {
-    return window.localStorage.getItem('gemini_debug') === '1';
-  } catch {
-    return false;
-  }
-}
-
 async function safeFetchJson(url: string, payload: any, timeoutMs: number = 30000) {
   const maxAutoRetries = 2;
   const isImageRequest = isImageModelUrl(url);
-  const debugEnabled = shouldDebugGemini();
+  const clientTraceId = typeof payload?.clientTraceId === 'string' ? payload.clientTraceId : '';
 
   for (let attempt = 0; attempt <= maxAutoRetries; attempt++) {
-    if (typeof navigator !== 'undefined' && 'onLine' in navigator && navigator.onLine === false) {
-      throw new Error('网络连接已中断，请恢复网络后再试。');
-    }
-
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
-      if (debugEnabled) {
-        console.warn(`[safeFetchJson] Request timeout for ${url} after ${timeoutMs}ms`);
-      }
+      console.warn(`[safeFetchJson] Request timeout for ${url} after ${timeoutMs}ms${clientTraceId ? ` · trace=${clientTraceId}` : ''}`);
       controller.abort();
     }, timeoutMs);
 
     try {
-      if (debugEnabled) {
-        console.log(`[safeFetchJson] Fetching ${url}...`);
-      }
+      console.log(`[safeFetchJson] Fetching ${url}${clientTraceId ? ` · trace=${clientTraceId}` : ''}...`);
       const token = localStorage.getItem('authing_token');
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (token && token !== "undefined" && token !== "null") headers['Authorization'] = `Bearer ${token}`;
@@ -139,9 +240,7 @@ async function safeFetchJson(url: string, payload: any, timeoutMs: number = 3000
         const shouldAutoRetryHere = !isImageRequest && (response.status === 429 || response.status === 503) && attempt < maxAutoRetries;
         if (shouldAutoRetryHere) {
           const retryDelayMs = getAutoRetryDelayMs(response.status, attempt, url);
-          if (debugEnabled) {
-            console.warn(`[safeFetchJson] ${response.status} detected, auto retry ${attempt + 1}/${maxAutoRetries} after ${retryDelayMs}ms`);
-          }
+          console.warn(`[safeFetchJson] ${response.status} detected, auto retry ${attempt + 1}/${maxAutoRetries} after ${retryDelayMs}ms${clientTraceId ? ` · trace=${clientTraceId}` : ''}`);
           await new Promise(resolve => setTimeout(resolve, retryDelayMs));
           continue;
         }
@@ -165,26 +264,59 @@ async function safeFetchJson(url: string, payload: any, timeoutMs: number = 3000
         captureLatestAssetSnapshot(parsed);
         return parsed;
       } catch (e) {
-        if (debugEnabled) {
-          console.error("[safeFetchJson] JSON Parse Error:", e, "Text:", text);
-        }
+        console.error("[safeFetchJson] JSON Parse Error:", e, "Text:", text);
         throw new Error("云端算力节点波动，数据流传输中断，请点击重试。");
       }
     } catch (error: any) {
       clearTimeout(timeoutId);
       if (error.name === 'AbortError') {
-        if (debugEnabled) {
-          console.error("[safeFetchJson] AbortError caught");
-        }
+        console.error(`[safeFetchJson] AbortError caught${clientTraceId ? ` · trace=${clientTraceId}` : ''}`);
         throw new Error("请求超时，云端算力响应过慢，请稍后重试。");
       }
-      if (debugEnabled) {
-        console.error("[safeFetchJson] Catch block error:", error);
-      }
+      console.error(`[safeFetchJson] Catch block error${clientTraceId ? ` · trace=${clientTraceId}` : ''}:`, error);
       throw new Error(error.message || "请求发送失败，请检查网络");
     }
   }
   throw new Error("当前 AI 算力拥挤，请稍后再试");
+}
+
+async function safeGetJson(url: string, timeoutMs: number = 15000) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const token = localStorage.getItem('authing_token');
+    const headers: Record<string, string> = {};
+    if (token && token !== "undefined" && token !== "null") headers['Authorization'] = `Bearer ${token}`;
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers,
+      signal: controller.signal,
+    });
+
+    const text = await response.text();
+    let data: any = {};
+    try {
+      data = text ? JSON.parse(text) : {};
+    } catch {
+      data = { raw: text };
+    }
+
+    if (!response.ok) {
+      const message = typeof data?.message === 'string' ? data.message : text || '请求失败';
+      throw new Error(message);
+    }
+
+    return data;
+  } catch (error: any) {
+    if (error?.name === 'AbortError') {
+      throw new Error('任务查询超时，请稍后重试');
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 const TEXT_MODEL_FALLBACK_CHAIN = [
@@ -364,10 +496,12 @@ async function fetchGeminiWithFallback(
           temporaryUnavailableModels.set(model, Date.now() + TEMP_MODEL_SKIP_MS_RATE_LIMIT_IMAGE);
         }
 
+        // 图像模型高峰拥堵：短时间跳过忙碌模型，给备用模型一个机会，避免 503 时直接判死整条链。
         if (isBusyImageModel) {
           temporaryUnavailableModels.set(model, Date.now() + TEMP_MODEL_SKIP_MS_BUSY_IMAGE);
         }
 
+        // 图像模型超时：中等时间跳过，避免持续卡死在同一模型。
         if (isTimeoutImageModel) {
           temporaryUnavailableModels.set(model, Date.now() + TEMP_MODEL_SKIP_MS_UNSTABLE_IMAGE);
         }
@@ -425,9 +559,7 @@ export async function generateMasterImagePrompt(
   currentText?: string,
   userId?: string,
   sceneSetting?: string,
-  toneSetting?: string,
-  targetPlatform: TargetPlatform = '通用电商',
-  scenario: ScenarioType = ScenarioType.STUDIO_WHITE
+  toneSetting?: string
 ): Promise<string> {
   if (!productBase64) {
     throw new Error("未获取到商品主体图，请先上传商品图。");
@@ -437,7 +569,6 @@ export async function generateMasterImagePrompt(
   const safeInput = userInput?.replace(/`/g, "'") || "";
   const safeScene = sceneSetting?.trim() || '未指定';
   const safeTone = toneSetting?.trim() || '未指定';
-  const platformPolicyPrompt = buildPlatformPolicyPrompt(targetPlatform, { scenario });
 
   const systemInstruction = `你是一个精通商业产品摄影、广告美术指导与电商场景设计的顶级 AI 提示词专家。
 【任务】：我会提供商品图、可选的风格参考图、用户已写好的导演指令、预选的场景设定与画面色调。请你融合这些信息，输出一段极致专业、纯中文、适合直接生图的提示词。
@@ -449,13 +580,9 @@ export async function generateMasterImagePrompt(
 4. 场景设定与画面色调是稳定约束：它们负责限定环境类型与整体色温倾向，除非与商品识别或用户明确指令冲突，否则必须体现在结果里。
 
 【当前控制条件】：
-- 目标平台：${targetPlatform}
 - 场景设定：${safeScene}
 - 画面色调：${safeTone}
 - 用户导演指令：${safeInput ? `【${safeInput}】` : '未填写'}
-
-【平台规则】：
-${platformPolicyPrompt}
 
 【生成目标】：
 1. 最终提示词必须少写商品、多写环境。商品描述只保留必要锚点，用一句话锁定主体即可。
@@ -566,6 +693,13 @@ export async function generateMasterMarketingCopy(base64Image: string, currentTe
 // 🧬 极致 DPE 0：竞品“视觉基因”提取 (Visual DNA)
 // ==========================================
 export async function extractVisualDNA(base64Image: string, userId?: string): Promise<VisualDNA | null> {
+  const cacheKey = buildLocalCacheKey('visual_dna', base64Image);
+  const cachedVisualDNA = readLocalServiceCache<VisualDNA | null>(cacheKey);
+  if (cachedVisualDNA) {
+    console.log("[extractVisualDNA] cache hit");
+    return cachedVisualDNA;
+  }
+
   const systemPrompt = `CRITICAL INSTRUCTION: You are an expert Colorist and Lighting Director. 
 TASK: Analyze this reference image and extract ONLY its abstract visual style. 
 ABSOLUTE RULE: DO NOT extract or mention any physical objects, props, specific shapes, or background items (e.g., ignore tables, windows, hands, specific products). 
@@ -605,6 +739,7 @@ OUTPUT FORMAT: Strict JSON only.
     const parsedData = JSON.parse(cleanJson);
     
     console.log("[extractVisualDNA] DNA Sequenced Successfully");
+    writeLocalServiceCache('visual_dna', cacheKey, parsedData);
     return parsedData as VisualDNA;
   } catch (error) {
     console.error("[extractVisualDNA] DNA Sequencing Failed:", error);
@@ -618,9 +753,26 @@ export async function generateDetailPagePlan(
   userInstruction: string,
   sceneSetting: string,
   toneSetting: string,
-  platform: TargetPlatform,
+  platform: string,
   userId?: string
 ): Promise<{ referenceStyle: DetailPageReferenceStyle | null; modules: DetailPageModulePlan[] }> {
+  const cacheKey = buildLocalCacheKey(
+    'detail_plan',
+    [
+      productBase64,
+      referenceBase64 || '',
+      userInstruction || '',
+      sceneSetting || '',
+      toneSetting || '',
+      platform || '',
+    ].join('|')
+  );
+  const cachedPlan = readLocalServiceCache<{ referenceStyle: DetailPageReferenceStyle | null; modules: DetailPageModulePlan[] }>(cacheKey);
+  if (cachedPlan) {
+    console.log("[generateDetailPagePlan] cache hit");
+    return cachedPlan;
+  }
+
   const productImage = {
     data: productBase64,
     mimeType: detectMimeType(productBase64),
@@ -646,7 +798,6 @@ hero, selling_points, scene, detail, benefit, spec, trust, cta
 
 【当前约束】
 - 平台类型：${platform}
-- 平台规则：${buildPlatformPolicySummary(platform, { isDetailPage: true })}
 - 场景设定：${sceneSetting}
 - 画面色调：${toneSetting}
 - 用户指令：${userInstruction || '未填写'}
@@ -721,238 +872,16 @@ JSON 结构必须是：
     const modules = Array.isArray(parsed.modules)
       ? parsed.modules.filter((item): item is DetailPageModulePlan => Boolean(item?.type))
       : [];
-    return {
+    const normalizedPlan = {
       referenceStyle: parsed.referenceStyle || null,
       modules,
     };
+    writeLocalServiceCache('detail_plan', cacheKey, normalizedPlan);
+    return normalizedPlan;
   } catch (error) {
     console.error("[generateDetailPagePlan] planning failed:", error);
     return {
       referenceStyle: null,
-      modules: [],
-    };
-  }
-}
-
-export async function generateDetailReferenceAnalysis(
-  productBase64: string,
-  referenceImages: Array<{ label: string; base64: string }>,
-  userInstruction: string,
-  sceneSetting: string,
-  toneSetting: string,
-  platform: TargetPlatform,
-  userId?: string
-): Promise<DetailPageReferenceAnalysis> {
-  const productImage = {
-    data: productBase64,
-    mimeType: detectMimeType(productBase64),
-  };
-
-  const parts: any[] = [
-    {
-      text: `你是“电商详情页参考图解析器”。
-【任务】
-现在不要直接生成详情页，也不要产出商品图文。你只负责把一组参考详情图拆解成“整套风格 token + 每张参考图更适合映射哪些模块”的结构化结果。
-
-【核心原则】
-1. 只学习版式、节奏、留白、文字密度、构图、色彩、光影与装饰语言。
-2. 严禁继承参考图里的商品、品牌、包装和原始文案。
-3. 输出结果要服务后续“固定 8 屏模板”的规划器，不能做自由排版。
-
-【固定模块】
-hero, selling_points, scene, detail, benefit, spec, trust, cta
-
-【当前约束】
-- 平台：${platform}
-- 平台规则：${buildPlatformPolicySummary(platform, { isDetailPage: true })}
-- 用户指令：${userInstruction || '未填写'}
-- 场景设定：${sceneSetting}
-- 画面色调：${toneSetting}
-
-【输出 JSON 结构】
-{
-  "workflowSummary": "...",
-  "adaptationStrategy": "...",
-  "referenceStyle": {
-    "pageStyle": "...",
-    "palette": ["...", "..."],
-    "typography": {
-      "headline": "...",
-      "body": "...",
-      "accent": "..."
-    },
-    "lightingStyle": "...",
-    "atmosphere": "...",
-    "layoutRhythm": "...",
-    "decorLanguage": "...",
-    "moduleSamples": [
-      {"type":"hero","layout":"...","emphasis":"...","density":"..."}
-    ]
-  },
-  "frames": [
-    {
-      "referenceIndex": 0,
-      "suggestedModules": ["hero", "scene"],
-      "layoutSignature": "...",
-      "headlineStyle": "...",
-      "copyDensity": "...",
-      "visualFocus": "...",
-      "mappingReason": "..."
-    }
-  ]
-}
-
-【硬性规则】
-- referenceIndex 从 0 开始，对应参考图上传顺序。
-- suggestedModules 只能从固定 8 屏里选。
-- frames 要覆盖每一张参考图。
-- workflowSummary 要说明为什么必须“先整组理解，再逐屏生成”。
-- 只输出 JSON，不要 markdown。`,
-    },
-    { text: '\n--- 图像 1：新商品主体（只用于锁定商品身份，不参与参考商品学习）---' },
-    { inlineData: productImage },
-  ];
-
-  referenceImages.forEach((item, index) => {
-    parts.push({ text: `\n--- 参考详情图 ${index + 1}：${item.label || `reference_${index + 1}`}（只学结构与风格）---` });
-    parts.push({
-      inlineData: {
-        data: item.base64,
-        mimeType: detectMimeType(item.base64),
-      },
-    });
-  });
-
-  const payload = {
-    userId,
-    contents: [{ parts }],
-    generationConfig: { responseMimeType: 'application/json' },
-  };
-
-  try {
-    const data = await fetchGeminiWithFallback(payload, TEXT_MODEL_FALLBACK_CHAIN, 35000, 1, '详情页参考图解析');
-    const rawText = collectGeminiText(data) || '{}';
-    const parsed = parseJsonPayload<DetailPageReferenceAnalysis>(rawText, {
-      workflowSummary: '',
-      adaptationStrategy: '',
-      referenceStyle: null,
-      frames: [],
-    });
-
-    return {
-      workflowSummary: String(parsed.workflowSummary || '').trim(),
-      adaptationStrategy: String(parsed.adaptationStrategy || '').trim(),
-      referenceStyle: parsed.referenceStyle || null,
-      frames: Array.isArray(parsed.frames)
-        ? parsed.frames
-            .filter((item): item is DetailPageReferenceAnalysis['frames'][number] => typeof item?.referenceIndex === 'number')
-            .map((item) => ({
-              referenceIndex: Number(item.referenceIndex || 0),
-              suggestedModules: Array.isArray(item.suggestedModules) ? item.suggestedModules.filter(Boolean) : [],
-              layoutSignature: String(item.layoutSignature || '').trim(),
-              headlineStyle: String(item.headlineStyle || '').trim(),
-              copyDensity: String(item.copyDensity || '').trim(),
-              visualFocus: String(item.visualFocus || '').trim(),
-              mappingReason: String(item.mappingReason || '').trim(),
-            }))
-        : [],
-    };
-  } catch (error) {
-    console.error('[generateDetailReferenceAnalysis] analysis failed:', error);
-    return {
-      workflowSummary: '',
-      adaptationStrategy: '',
-      referenceStyle: null,
-      frames: [],
-    };
-  }
-}
-
-export async function generateDetailPagePlanFromAnalysis(
-  productBase64: string,
-  referenceAnalysis: DetailPageReferenceAnalysis | null,
-  userInstruction: string,
-  sceneSetting: string,
-  toneSetting: string,
-  platform: TargetPlatform,
-  userId?: string
-): Promise<{ referenceStyle: DetailPageReferenceStyle | null; modules: DetailPageModulePlan[] }> {
-  const productImage = {
-    data: productBase64,
-    mimeType: detectMimeType(productBase64),
-  };
-
-  const analysisJson = JSON.stringify(referenceAnalysis || {}, null, 2);
-  const systemPrompt = `你是“电商详情页 8 屏规划引擎”。
-【任务】
-现在基于“商品图 + 已经完成的参考图解析结果”，输出固定 8 屏的详情页规划。你不是去重新理解参考图，而是消费已有的解析结果。
-
-【当前约束】
-- 平台：${platform}
-- 平台规则：${buildPlatformPolicySummary(platform, { isDetailPage: true })}
-- 场景设定：${sceneSetting}
-- 画面色调：${toneSetting}
-- 用户指令：${userInstruction || '未填写'}
-
-【参考解析结果】
-${analysisJson || '{}'}
-
-【输出要求】
-只输出 JSON，不要 markdown。
-结构必须是：
-{
-  "referenceStyle": {...},
-  "modules": [
-    {
-      "type": "hero",
-      "objective": "...",
-      "headlineDirection": "...",
-      "copyTask": "...",
-      "visualTask": "...",
-      "layoutPreset": "...",
-      "referenceHint": "...",
-      "sceneHint": "...",
-      "toneHint": "...",
-      "referenceIndex": 0
-    }
-  ]
-}
-
-【硬性规则】
-- modules 必须包含且只包含 8 个固定 type。
-- referenceIndex 优先引用参考解析里最匹配的样本，没有就给 null。
-- 规划要适配“先规划，再逐屏生成”的工作流。
-- hero / selling_points / scene 这三屏优先使用最能定义整套风格的参考样本。`;
-
-  const payload = {
-    userId,
-    contents: [
-      {
-        parts: [
-          { text: systemPrompt },
-          { text: '\n--- 新商品主体图（唯一商品锚点）---' },
-          { inlineData: productImage },
-        ],
-      },
-    ],
-    generationConfig: { responseMimeType: 'application/json' },
-  };
-
-  try {
-    const data = await fetchGeminiWithFallback(payload, TEXT_MODEL_FALLBACK_CHAIN, 30000, 1, '详情页规划');
-    const rawText = collectGeminiText(data) || '{}';
-    const parsed = parseJsonPayload<{ referenceStyle?: DetailPageReferenceStyle; modules?: DetailPageModulePlan[] }>(rawText, {});
-    const modules = Array.isArray(parsed.modules)
-      ? parsed.modules.filter((item): item is DetailPageModulePlan => Boolean(item?.type))
-      : [];
-    return {
-      referenceStyle: parsed.referenceStyle || referenceAnalysis?.referenceStyle || null,
-      modules,
-    };
-  } catch (error) {
-    console.error('[generateDetailPagePlanFromAnalysis] planning failed:', error);
-    return {
-      referenceStyle: referenceAnalysis?.referenceStyle || null,
       modules: [],
     };
   }
@@ -966,7 +895,7 @@ export async function generateDetailPageModuleCopy(
   userInstruction: string,
   sceneSetting: string,
   toneSetting: string,
-  platform: TargetPlatform,
+  platform: string,
   userId?: string
 ): Promise<{
   headline: string;
@@ -1063,7 +992,6 @@ export async function generateDetailPageModuleCopy(
 
 【当前约束】
 - 平台：${platform}
-- 平台规则：${buildPlatformPolicySummary(platform, { moduleType, isDetailPage: true })}
 - 场景：${sceneSetting}
 - 色调：${toneSetting}
 - 用户指令：${userInstruction || '未填写'}
@@ -1072,7 +1000,7 @@ export async function generateDetailPageModuleCopy(
 1. 只输出 JSON。
 2. headline 6-14 字；subheadline 10-24 字；body 32-90 字。
 3. sellingPoints 输出 3 到 4 条短句数组。
-4. generatedPrompt 必须是可直接给生图引擎使用的中文视觉指令，重点写画面结构、环境、光影、材质和商品位置，并显式满足当前平台规则。
+4. generatedPrompt 必须是可直接给生图引擎使用的中文视觉指令，重点写画面结构、环境、光影、材质和商品位置。
 5. styleNotes 与 toneNotes 用来给右侧编辑面板展示，写成简短可编辑的中文短语。
 6. 绝不借用参考图里的商品、品牌和原文案。
 
@@ -1319,7 +1247,7 @@ modern_sans, elegant_serif, bold_display, handwritten_script, tech_mono, playful
 // ==========================================
 // 📐 极致 DPE 2：物理光影引擎解析
 // ==========================================
-export async function analyzeProduct(base64Images: string[], userId?: string): Promise<MarketAnalysis> {
+export async function analyzeProduct(base64Images: string[], userId?: string, clientTraceId?: string): Promise<MarketAnalysis> {
   const fallbackAnalysis: MarketAnalysis = {
     perspective: "Eye-level",
     lightingDirection: "Top-Left",
@@ -1330,8 +1258,16 @@ export async function analyzeProduct(base64Images: string[], userId?: string): P
     }
   };
 
+  const cacheKey = buildLocalCacheKey('analysis', base64Images.join('|'));
+  const cachedAnalysis = readLocalServiceCache<MarketAnalysis>(cacheKey);
+  if (cachedAnalysis) {
+    console.log("[analyzeProduct] cache hit");
+    return cachedAnalysis;
+  }
+
   const payload = {
     userId,
+    clientTraceId,
     contents: [{
       parts: [
         ...base64Images.map(data => ({ inlineData: { data, mimeType: 'image/png' } })),
@@ -1343,7 +1279,7 @@ export async function analyzeProduct(base64Images: string[], userId?: string): P
 
   try {
     // 物理参数解析只作为辅助信息，不值得为它阻塞几十秒；
-    // 但高峰时单模型硬等也不稳，因此改成“首模 + 备模”的柔性窗口。
+    // 但高峰时 8s 又太激进，因此改成“首模 + 备模”的柔性窗口。
     const data = await fetchGeminiWithFallback(
       payload,
       ANALYZE_MODEL_FALLBACK_CHAIN.slice(0, 2),
@@ -1359,7 +1295,7 @@ export async function analyzeProduct(base64Images: string[], userId?: string): P
     const cleanJson = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
     const parsedData = JSON.parse(cleanJson);
 
-    return {
+    const normalizedAnalysis = {
       ...fallbackAnalysis,
       ...parsedData,
       perspective: parsedData?.perspective || fallbackAnalysis.perspective,
@@ -1369,6 +1305,8 @@ export async function analyzeProduct(base64Images: string[], userId?: string): P
         ...(parsedData?.physicalSpecs || {})
       }
     };
+    writeLocalServiceCache('analysis', cacheKey, normalizedAnalysis);
+    return normalizedAnalysis;
   } catch (e: any) {
     const message = String(e?.message || '');
     // 鉴权问题必须上抛，避免吞掉真实登录态异常
@@ -1384,121 +1322,6 @@ export async function analyzeProduct(base64Images: string[], userId?: string): P
 // ==========================================
 // 📸 极致 DPE 3：好莱坞级出图引擎与风格垫图
 // ==========================================
-// 1. 组装终极提示词（包含高级构图与比例适配指令）
-function buildEnhancedPrompt(
-  scenario: ScenarioType, 
-  analysis: MarketAnalysis, 
-  userIntent: string, 
-  textConfig: TextConfig, 
-  mode: GenerationMode, 
-  styleImageBase64?: string, 
-  visualDNA?: VisualDNA | null,
-  variationPrompt?: string, 
-  aspectRatio: AspectRatio = '1:1', 
-  layout: CompositionLayout = 'center',
-  redesignPrompt?: string,
-  targetPlatform: TargetPlatform = '通用电商',
-  productLockLevel: 'strict' | 'balanced' | 'editorial' = 'strict'
-): string {
-  let ratioDirective = "";
-  if (aspectRatio === '3:4' || aspectRatio === '9:16') {
-    ratioDirective = `[COMPOSITION: Vertical/Portrait orientation (${aspectRatio}). Frame the subject tall and elegant.]`;
-  } else if (aspectRatio === '16:9' || aspectRatio === '4:3') {
-    ratioDirective = `[COMPOSITION: Horizontal/Landscape orientation (${aspectRatio}). Wide cinematic framing.]`;
-  } else {
-    ratioDirective = `[COMPOSITION: Perfect square 1:1 framing. Center the subject.]`;
-  }
-
-  const AESTHETIC_BASE = `${ratioDirective}\n[GLOBAL AESTHETIC MASTER-CLASS] Award-winning commercial product photography, shot on Hasselblad H6D-100c or Sony A7R IV, 85mm f/1.8 lens. Raw unedited aesthetic, extreme macro texture detail, authentic physical lighting. No digitized CGI look, absolutely no text, no watermarks, flawless commercial packshot.`;
-
-  const platformDirective = `\n${buildPlatformPolicyPrompt(targetPlatform, { scenario })}`;
-
-  const cameraSpecs = "[CAMERA & RENDER] Hasselblad H6D-100c, 100mm Macro lens, f/8. 8k resolution, Octane Render, global illumination, Ray Tracing, ultra-detailed textures.";
-  
-  let vibe = "";
-  switch(scenario) {
-    case ScenarioType.STUDIO_WHITE: vibe = "[AMAZON/TMALL STANDARD] Pure white #FFFFFF seamless background. Studio softbox lighting. Extreme sharpness. High commercial viability, zero distracting elements."; break;
-    case ScenarioType.MINIMALIST_PREMIUM: vibe = "[JD LUXURY STYLE] Minimalist premium setting. Matte acrylic or textured plaster geometric pedestals. Low saturation neutral tones. Chiaroscuro lighting with elegant soft cast shadows."; break;
-    case ScenarioType.NATURAL_LIFESTYLE: vibe = "[XIAOHONGSHU/INS LIFESTYLE] Cozy highly realistic natural setting. Dappled morning sunlight (gobo lighting) filtering through window. Organic textures (linen, wood, stone). Warm, inviting, breathable."; break;
-    case ScenarioType.OUTDOOR_STREET: vibe = "[TAOBAO FASHION/OUTDOOR] Dynamic outdoor environment. Shallow depth of field with beautiful bokeh. Golden hour natural sunlight. Vibrant, energetic, high contrast."; break;
-    case ScenarioType.FESTIVAL_PROMO: vibe = "[TAOBAO DOUBLE 11 MEGA SALE] Festive promotional commercial vibe. Warm spotlighting, subtle celebratory out-of-focus background elements. High saturation, eye-catching, high click-through-rate style."; break;
-    case ScenarioType.SOCIAL_MEDIA_STORY: vibe = "[TIKTOK/XIAOHONGSHU VIRAL] Trendy, visually striking modern lifestyle context. Dynamic angles, pop of complementary colors. Highly shareable aesthetic."; break;
-  }
-
-  // 【核心升级：基于比例的专业构图法则】
-  let compositionRules = "";
-  switch(aspectRatio) {
-    case '1:1':
-      compositionRules = "\n[COMPOSITION - SQUARE] Balanced, symmetrical composition. The environment should feel contained and focused around the center.";
-      break;
-    case '3:4':
-    case '9:16':
-      compositionRules = "\n[COMPOSITION - VERTICAL/PORTRAIT] Emphasize verticality and height. Use leading lines that draw the eye upwards. The background should feel tall and spacious, allowing for breathing room above or below the subject.";
-      break;
-    case '16:9':
-    case '4:3':
-      compositionRules = "\n[COMPOSITION - HORIZONTAL/CINEMATIC] Expansive, wide-angle composition. Emphasize the breadth of the environment. Use horizontal leading lines. The background should feel panoramic and epic, providing context and scale.";
-      break;
-  }
-
-  let layoutDirective = "";
-  switch(layout) {
-    case 'center': layoutDirective = "\n[LAYOUT PLACEMENT] Subject placed perfectly in the center. Symmetrical balance."; break;
-    case 'left_space': layoutDirective = "\n[LAYOUT PLACEMENT - CRITICAL] Place the main subject clearly on the RIGHT side. The entire LEFT half MUST be clean negative space for copy."; break;
-    case 'right_space': layoutDirective = "\n[LAYOUT PLACEMENT - CRITICAL] Place the main subject clearly on the LEFT side. The entire RIGHT half MUST be clean negative space for copy."; break;
-    case 'top_space': layoutDirective = "\n[LAYOUT PLACEMENT - CRITICAL] Place the main subject at the BOTTOM. The entire TOP half MUST be clean negative space expanding upwards."; break;
-  }
-
-  const guardrails = mode === 'precision' 
-    ? `[PHYSICAL CONSTRAINTS - STRICT] Build an EMPTY background ready for a product.\n- Angle: ${analysis.physicalSpecs.cameraPerspective}\n- Light: ${analysis.physicalSpecs.lightingDirection}\n- Temp: ${analysis.physicalSpecs.colorTemperature}\nDO NOT RENDER THE MAIN PRODUCT.` 
-    : `[INTEGRATION] Integrate the product perfectly.`;
-
-  // [全新] 好莱坞级物理融合指令构建
-  let dnaDirective = "";
-  if (visualDNA) {
-    dnaDirective = `
-\n[STYLE TRANSFER OVERRIDE - CRITICAL]
-Apply the following visual style completely to the entire image:
-- Lighting & Shadows: ${visualDNA.lighting_style}
-- Color Grading: ${visualDNA.color_palette}
-- Overall Vibe: ${visualDNA.atmosphere}
-WARNING: Apply ONLY the lighting, color, and vibe. Do NOT introduce any new objects or props based on this style reference.
-`;
-  }
-
-  // [全新] 虚拟改款实验室：轮廓锁死与材质替换覆盖指令
-  let redesignDirective = "";
-  if (redesignPrompt) {
-    redesignDirective = `\n[VIRTUAL REDESIGN]: Change the material and surface texture of the masked object to strictly be: "${redesignPrompt}".`;
-  }
-
-  const styleDirective = (styleImageBase64 && !visualDNA) ? `[STYLE TRANSFER] Extract and replicate the exact color grading, lighting, and aesthetic DNA of the SECOND image.\n` : "";
-  const variationDirective = variationPrompt ? `\n[MANDATORY COMMERCIAL VARIATION] ${variationPrompt}\n` : "";
-  const productIdentityLock = (() => {
-    if (redesignPrompt) return "";
-
-    switch (productLockLevel) {
-      case 'balanced':
-        return `\n[ABSOLUTE PRODUCT ID LOCK - BALANCED] The uploaded product image remains the only canonical SKU reference. Preserve the exact same product identity, bottle silhouette, cap shape, overall proportions, label layout, branding placement, and packaging artwork. A subtle perspective shift of the SAME bottle is allowed, but do NOT redesign, relabel, simplify, or replace it with a similar beverage. You may only enhance material realism, condensation, reflections, refraction, and premium lighting around the same package.\n`;
-      case 'editorial':
-        return `\n[ABSOLUTE PRODUCT ID LOCK - EDITORIAL] The uploaded product image is still the canonical SKU. Keep the product immediately recognizable as the same bottle and the same packaging design, including cap form, bottle structure, label system, branding position, color blocking, and fruit/package artwork. A moderate camera angle shift and stronger art direction are allowed, but the product itself must remain the same SKU. Never substitute it with a different beverage, generic bottle, or redesigned package.\n`;
-      case 'strict':
-      default:
-        return `\n[ABSOLUTE PRODUCT ID LOCK - STRICT] Treat the uploaded product image as the only canonical SKU reference. You MUST keep the exact same product identity in the final image. Preserve the exact bottle silhouette, cap shape, neck and base proportions, label layout, branding position, packaging color blocking, and printed fruit/package artwork from the uploaded product. Do NOT redesign, substitute, simplify, or replace it with a similar beverage or a generic bottle. No camera angle change is allowed. Only change scene, lighting, reflections, and peripheral environment around the SAME product. Product label graphics that already exist on the uploaded package must remain consistent; the NO TEXT rule only forbids adding new scene text or watermarks.\n`;
-    }
-  })();
-
-  // 在最终拼接前，如果存在改款指令，将其提权到极高的优先级
-  let finalRedesignOverride = "";
-  if (redesignPrompt) {
-    finalRedesignOverride = `\n[ABSOLUTE PRIORITY OVERRIDE]: The user has commanded a VIRTUAL REDESIGN. You MUST preserve the exact original shape of the uploaded product but completely transform its surface material/color to: "${redesignPrompt}". This overrides any conflicting lighting or platform rules. Do NOT distort the product's physical structure.`;
-  }
-
-  // 将新的 compositionRules 加入到最终 Prompt 中
-  return `${AESTHETIC_BASE}${platformDirective}\nYou are a Top-tier Commercial E-commerce Photographer.\n${cameraSpecs}\n[SCENE VIBE] ${vibe}\n${compositionRules}${layoutDirective}\n${guardrails}${productIdentityLock}\n${dnaDirective}${redesignDirective}${finalRedesignOverride}${styleDirective}${variationDirective}[USER DIRECTIVE] ${userIntent}\n[SAFETY] NO TEXT. NO WATERMARKS. NO FLOATING OBJECTS. Keep the final image fully compliant with the platform policy above.`.trim();
-}
-
-// 2. 底层生图引擎（绝对纯净的 Payload 构建）
 export async function generateScenarioImage(
   base64Images: string[], 
   scenario: ScenarioType, 
@@ -1512,14 +1335,15 @@ export async function generateScenarioImage(
   aspectRatio: any = '1:1', 
   layout: any = 'center',
   redesignPrompt?: string,
-  targetPlatform: TargetPlatform = '通用电商',
+  targetPlatform: string = '通用电商',
   maskImageBase64?: string | null,
   isRedesignMode: boolean = false,
   userId?: string,
   count: 1 | 3 = 1,
   skipPromptExpansion: boolean = false,
   productLockLevel: 'strict' | 'balanced' | 'editorial' = 'strict',
-  imageRequestProfile: 'default' | 'stable' = 'default'
+  imageRequestProfile: 'default' | 'stable' = 'default',
+  clientTraceId?: string,
 ): Promise<string | string[]> {
   
   const finalPrompt = buildEnhancedPrompt(scenario, analysis, userIntent, textConfig, mode, styleImageBase64, visualDNA, variationPrompt, aspectRatio, layout, redesignPrompt, targetPlatform, productLockLevel);
@@ -1548,6 +1372,7 @@ export async function generateScenarioImage(
   const fullPayload = {
     userId,
     count,
+    clientTraceId,
     skipPromptExpansion,
     contents: [
       { parts: parts }
@@ -1566,19 +1391,19 @@ export async function generateScenarioImage(
 
   const timeoutByModel = imageRequestProfile === 'stable'
     ? {
-        "gemini-2.5-flash-image": 115000,
-        "gemini-3.1-flash-image-preview": 45000
+        "gemini-2.5-flash-image": 85000,
+        "gemini-3.1-flash-image-preview": 32000
       }
     : {
-        "gemini-3.1-flash-image-preview": 40000,
-        "gemini-2.5-flash-image": 90000
+        "gemini-3.1-flash-image-preview": 30000,
+        "gemini-2.5-flash-image": 80000
       };
 
-  // 📸 生图请求给更长超时，尽量减少前端先超时、服务端后成功的体感失败
+  // 📸 生图请求给予更宽容超时，失败自动回落下一个模型
   const data = await fetchGeminiWithFallback(
     fullPayload,
     imageModelChain,
-    90000,
+    80000,
     1,
     "生图引擎",
     timeoutByModel

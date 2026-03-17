@@ -2,16 +2,12 @@ import {
   CompositionLayout,
   DetailPageModule,
   DetailPageModuleAssets,
-  DetailPageReferenceAnalysis,
-  DetailPageReferenceFrameAnalysis,
   DetailPageModulePlan,
   DetailPageModuleType,
   DetailPageReferenceStyle,
   ScenarioType,
-  TargetPlatform,
   VisualDNA,
 } from '../types';
-import { buildPlatformPolicySummary } from './platformPolicy';
 
 const DETAIL_PAGE_BLUEPRINTS: Array<
   Omit<DetailPageModule, 'status' | 'plan' | 'assets'>
@@ -162,86 +158,6 @@ export function createFallbackDetailReferenceStyle(
   };
 }
 
-function buildFallbackFrameAnalysis(
-  referenceIndex: number,
-  suggestedModules: DetailPageModuleType[],
-  layoutSignature: string,
-  visualFocus: string,
-  copyDensity: string,
-  mappingReason: string
-): DetailPageReferenceFrameAnalysis {
-  return {
-    referenceIndex,
-    suggestedModules,
-    layoutSignature,
-    headlineStyle: '标题与主体分层明确',
-    copyDensity,
-    visualFocus,
-    mappingReason,
-  };
-}
-
-export function createFallbackDetailReferenceAnalysis(
-  referenceCount: number,
-  visualDNA: VisualDNA | null | undefined,
-  sceneSetting: string,
-  toneSetting: string
-): DetailPageReferenceAnalysis {
-  const normalizedCount = Math.max(1, referenceCount || 0);
-  const frameFallbacks: DetailPageReferenceFrameAnalysis[] = [];
-
-  for (let index = 0; index < normalizedCount; index += 1) {
-    if (index === 0) {
-      frameFallbacks.push(
-        buildFallbackFrameAnalysis(
-          index,
-          ['hero', 'scene'],
-          '大图强视觉 + 上下标题区',
-          '商品主体与氛围底图',
-          'low',
-          '首张参考优先承担封面和场景氛围，负责定义整套详情页的气质。'
-        )
-      );
-      continue;
-    }
-
-    if (index === 1) {
-      frameFallbacks.push(
-        buildFallbackFrameAnalysis(
-          index,
-          ['selling_points', 'detail'],
-          '模块分栏 + 细节拆解',
-          '卖点条列与局部细节',
-          'medium',
-          '第二张参考优先承担卖点解释和材质细节，适合中段拆解。'
-        )
-      );
-      continue;
-    }
-
-    frameFallbacks.push(
-      buildFallbackFrameAnalysis(
-        index,
-        ['benefit', 'spec', 'trust', 'cta'],
-        '信息条列 + 理性说明',
-        '参数、服务与收口信息',
-        'medium',
-        '后续参考图主要用来补足参数说明、信任建立和尾屏收口。'
-      )
-    );
-  }
-
-  return {
-    workflowSummary:
-      normalizedCount > 1
-        ? '已先整组理解参考详情图，再映射到固定 8 屏模板。后续每一屏都会优先参考最匹配的样本。'
-        : '已先解析参考图的结构与风格，再映射到固定 8 屏模板。',
-    adaptationStrategy: '整组参考先统一气质，再逐屏选择更匹配的参考样本，避免每屏风格漂移。',
-    referenceStyle: createFallbackDetailReferenceStyle(visualDNA, sceneSetting, toneSetting),
-    frames: frameFallbacks,
-  };
-}
-
 export function mergeDetailPagePlan(
   seedModules: DetailPageModule[],
   plannedModules: DetailPageModulePlan[]
@@ -253,34 +169,21 @@ export function mergeDetailPagePlan(
 
     return {
       ...module,
-        title: plan.objective || module.title,
-        copyGoal: plan.copyTask || module.copyGoal,
-        imageGoal: plan.visualTask || module.imageGoal,
-        layoutPreset: plan.layoutPreset || module.layoutPreset,
-        plan,
-        status: 'success',
-        assets: {
-          ...module.assets,
-        },
-      };
+      title: plan.objective || module.title,
+      copyGoal: plan.copyTask || module.copyGoal,
+      imageGoal: plan.visualTask || module.imageGoal,
+      layoutPreset: plan.layoutPreset || module.layoutPreset,
+      plan,
+      status: 'success',
+    };
   });
 }
 
 export function createFallbackDetailPagePlans(
   seedModules: DetailPageModule[],
   sceneSetting: string,
-  toneSetting: string,
-  referenceAnalysis?: DetailPageReferenceAnalysis | null
+  toneSetting: string
 ): DetailPageModulePlan[] {
-  const frameAssignments = new Map<DetailPageModuleType, number>();
-  referenceAnalysis?.frames.forEach((frame) => {
-    frame.suggestedModules.forEach((type) => {
-      if (!frameAssignments.has(type)) {
-        frameAssignments.set(type, frame.referenceIndex);
-      }
-    });
-  });
-
   return seedModules.map((module) => ({
     type: module.type,
     objective: module.title,
@@ -291,29 +194,7 @@ export function createFallbackDetailPagePlans(
     referenceHint: '沿用参考详情图的整体留白、标题层级与版式节奏',
     sceneHint: sceneSetting,
     toneHint: toneSetting,
-    referenceIndex: frameAssignments.get(module.type) ?? null,
   }));
-}
-
-export function assignDetailReferencesFromPlan(
-  modules: DetailPageModule[],
-  referenceImageIds: string[]
-): DetailPageModule[] {
-  return modules.map((module) => {
-    const rawIndex = module.plan?.referenceIndex;
-    const nextReferenceId =
-      typeof rawIndex === 'number' && Number.isFinite(rawIndex)
-        ? referenceImageIds[rawIndex] || module.assets.referenceImageId || null
-        : module.assets.referenceImageId || null;
-
-    return {
-      ...module,
-      assets: {
-        ...module.assets,
-        referenceImageId: nextReferenceId,
-      },
-    };
-  });
 }
 
 export function isDetailModuleSupported(type: DetailPageModuleType): boolean {
@@ -390,7 +271,7 @@ export function getDetailModuleLockLevel(type: DetailPageModuleType): 'strict' |
 
 export function buildDetailModuleImageIntent(
   module: DetailPageModule,
-  platform: TargetPlatform,
+  platform: string,
   sceneSetting: string,
   toneSetting: string,
   referenceStyle: DetailPageReferenceStyle | null
@@ -403,7 +284,6 @@ export function buildDetailModuleImageIntent(
   return [
     `这是电商详情页的第 ${module.order} 屏，模块类型为 ${module.name}。`,
     `目标平台：${platform}。`,
-    `平台规则：${buildPlatformPolicySummary(platform, { moduleType: module.type, isDetailPage: true })}`,
     `核心目标：${plan?.objective || module.title}。`,
     `视觉任务：${plan?.visualTask || module.imageGoal}。`,
     `版式建议：${plan?.layoutPreset || module.layoutPreset}。`,

@@ -194,6 +194,10 @@ export async function onRequestPost(context: { env: Env; request: Request }) {
   const { request, env } = context;
   const apiKey = env.API_KEY;
   const authingDomain = env.AUTHING_DOMAIN || 'YOUR_AUTHING_DOMAIN';
+  let logModel = '';
+  let logTraceId = '';
+  let logIsImageRequest = false;
+  let logStartedAt = Date.now();
 
   if (!apiKey) {
     return new Response(JSON.stringify({ error: 'AUTH_ERROR', message: '服务端 API_KEY 未配置' }), { status: 500 });
@@ -227,6 +231,7 @@ export async function onRequestPost(context: { env: Env; request: Request }) {
     const url = new URL(request.url);
     const model = url.searchParams.get('model');
     if (!model) return json({ error: 'INVALID_REQUEST', message: '缺少 model 参数' }, 400);
+    logModel = model;
 
     const payload = await request.json().catch(() => null);
     if (!payload || typeof payload !== 'object') {
@@ -234,8 +239,13 @@ export async function onRequestPost(context: { env: Env; request: Request }) {
     }
 
     const billingUserId = typeof payload.userId === 'string' ? payload.userId.trim() : '';
+    const clientTraceId = typeof payload.clientTraceId === 'string' ? payload.clientTraceId.trim() : '';
     const skipPromptExpansion = payload.skipPromptExpansion === true;
     const isImageRequest = model.includes('flash-image');
+    const requestStartedAt = Date.now();
+    logTraceId = clientTraceId;
+    logIsImageRequest = isImageRequest;
+    logStartedAt = requestStartedAt;
 
     if (!billingUserId) {
       return json({ error: 'UNAUTHORIZED', code: 401, message: '缺少 userId' }, 401);
@@ -284,8 +294,22 @@ export async function onRequestPost(context: { env: Env; request: Request }) {
       }
     }
 
-    // userId / count 仅用于后端鉴权，不转发给 Gemini
-    const { userId: _skipUserId, count: _skipCount, skipPromptExpansion: _skipPromptExpansion, imageRequestProfile: _skipImageRequestProfile, ...googlePayload } = payload as Record<string, any>;
+    console.info('[gemini-api] start', {
+      traceId: clientTraceId || null,
+      model,
+      isImageRequest,
+      billingUserId,
+    });
+
+    // userId / count / trace 仅用于后端鉴权与诊断，不转发给 Gemini
+    const {
+      userId: _skipUserId,
+      count: _skipCount,
+      skipPromptExpansion: _skipPromptExpansion,
+      imageRequestProfile: _skipImageRequestProfile,
+      clientTraceId: _skipClientTraceId,
+      ...googlePayload
+    } = payload as Record<string, any>;
 
     let modelData: any;
     const generatedImages: string[] = [];
@@ -380,6 +404,15 @@ export async function onRequestPost(context: { env: Env; request: Request }) {
     }
 
     if (modelData && typeof modelData === 'object' && !Array.isArray(modelData)) {
+      console.info('[gemini-api] success', {
+        traceId: clientTraceId || null,
+        model,
+        isImageRequest,
+        requestedCount,
+        generatedImageCount: generatedImages.length,
+        elapsedMs: Date.now() - requestStartedAt,
+        imageQuota: latestImageQuota,
+      });
       return json({
         ...modelData,
         images: generatedImages.length ? generatedImages : modelData.images,
@@ -388,6 +421,15 @@ export async function onRequestPost(context: { env: Env; request: Request }) {
       });
     }
 
+    console.info('[gemini-api] success', {
+      traceId: clientTraceId || null,
+      model,
+      isImageRequest,
+      requestedCount,
+      generatedImageCount: generatedImages.length,
+      elapsedMs: Date.now() - requestStartedAt,
+      imageQuota: latestImageQuota,
+    });
     return json({
       data: modelData,
       images: generatedImages,
@@ -396,6 +438,13 @@ export async function onRequestPost(context: { env: Env; request: Request }) {
     });
   } catch (error: any) {
     const message = typeof error?.message === 'string' ? error.message : String(error);
+    console.error('[gemini-api] failure', {
+      traceId: logTraceId || null,
+      model: logModel || null,
+      isImageRequest: logIsImageRequest,
+      elapsedMs: Date.now() - logStartedAt,
+      message,
+    });
     if (message.includes('INVALID_IMAGE_COUNT')) {
       return json({ error: 'INVALID_IMAGE_COUNT', message: 'count 参数仅支持 1 或 3' }, 400);
     }
