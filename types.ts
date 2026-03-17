@@ -60,6 +60,12 @@ export interface VisualDNA {
   atmosphere: string;
 }
 
+export type TargetPlatform =
+  | '通用电商'
+  | '亚马逊爆款'
+  | '小红书种草'
+  | '抖音/TikTok';
+
 export type DetailPagePlatform = 'universal';
 
 export type DetailPageStyle = 'hybrid';
