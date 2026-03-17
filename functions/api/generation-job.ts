@@ -220,6 +220,15 @@ async function getD1TablePresence(env: Env, tableName: 'GenerationJobs' | 'Gener
   return row?.name === tableName;
 }
 
+async function getD1TableColumns(
+  env: Env,
+  tableName: OptionalGenerationTable
+): Promise<Set<string>> {
+  const result = await env.DB.prepare(`PRAGMA table_info(${tableName})`).all();
+  const rows = Array.isArray(result?.results) ? result.results : [];
+  return new Set(rows.map((row: any) => String(row?.name || '')).filter(Boolean));
+}
+
 async function assertD1TableReady(env: Env, tableName: 'GenerationJobs' | 'GenerationCache') {
   try {
     if (await getD1TablePresence(env, tableName)) return;
@@ -244,56 +253,114 @@ async function ensureGenerationCacheTable(env: Env) {
 async function insertGenerationOutput(env: Env, record: GenerationOutputRecordInput) {
   if (!(await getD1TablePresence(env, 'GenerationOutputs'))) return null;
 
-  const outputId = createGenerationOutputId();
-  await env.DB
-    .prepare(`
-      INSERT INTO GenerationOutputs (
-        id, job_id, user_id, trace_id, slot_index, mode, model_name, status,
-        image_url, prompt_snapshot, error_message, charged_tokens
-      )
-      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)
-    `)
-    .bind(
-      outputId,
-      record.jobId,
-      record.userId,
-      record.traceId,
-      record.slotIndex,
-      record.mode,
-      record.modelName || null,
-      record.status,
-      record.imageUrl || null,
-      record.promptSnapshot || null,
-      record.errorMessage || null,
-      record.chargedTokens
-    )
-    .run();
+  try {
+    const outputId = createGenerationOutputId();
+    const columns = await getD1TableColumns(env, 'GenerationOutputs');
+    const insertColumns = ['id', 'job_id', 'user_id', 'status'];
+    const insertValues: Array<string | number | null> = [outputId, record.jobId, record.userId, record.status];
 
-  return outputId;
+    if (columns.has('trace_id')) {
+      insertColumns.push('trace_id');
+      insertValues.push(record.traceId);
+    }
+
+    if (columns.has('slot_index')) {
+      insertColumns.push('slot_index');
+      insertValues.push(record.slotIndex);
+    }
+
+    if (columns.has('mode')) {
+      insertColumns.push('mode');
+      insertValues.push(record.mode);
+    }
+
+    if (columns.has('model_name')) {
+      insertColumns.push('model_name');
+      insertValues.push(record.modelName || null);
+    }
+
+    if (columns.has('image_url')) {
+      insertColumns.push('image_url');
+      insertValues.push(record.imageUrl || null);
+    }
+
+    if (columns.has('thumbnail_url')) {
+      insertColumns.push('thumbnail_url');
+      insertValues.push(record.imageUrl || null);
+    }
+
+    if (columns.has('prompt_snapshot')) {
+      insertColumns.push('prompt_snapshot');
+      insertValues.push(record.promptSnapshot || null);
+    }
+
+    if (columns.has('error_message')) {
+      insertColumns.push('error_message');
+      insertValues.push(record.errorMessage || null);
+    }
+
+    if (columns.has('charged_tokens')) {
+      insertColumns.push('charged_tokens');
+      insertValues.push(record.chargedTokens);
+    }
+
+    const placeholders = insertColumns.map((_, index) => `?${index + 1}`).join(', ');
+    await env.DB
+      .prepare(`
+        INSERT INTO GenerationOutputs (${insertColumns.join(', ')})
+        VALUES (${placeholders})
+      `)
+      .bind(...insertValues)
+      .run();
+
+    return outputId;
+  } catch (error) {
+    console.warn('[generation-job] insertGenerationOutput skipped:', error instanceof Error ? error.message : String(error));
+    return null;
+  }
 }
 
 async function insertGenerationChargeLedger(env: Env, record: GenerationChargeLedgerRecordInput) {
   if (!(await getD1TablePresence(env, 'GenerationChargeLedger'))) return;
 
-  await env.DB
-    .prepare(`
-      INSERT INTO GenerationChargeLedger (
-        id, job_id, user_id, output_id, trace_id, slot_index, action_type, token_delta, reason
-      )
-      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
-    `)
-    .bind(
+  try {
+    const columns = await getD1TableColumns(env, 'GenerationChargeLedger');
+    const insertColumns = ['id', 'job_id', 'user_id', 'action_type', 'token_delta', 'reason'];
+    const insertValues: Array<string | number | null> = [
       createGenerationChargeLedgerId(),
       record.jobId,
       record.userId,
-      record.outputId || null,
-      record.traceId,
-      record.slotIndex,
       record.actionType,
       record.tokenDelta,
-      record.reason
-    )
-    .run();
+      record.reason,
+    ];
+
+    if (columns.has('output_id')) {
+      insertColumns.push('output_id');
+      insertValues.push(record.outputId || null);
+    }
+
+    if (columns.has('trace_id')) {
+      insertColumns.push('trace_id');
+      insertValues.push(record.traceId);
+    }
+
+    if (columns.has('slot_index')) {
+      insertColumns.push('slot_index');
+      insertValues.push(record.slotIndex);
+    }
+
+    const placeholders = insertColumns.map((_, index) => `?${index + 1}`).join(', ');
+    await env.DB
+      .prepare(`
+        INSERT INTO GenerationChargeLedger (${insertColumns.join(', ')})
+        VALUES (${placeholders})
+      `)
+      .bind(...insertValues)
+      .run();
+  } catch (error) {
+    console.warn('[generation-job] insertGenerationChargeLedger skipped:', error instanceof Error ? error.message : String(error));
+  }
 }
 
 function mapJobApiError(error: unknown, fallbackMessage: string) {
