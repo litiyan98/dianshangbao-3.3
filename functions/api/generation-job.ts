@@ -647,6 +647,9 @@ function isRetryableModelFailure(error: any) {
   const status = Number(error?.status || 0);
   return (
     [429, 500, 502, 503, 504].includes(status) ||
+    message.includes('image_empty') ||
+    message.includes('empty image') ||
+    message.includes('空图') ||
     message.includes('high demand') ||
     message.includes('unavailable') ||
     message.includes('timeout') ||
