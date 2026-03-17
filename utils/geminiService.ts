@@ -1,4 +1,11 @@
 import {
+  AdminRefundAppealActionType,
+  AdminRefundAppealDetail,
+  AdminRefundAppealListItem,
+  AdminGenerationIssueTag,
+  AdminGenerationReviewActionType,
+  AdminGenerationReviewDetail,
+  AdminGenerationReviewListItem,
   AspectRatio,
   CompositionLayout,
   DetailPageModulePlan,
@@ -7,6 +14,9 @@ import {
   FontStyle,
   GenerationMode,
   MarketAnalysis,
+  RefundAppealListResponse,
+  RefundAppealSourceType,
+  RefundAppealType,
   ScenarioType,
   TextConfig,
   VisualDNA,
@@ -155,6 +165,81 @@ export async function getGenerationJob(jobId: string, userId: string): Promise<G
   const data = await safeGetJson(`/api/generation-job?jobId=${encodeURIComponent(jobId)}&userId=${encodeURIComponent(userId)}&t=${Date.now()}`, 15000);
   captureLatestAssetSnapshot(data?.result);
   return data;
+}
+
+export async function getAdminGenerationReviewList(options?: {
+  limit?: number;
+  status?: string;
+  userId?: string;
+}): Promise<{ success: boolean; items: AdminGenerationReviewListItem[] }> {
+  const query = new URLSearchParams();
+  if (typeof options?.limit === 'number' && Number.isFinite(options.limit)) query.set('limit', String(options.limit));
+  if (options?.status) query.set('status', options.status);
+  if (options?.userId) query.set('userId', options.userId);
+  query.set('t', String(Date.now()));
+  return safeGetJson(`/api/admin/generation-review?${query.toString()}`, 15000);
+}
+
+export async function getAdminGenerationReviewDetail(jobId: string): Promise<{ success: boolean } & AdminGenerationReviewDetail> {
+  return safeGetJson(`/api/admin/generation-review?jobId=${encodeURIComponent(jobId)}&t=${Date.now()}`, 15000);
+}
+
+export async function submitAdminGenerationReviewAction(payload: {
+  actionType: AdminGenerationReviewActionType;
+  issueTag?: AdminGenerationIssueTag | null;
+  jobId: string;
+  outputId?: string | null;
+  userId: string;
+  tokenAmount?: number;
+  note?: string | null;
+}): Promise<{ success: boolean; message: string }> {
+  return safeFetchJson(`/api/admin/generation-review?t=${Date.now()}`, payload, 15000);
+}
+
+export async function getRefundAppeals(userId: string): Promise<RefundAppealListResponse> {
+  return safeGetJson(`/api/refund-appeals?userId=${encodeURIComponent(userId)}&t=${Date.now()}`, 15000);
+}
+
+export async function submitRefundAppeal(payload: {
+  userId: string;
+  appealType: RefundAppealType | string;
+  sourceType: RefundAppealSourceType | string;
+  sourceId?: string | null;
+  title: string;
+  description?: string;
+  requestedRefundTokens?: number;
+  requestedRefundAmount?: number;
+  evidence?: unknown;
+}): Promise<{ success: boolean; appealId: string; message: string; auto_check_result?: string | null }> {
+  return safeFetchJson(`/api/refund-appeals?t=${Date.now()}`, payload, 15000);
+}
+
+export async function getAdminRefundAppealList(options?: {
+  limit?: number;
+  status?: string;
+  userId?: string;
+  appealType?: string;
+}): Promise<{ success: boolean; items: AdminRefundAppealListItem[] }> {
+  const query = new URLSearchParams();
+  if (typeof options?.limit === 'number' && Number.isFinite(options.limit)) query.set('limit', String(options.limit));
+  if (options?.status) query.set('status', options.status);
+  if (options?.userId) query.set('userId', options.userId);
+  if (options?.appealType) query.set('appealType', options.appealType);
+  query.set('t', String(Date.now()));
+  return safeGetJson(`/api/admin/refund-appeals?${query.toString()}`, 15000);
+}
+
+export async function getAdminRefundAppealDetail(appealId: string): Promise<{ success: boolean } & AdminRefundAppealDetail> {
+  return safeGetJson(`/api/admin/refund-appeals?appealId=${encodeURIComponent(appealId)}&t=${Date.now()}`, 15000);
+}
+
+export async function submitAdminRefundAppealAction(payload: {
+  appealId: string;
+  actionType: AdminRefundAppealActionType;
+  refundTokens?: number;
+  note?: string | null;
+}): Promise<{ success: boolean; message: string; tokenAmount?: number }> {
+  return safeFetchJson(`/api/admin/refund-appeals?t=${Date.now()}`, payload, 15000);
 }
 
 // ==========================================

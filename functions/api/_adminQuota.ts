@@ -2,6 +2,12 @@ interface AdminQuotaEnv {
   DB: any;
 }
 
+type AdminAccessResult = {
+  isAdmin: boolean;
+  phone: string | null;
+  source: 'd1' | 'phone_whitelist' | null;
+};
+
 export const ADMIN_DAILY_TOKEN_QUOTA = 999;
 export const ADMIN_VIP_EXPIRE_AT = '2099-12-31T23:59:59.000Z';
 
@@ -10,6 +16,68 @@ const ADMIN_PHONES = new Set([
   '18963270965',
   '13375642444',
 ]);
+
+export function isAdminPhone(value: unknown): boolean {
+  const normalized = normalizePhone(value);
+  return Boolean(normalized && ADMIN_PHONES.has(normalized));
+}
+
+async function hasAdminAccountsTable(env: AdminQuotaEnv): Promise<boolean> {
+  const row = (await env.DB
+    .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'AdminAccounts'")
+    .first()) as { name?: string | null } | null;
+  return row?.name === 'AdminAccounts';
+}
+
+export async function resolveAdminAccess(
+  env: AdminQuotaEnv,
+  input: { userId?: string | null; phone?: string | null },
+): Promise<AdminAccessResult> {
+  const userId = String(input.userId || '').trim();
+  const normalizedPhone = normalizePhone(input.phone);
+
+  if (await hasAdminAccountsTable(env)) {
+    const matchers: string[] = [];
+    const values: string[] = [];
+
+    if (userId) {
+      matchers.push(`user_id = ?${values.length + 1}`);
+      values.push(userId);
+    }
+
+    if (normalizedPhone) {
+      matchers.push(`phone = ?${values.length + 1}`);
+      values.push(normalizedPhone);
+    }
+
+    if (matchers.length > 0) {
+      const row = (await env.DB
+        .prepare(`
+          SELECT user_id, phone
+          FROM AdminAccounts
+          WHERE status = 'ACTIVE'
+            AND (${matchers.join(' OR ')})
+          LIMIT 1
+        `)
+        .bind(...values)
+        .first()) as { user_id?: string | null; phone?: string | null } | null;
+
+      if (row) {
+        return {
+          isAdmin: true,
+          phone: normalizePhone(row.phone) || normalizedPhone || null,
+          source: 'd1',
+        };
+      }
+    }
+  }
+
+  if (normalizedPhone && ADMIN_PHONES.has(normalizedPhone)) {
+    return { isAdmin: true, phone: normalizedPhone, source: 'phone_whitelist' };
+  }
+
+  return { isAdmin: false, phone: null, source: null };
+}
 
 export function normalizePhone(value: unknown): string | null {
   if (typeof value !== 'string') return null;
@@ -101,8 +169,13 @@ export async function ensureAdminDailyQuota(
     .bind(userId)
     .first()) as AdminQuotaStateRow | null;
 
-  const resolvedPhone = normalizePhone(input.phone) || normalizePhone(currentState?.phone || null);
-  if (!resolvedPhone || !ADMIN_PHONES.has(resolvedPhone)) {
+  const resolvedAdmin = await resolveAdminAccess(env, {
+    userId,
+    phone: normalizePhone(input.phone) || normalizePhone(currentState?.phone || null),
+  });
+  const resolvedPhone = resolvedAdmin.phone;
+
+  if (!resolvedAdmin.isAdmin || !resolvedPhone) {
     return { isAdmin: false, phone: null, refreshed: false };
   }
 

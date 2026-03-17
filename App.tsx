@@ -2,7 +2,14 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   X, Plus, Download, Sparkles, Wand2, Palette, Zap, Loader2, Lightbulb, ZoomIn, Trash2
 } from 'lucide-react';
-import {
+import { 
+  AdminRefundAppealActionType,
+  AdminRefundAppealDetail,
+  AdminRefundAppealListItem,
+  AdminGenerationIssueTag,
+  AdminGenerationReviewActionType,
+  AdminGenerationReviewDetail,
+  AdminGenerationReviewListItem,
   AspectRatio,
   CompositionLayout,
   DetailPageBatchProgress,
@@ -21,16 +28,22 @@ import {
 } from './types';
 import { SCENARIO_CONFIGS, DEFAULT_STICKERS } from './constants';
 import {
+  getAdminRefundAppealDetail,
+  getAdminRefundAppealList,
   analyzeProduct,
   createGenerationJob,
   consumeLatestAssetSnapshot,
   extractVisualDNA,
+  getAdminGenerationReviewDetail,
+  getAdminGenerationReviewList,
   generateDetailPageModuleCopy,
   generateDetailPagePlan,
   getGenerationJob,
   generateMasterImagePrompt,
   generateMasterMarketingCopy,
   generateScenarioImage,
+  submitAdminRefundAppealAction,
+  submitAdminGenerationReviewAction,
 } from './utils/geminiService';
 import { processFinalImage, FONT_REGISTRY, exportImageWithText, preloadFont, compressImage, generateMask, loadImage } from './utils/imageComposite';
 import html2canvas from 'html2canvas';
@@ -47,6 +60,8 @@ import GloveIcon from './components/GloveIcon';
 import DetailPageWorkbench from './components/DetailPageWorkbench';
 import DetailPagePlanPreview from './components/DetailPagePlanPreview';
 import DetailPageWizard from './components/DetailPageWizard';
+import AdminGenerationReviewModal from './components/AdminGenerationReviewModal';
+import AdminRefundAppealModal from './components/AdminRefundAppealModal';
 import { exportDetailPageModuleImage, exportDetailPageSuiteImage } from './utils/detailPageExport';
 import {
   buildDetailModuleImageIntent,
@@ -367,6 +382,21 @@ const App: React.FC = () => {
   const [isCreditModalOpen, setIsCreditModalOpen] = useState(false);
   const [creditModalTab, setCreditModalTab] = useState<CreditTab>('invite');
   const [isAvatarMenuOpen, setIsAvatarMenuOpen] = useState(false);
+  const [isAdminUser, setIsAdminUser] = useState(false);
+  const [isAdminGenerationReviewOpen, setIsAdminGenerationReviewOpen] = useState(false);
+  const [adminGenerationReviewJobs, setAdminGenerationReviewJobs] = useState<AdminGenerationReviewListItem[]>([]);
+  const [adminGenerationReviewDetail, setAdminGenerationReviewDetail] = useState<AdminGenerationReviewDetail | null>(null);
+  const [selectedAdminGenerationJobId, setSelectedAdminGenerationJobId] = useState<string | null>(null);
+  const [isAdminGenerationReviewListLoading, setIsAdminGenerationReviewListLoading] = useState(false);
+  const [isAdminGenerationReviewDetailLoading, setIsAdminGenerationReviewDetailLoading] = useState(false);
+  const [isAdminGenerationReviewActionLoading, setIsAdminGenerationReviewActionLoading] = useState(false);
+  const [isAdminRefundAppealOpen, setIsAdminRefundAppealOpen] = useState(false);
+  const [adminRefundAppeals, setAdminRefundAppeals] = useState<AdminRefundAppealListItem[]>([]);
+  const [adminRefundAppealDetail, setAdminRefundAppealDetail] = useState<AdminRefundAppealDetail | null>(null);
+  const [selectedAdminRefundAppealId, setSelectedAdminRefundAppealId] = useState<string | null>(null);
+  const [isAdminRefundAppealListLoading, setIsAdminRefundAppealListLoading] = useState(false);
+  const [isAdminRefundAppealDetailLoading, setIsAdminRefundAppealDetailLoading] = useState(false);
+  const [isAdminRefundAppealActionLoading, setIsAdminRefundAppealActionLoading] = useState(false);
   const [isCreditsLoading, setIsCreditsLoading] = useState(false);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [authTokenReady, setAuthTokenReady] = useState(false);
@@ -2356,11 +2386,13 @@ const App: React.FC = () => {
       if (data?.admin_debug) {
         console.info('[admin-debug] /api/user', data.admin_debug);
       }
+      setIsAdminUser(Boolean(data?.admin_debug?.is_admin));
       setUserCredits(quota);
       setUserVipExpireDate(data?.vip_expire_date ? String(data.vip_expire_date) : null);
       setUserInviteCode(String(data?.invite_code || '').trim());
     } catch (error) {
       console.error('[credits] query failed:', error);
+      setIsAdminUser(false);
       setUserCredits(null);
       setUserVipExpireDate(null);
     } finally {
@@ -2372,6 +2404,144 @@ const App: React.FC = () => {
     if (!localUserId) return;
     void refreshUserCredits();
   }, [localUserId, userInfo, refreshUserCredits]);
+
+  const refreshAdminGenerationReviewJobs = useCallback(async (preferredJobId?: string | null) => {
+    if (!isAdminUser) return;
+    setIsAdminGenerationReviewListLoading(true);
+    try {
+      const data = await getAdminGenerationReviewList({ limit: 24 });
+      const items = Array.isArray(data?.items) ? data.items : [];
+      setAdminGenerationReviewJobs(items);
+      setSelectedAdminGenerationJobId((prev) => {
+        const candidate = preferredJobId || prev || items[0]?.id || null;
+        return candidate && items.some((item) => item.id === candidate) ? candidate : items[0]?.id || null;
+      });
+      if (!items.length) {
+        setAdminGenerationReviewDetail(null);
+      }
+    } catch (error: any) {
+      console.error('[admin-review] list failed:', error);
+      setToastMessage(error?.message || '审查列表加载失败');
+    } finally {
+      setIsAdminGenerationReviewListLoading(false);
+    }
+  }, [isAdminUser]);
+
+  const refreshAdminGenerationReviewDetail = useCallback(async (jobId: string) => {
+    if (!jobId || !isAdminUser) return;
+    setIsAdminGenerationReviewDetailLoading(true);
+    try {
+      const detail = await getAdminGenerationReviewDetail(jobId);
+      setAdminGenerationReviewDetail(detail);
+    } catch (error: any) {
+      console.error('[admin-review] detail failed:', error);
+      setToastMessage(error?.message || '审查详情加载失败');
+    } finally {
+      setIsAdminGenerationReviewDetailLoading(false);
+    }
+  }, [isAdminUser]);
+
+  const handleOpenAdminGenerationReview = useCallback(async () => {
+    setIsAvatarMenuOpen(false);
+    setIsAdminGenerationReviewOpen(true);
+    await refreshAdminGenerationReviewJobs(selectedAdminGenerationJobId);
+  }, [refreshAdminGenerationReviewJobs, selectedAdminGenerationJobId]);
+
+  const refreshAdminRefundAppeals = useCallback(async (preferredAppealId?: string | null) => {
+    if (!isAdminUser) return;
+    setIsAdminRefundAppealListLoading(true);
+    try {
+      const data = await getAdminRefundAppealList({ limit: 24 });
+      const items = Array.isArray(data?.items) ? data.items : [];
+      setAdminRefundAppeals(items);
+      setSelectedAdminRefundAppealId((prev) => {
+        const candidate = preferredAppealId || prev || items[0]?.id || null;
+        return candidate && items.some((item) => item.id === candidate) ? candidate : items[0]?.id || null;
+      });
+      if (!items.length) {
+        setAdminRefundAppealDetail(null);
+      }
+    } catch (error: any) {
+      console.error('[admin-appeal] list failed:', error);
+      setToastMessage(error?.message || '退款申诉列表加载失败');
+    } finally {
+      setIsAdminRefundAppealListLoading(false);
+    }
+  }, [isAdminUser]);
+
+  const refreshAdminRefundAppealDetail = useCallback(async (appealId: string) => {
+    if (!appealId || !isAdminUser) return;
+    setIsAdminRefundAppealDetailLoading(true);
+    try {
+      const detail = await getAdminRefundAppealDetail(appealId);
+      setAdminRefundAppealDetail(detail);
+    } catch (error: any) {
+      console.error('[admin-appeal] detail failed:', error);
+      setToastMessage(error?.message || '退款申诉详情加载失败');
+    } finally {
+      setIsAdminRefundAppealDetailLoading(false);
+    }
+  }, [isAdminUser]);
+
+  const handleOpenAdminRefundAppeals = useCallback(async () => {
+    setIsAvatarMenuOpen(false);
+    setIsAdminRefundAppealOpen(true);
+    await refreshAdminRefundAppeals(selectedAdminRefundAppealId);
+  }, [refreshAdminRefundAppeals, selectedAdminRefundAppealId]);
+
+  const handleSubmitAdminGenerationReviewAction = useCallback(async (payload: {
+    actionType: AdminGenerationReviewActionType;
+    issueTag?: AdminGenerationIssueTag | null;
+    jobId: string;
+    outputId?: string | null;
+    userId: string;
+    tokenAmount?: number;
+    note?: string | null;
+  }) => {
+    setIsAdminGenerationReviewActionLoading(true);
+    try {
+      const result = await submitAdminGenerationReviewAction(payload);
+      setToastMessage(result?.message || '处理动作已提交');
+      await refreshAdminGenerationReviewDetail(payload.jobId);
+      await refreshAdminGenerationReviewJobs(payload.jobId);
+    } catch (error: any) {
+      console.error('[admin-review] action failed:', error);
+      setToastMessage(error?.message || '处理动作提交失败');
+    } finally {
+      setIsAdminGenerationReviewActionLoading(false);
+    }
+  }, [refreshAdminGenerationReviewDetail, refreshAdminGenerationReviewJobs]);
+
+  const handleSubmitAdminRefundAppealAction = useCallback(async (payload: {
+    appealId: string;
+    actionType: AdminRefundAppealActionType;
+    refundTokens?: number;
+    note?: string | null;
+  }) => {
+    setIsAdminRefundAppealActionLoading(true);
+    try {
+      const result = await submitAdminRefundAppealAction(payload);
+      setToastMessage(result?.message || '申诉处理动作已提交');
+      await refreshAdminRefundAppealDetail(payload.appealId);
+      await refreshAdminRefundAppeals(payload.appealId);
+      await refreshUserCredits();
+    } catch (error: any) {
+      console.error('[admin-appeal] action failed:', error);
+      setToastMessage(error?.message || '申诉处理失败');
+    } finally {
+      setIsAdminRefundAppealActionLoading(false);
+    }
+  }, [refreshAdminRefundAppealDetail, refreshAdminRefundAppeals, refreshUserCredits]);
+
+  useEffect(() => {
+    if (!isAdminGenerationReviewOpen || !selectedAdminGenerationJobId) return;
+    void refreshAdminGenerationReviewDetail(selectedAdminGenerationJobId);
+  }, [isAdminGenerationReviewOpen, selectedAdminGenerationJobId, refreshAdminGenerationReviewDetail]);
+
+  useEffect(() => {
+    if (!isAdminRefundAppealOpen || !selectedAdminRefundAppealId) return;
+    void refreshAdminRefundAppealDetail(selectedAdminRefundAppealId);
+  }, [isAdminRefundAppealOpen, selectedAdminRefundAppealId, refreshAdminRefundAppealDetail]);
 
   const syncAssetsFromGemini = useCallback(() => {
     const latestAssets = consumeLatestAssetSnapshot();
@@ -4046,6 +4216,11 @@ const App: React.FC = () => {
     setIsCreditModalOpen(true);
   };
 
+  const handleOpenAppealCenter = () => {
+    setCreditModalTab('appeal');
+    setIsCreditModalOpen(true);
+  };
+
   const renderLiveTextOverlay = (compact: boolean = false) => {
     if (!textConfig.isEnabled || (!textConfig.title && !textConfig.detail)) return null;
 
@@ -5284,6 +5459,38 @@ const App: React.FC = () => {
                       type="button"
                       onClick={() => {
                         setIsAvatarMenuOpen(false);
+                        handleOpenAppealCenter();
+                      }}
+                      className="w-full text-left px-3.5 py-2 text-[12px] font-bold text-amber-700 hover:bg-amber-50 rounded-lg transition-colors"
+                    >
+                      退款与申诉
+                    </button>
+                    {isAdminUser ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            void handleOpenAdminGenerationReview();
+                          }}
+                          className="w-full text-left px-3.5 py-2 text-[12px] font-bold text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors"
+                        >
+                          生成审查台
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            void handleOpenAdminRefundAppeals();
+                          }}
+                          className="w-full text-left px-3.5 py-2 text-[12px] font-bold text-sky-700 hover:bg-sky-50 rounded-lg transition-colors"
+                        >
+                          退款申诉台
+                        </button>
+                      </>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAvatarMenuOpen(false);
                         setToastMessage('历史记录 / 账号设置 即将上线');
                       }}
                       className="w-full text-left px-3.5 py-2 text-[12px] font-medium text-stone-600 hover:bg-stone-50 rounded-lg transition-colors"
@@ -6060,6 +6267,44 @@ const App: React.FC = () => {
         onClose={closePaymentCheckout}
         onPaid={refreshUserCredits}
         onToast={(message) => setToastMessage(message)}
+      />
+
+      <AdminGenerationReviewModal
+        open={isAdminGenerationReviewOpen}
+        jobs={adminGenerationReviewJobs}
+        selectedJobId={selectedAdminGenerationJobId}
+        detail={adminGenerationReviewDetail}
+        isListLoading={isAdminGenerationReviewListLoading}
+        isDetailLoading={isAdminGenerationReviewDetailLoading}
+        isActionLoading={isAdminGenerationReviewActionLoading}
+        onClose={() => setIsAdminGenerationReviewOpen(false)}
+        onRefresh={() => {
+          void refreshAdminGenerationReviewJobs(selectedAdminGenerationJobId);
+          if (selectedAdminGenerationJobId) {
+            void refreshAdminGenerationReviewDetail(selectedAdminGenerationJobId);
+          }
+        }}
+        onSelectJob={setSelectedAdminGenerationJobId}
+        onSubmitAction={handleSubmitAdminGenerationReviewAction}
+      />
+
+      <AdminRefundAppealModal
+        open={isAdminRefundAppealOpen}
+        appeals={adminRefundAppeals}
+        selectedAppealId={selectedAdminRefundAppealId}
+        detail={adminRefundAppealDetail}
+        isListLoading={isAdminRefundAppealListLoading}
+        isDetailLoading={isAdminRefundAppealDetailLoading}
+        isActionLoading={isAdminRefundAppealActionLoading}
+        onClose={() => setIsAdminRefundAppealOpen(false)}
+        onRefresh={() => {
+          void refreshAdminRefundAppeals(selectedAdminRefundAppealId);
+          if (selectedAdminRefundAppealId) {
+            void refreshAdminRefundAppealDetail(selectedAdminRefundAppealId);
+          }
+        }}
+        onSelectAppeal={setSelectedAdminRefundAppealId}
+        onSubmitAction={handleSubmitAdminRefundAppealAction}
       />
 
       <DetailPageWizard

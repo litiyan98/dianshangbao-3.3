@@ -78,6 +78,33 @@ interface JobRow {
   updated_at?: string | null;
 }
 
+type OptionalGenerationTable = 'GenerationOutputs' | 'GenerationChargeLedger';
+
+interface GenerationOutputRecordInput {
+  jobId: string;
+  userId: string;
+  traceId: string;
+  slotIndex: number;
+  mode: JobMode;
+  status: 'COMPLETED' | 'FAILED';
+  imageUrl?: string | null;
+  promptSnapshot?: string | null;
+  modelName?: string | null;
+  errorMessage?: string | null;
+  chargedTokens: number;
+}
+
+interface GenerationChargeLedgerRecordInput {
+  jobId: string;
+  userId: string;
+  outputId?: string | null;
+  traceId: string;
+  slotIndex: number;
+  actionType: 'CHARGE' | 'REFUND' | 'COMPENSATE';
+  tokenDelta: number;
+  reason: string;
+}
+
 const CORS_HEADERS: Record<string, string> = {
   'Content-Type': 'application/json; charset=utf-8',
   'Cache-Control': 'no-store',
@@ -134,6 +161,14 @@ function createJobId() {
   return `job_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
+function createGenerationOutputId() {
+  return `gout_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function createGenerationChargeLedgerId() {
+  return `gchg_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
 function createStableHash(input: string): string {
   let hashA = 5381;
   let hashB = 52711;
@@ -176,43 +211,121 @@ function serializeJobRow(row: JobRow | null) {
   };
 }
 
+async function getD1TablePresence(env: Env, tableName: 'GenerationJobs' | 'GenerationCache' | OptionalGenerationTable) {
+  const row = (await env.DB
+    .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?1")
+    .bind(tableName)
+    .first()) as { name?: string | null } | null;
+
+  return row?.name === tableName;
+}
+
+async function assertD1TableReady(env: Env, tableName: 'GenerationJobs' | 'GenerationCache') {
+  try {
+    if (await getD1TablePresence(env, tableName)) return;
+    throw new Error(`D1_SCHEMA_MISSING:${tableName}`);
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith('D1_SCHEMA_MISSING:')) {
+      throw error;
+    }
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new Error(`D1_SCHEMA_CHECK_FAILED:${tableName}:${detail}`);
+  }
+}
+
 async function ensureGenerationJobsTable(env: Env) {
-  await env.DB.exec(`
-    CREATE TABLE IF NOT EXISTS GenerationJobs (
-      id TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL,
-      trace_id TEXT,
-      mode TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'QUEUED',
-      stage TEXT NOT NULL DEFAULT 'queued',
-      progress INTEGER NOT NULL DEFAULT 0,
-      message TEXT,
-      metrics_json TEXT,
-      state_json TEXT,
-      result_json TEXT,
-      error_message TEXT,
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      started_at TEXT,
-      completed_at TEXT,
-      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-    );
-    CREATE INDEX IF NOT EXISTS idx_generation_jobs_user_created ON GenerationJobs(user_id, created_at DESC);
-    CREATE INDEX IF NOT EXISTS idx_generation_jobs_status ON GenerationJobs(status, updated_at DESC);
-  `);
+  await assertD1TableReady(env, 'GenerationJobs');
 }
 
 async function ensureGenerationCacheTable(env: Env) {
-  await env.DB.exec(`
-    CREATE TABLE IF NOT EXISTS GenerationCache (
-      cache_key TEXT PRIMARY KEY,
-      kind TEXT NOT NULL,
-      value_json TEXT NOT NULL,
-      expires_at TEXT NOT NULL,
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-    );
-    CREATE INDEX IF NOT EXISTS idx_generation_cache_kind_expires ON GenerationCache(kind, expires_at);
-  `);
+  await assertD1TableReady(env, 'GenerationCache');
+}
+
+async function insertGenerationOutput(env: Env, record: GenerationOutputRecordInput) {
+  if (!(await getD1TablePresence(env, 'GenerationOutputs'))) return null;
+
+  const outputId = createGenerationOutputId();
+  await env.DB
+    .prepare(`
+      INSERT INTO GenerationOutputs (
+        id, job_id, user_id, trace_id, slot_index, mode, model_name, status,
+        image_url, prompt_snapshot, error_message, charged_tokens
+      )
+      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)
+    `)
+    .bind(
+      outputId,
+      record.jobId,
+      record.userId,
+      record.traceId,
+      record.slotIndex,
+      record.mode,
+      record.modelName || null,
+      record.status,
+      record.imageUrl || null,
+      record.promptSnapshot || null,
+      record.errorMessage || null,
+      record.chargedTokens
+    )
+    .run();
+
+  return outputId;
+}
+
+async function insertGenerationChargeLedger(env: Env, record: GenerationChargeLedgerRecordInput) {
+  if (!(await getD1TablePresence(env, 'GenerationChargeLedger'))) return;
+
+  await env.DB
+    .prepare(`
+      INSERT INTO GenerationChargeLedger (
+        id, job_id, user_id, output_id, trace_id, slot_index, action_type, token_delta, reason
+      )
+      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+    `)
+    .bind(
+      createGenerationChargeLedgerId(),
+      record.jobId,
+      record.userId,
+      record.outputId || null,
+      record.traceId,
+      record.slotIndex,
+      record.actionType,
+      record.tokenDelta,
+      record.reason
+    )
+    .run();
+}
+
+function mapJobApiError(error: unknown, fallbackMessage: string) {
+  const raw = String(error instanceof Error ? error.message : error || fallbackMessage);
+
+  if (raw === 'UNAUTHORIZED') {
+    return { status: 401, error: raw, message: raw };
+  }
+
+  if (raw === 'FORBIDDEN') {
+    return { status: 403, error: raw, message: raw };
+  }
+
+  if (raw.startsWith('D1_SCHEMA_MISSING:')) {
+    const tableName = raw.split(':')[1] || 'UNKNOWN_TABLE';
+    return {
+      status: 500,
+      error: raw,
+      message: `数据库缺少 ${tableName} 表，请先执行 D1 初始化 SQL。`,
+    };
+  }
+
+  if (raw.startsWith('D1_SCHEMA_CHECK_FAILED:')) {
+    const [, tableName = 'UNKNOWN_TABLE', detail = 'unknown'] = raw.split(':');
+    return {
+      status: 500,
+      error: raw,
+      message: `数据库表检查失败（${tableName}）：${detail}`,
+    };
+  }
+
+  return { status: 500, error: raw, message: fallbackMessage };
 }
 
 async function fetchJob(env: Env, jobId: string, userId: string): Promise<JobRow | null> {
@@ -653,6 +766,30 @@ async function processSingleJob(
     detail: generated.model,
   });
 
+  const outputId = await insertGenerationOutput(env, {
+    jobId,
+    userId: payload.userId,
+    traceId: payload.traceId,
+    slotIndex: 0,
+    mode: payload.mode,
+    status: 'COMPLETED',
+    imageUrl: generated.image,
+    promptSnapshot: prompt,
+    modelName: generated.model,
+    chargedTokens: 1,
+  });
+
+  await insertGenerationChargeLedger(env, {
+    jobId,
+    userId: payload.userId,
+    outputId,
+    traceId: payload.traceId,
+    slotIndex: 0,
+    actionType: 'CHARGE',
+    tokenDelta: 1,
+    reason: '单图生成成功，扣除 1 Token',
+  });
+
   await updateJob(env, jobId, {
     status: 'COMPLETED',
     stage: 'completed',
@@ -749,9 +886,10 @@ async function processMatrixJob(
 
     const startedAt = Date.now();
     try {
+      const slotTraceId = `${payload.traceId}_slot_${index + 1}`;
       const generated = await requestImageWithFallback(request, authHeader, {
         userId: payload.userId,
-        traceId: `${payload.traceId}_slot_${index + 1}`,
+        traceId: slotTraceId,
         sourceImageBase64: payload.sourceImageBase64,
         styleImageBase64: payload.styleImageBase64,
         prompt,
@@ -775,6 +913,31 @@ async function processMatrixJob(
         status: generated.model === (profile.requestProfile === 'stable' ? IMAGE_MODEL_CHAIN_STABLE[0] : IMAGE_MODEL_CHAIN_DEFAULT[0]) ? 'done' : 'fallback',
         detail: generated.model,
       });
+
+      const outputId = await insertGenerationOutput(env, {
+        jobId,
+        userId: payload.userId,
+        traceId: slotTraceId,
+        slotIndex: index,
+        mode: payload.mode,
+        status: 'COMPLETED',
+        imageUrl: generated.image,
+        promptSnapshot: prompt,
+        modelName: generated.model,
+        chargedTokens: 1,
+      });
+
+      await insertGenerationChargeLedger(env, {
+        jobId,
+        userId: payload.userId,
+        outputId,
+        traceId: slotTraceId,
+        slotIndex: index,
+        actionType: 'CHARGE',
+        tokenDelta: 1,
+        reason: `营销矩阵第 ${index + 1} 张生成成功，扣除 1 Token`,
+      });
+
       await updateJob(env, jobId, {
         progress: 30 + (index + 1) * 20,
         message: `营销矩阵顺序渲染中：已完成 ${(result.fulfilledCount || 0)}/${MATRIX_PROFILES.length}`,
@@ -796,6 +959,19 @@ async function processMatrixJob(
         status: 'failed',
         detail: state.suiteSlotMessages![index],
       });
+
+      await insertGenerationOutput(env, {
+        jobId,
+        userId: payload.userId,
+        traceId: `${payload.traceId}_slot_${index + 1}`,
+        slotIndex: index,
+        mode: payload.mode,
+        status: 'FAILED',
+        promptSnapshot: prompt,
+        errorMessage: state.suiteSlotMessages![index],
+        chargedTokens: 0,
+      });
+
       await updateJob(env, jobId, {
         stage: 'retry',
         progress: 30 + index * 20,
@@ -921,9 +1097,8 @@ export async function onRequestPost(context: { env: Env; request: Request; waitU
       message: '任务已创建，正在排队...',
     });
   } catch (error: any) {
-    const message = String(error?.message || '任务创建失败');
-    const status = message === 'UNAUTHORIZED' ? 401 : message === 'FORBIDDEN' ? 403 : 500;
-    return json({ success: false, error: message, message: status === 500 ? '任务创建失败，请稍后重试' : message }, status);
+    const failure = mapJobApiError(error, '任务创建失败，请稍后重试');
+    return json({ success: false, error: failure.error, message: failure.message }, failure.status);
   }
 }
 
@@ -949,8 +1124,7 @@ export async function onRequestGet(context: { env: Env; request: Request }) {
 
     return json(serializeJobRow(row), 200);
   } catch (error: any) {
-    const message = String(error?.message || '任务查询失败');
-    const status = message === 'UNAUTHORIZED' ? 401 : message === 'FORBIDDEN' ? 403 : 500;
-    return json({ success: false, error: message, message: status === 500 ? '任务查询失败，请稍后重试' : message }, status);
+    const failure = mapJobApiError(error, '任务查询失败，请稍后重试');
+    return json({ success: false, error: failure.error, message: failure.message }, failure.status);
   }
 }
