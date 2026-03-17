@@ -131,9 +131,10 @@ const DetailPageWorkbench: React.FC<DetailPageWorkbenchProps> = ({
   const lastFailedModule = modules.find((module) => module.id === batchProgress.lastFailedModuleId) || null;
 
   return (
-    <div className="fixed inset-0 z-[270] flex items-center justify-center p-4 md:p-6">
+    <div className="fixed inset-0 z-[270] overflow-y-auto p-4 md:p-6">
       <div className="absolute inset-0 bg-stone-950/55 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-[1440px] bg-white rounded-[2rem] border border-stone-200 shadow-[0_24px_80px_rgba(15,23,42,0.14)] overflow-hidden">
+      <div className="relative flex min-h-full items-start justify-center md:items-center">
+      <div className="relative my-4 flex w-full max-w-[1320px] max-h-[calc(100dvh-2rem)] flex-col overflow-hidden rounded-[2rem] border border-stone-200 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.14)] md:my-0 md:max-h-[calc(100dvh-3rem)]">
         <button
           type="button"
           onClick={onClose}
@@ -142,19 +143,19 @@ const DetailPageWorkbench: React.FC<DetailPageWorkbenchProps> = ({
           <X size={16} />
         </button>
 
-        <div className="px-6 md:px-8 py-6 border-b border-stone-100">
+        <div className="shrink-0 px-5 md:px-7 py-5 border-b border-stone-100">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 pr-12">
             <div>
               <div className="inline-flex items-center gap-2 rounded-full bg-stone-100 px-3 py-1 text-[11px] font-bold tracking-[0.18em] uppercase text-stone-500">
                 <LayoutTemplate size={12} />
                 Detail Page Engine
               </div>
-              <h2 className="mt-4 text-2xl md:text-3xl font-black text-[#1d1d1f] tracking-tight">8 屏详情页编辑台</h2>
+              <h2 className="mt-4 text-[24px] md:text-[28px] font-black text-[#1d1d1f] tracking-tight">8 屏详情页编辑台</h2>
               <p className="mt-2 text-[14px] md:text-[15px] text-stone-500 font-medium max-w-3xl">
                 这里会先展示 8 屏结构，再逐屏出图。你可以边看边改，不需要一次理解所有配置。
               </p>
             </div>
-            <div className="grid grid-cols-4 gap-3 md:min-w-[420px]">
+            <div className="grid grid-cols-2 gap-2 md:min-w-[340px] lg:grid-cols-4">
               <div className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3">
                 <p className="text-[11px] font-bold tracking-[0.14em] uppercase text-stone-400">平台</p>
                 <p className="mt-2 text-[15px] font-black text-stone-900">{platform === 'universal' ? '通用混合版' : platform}</p>
@@ -175,8 +176,8 @@ const DetailPageWorkbench: React.FC<DetailPageWorkbenchProps> = ({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-[280px_minmax(0,1fr)_380px] min-h-[780px]">
-          <aside className="border-r border-stone-100 bg-stone-50/70 px-5 py-6">
+        <div className="grid flex-1 min-h-0 grid-cols-1 xl:grid-cols-[228px_minmax(0,1fr)_320px] overflow-hidden">
+          <aside className="border-r border-stone-100 bg-stone-50/70 px-5 py-6 overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <p className="text-[11px] font-bold tracking-[0.16em] uppercase text-stone-400">页面结构</p>
@@ -251,7 +252,7 @@ const DetailPageWorkbench: React.FC<DetailPageWorkbenchProps> = ({
             </div>
           </aside>
 
-          <main className="px-6 md:px-8 py-6 bg-white">
+          <main className="min-h-0 overflow-y-auto px-6 md:px-8 py-6 bg-white">
             {activeModule ? (
               <div className="h-full flex flex-col">
                 {(currentGeneratingModule || lastCompletedModule || lastFailedModule) ? (
@@ -492,7 +493,7 @@ const DetailPageWorkbench: React.FC<DetailPageWorkbenchProps> = ({
             ) : null}
           </main>
 
-          <aside className="border-l border-stone-100 bg-stone-50/60 px-5 py-6 overflow-y-auto max-h-[780px]">
+          <aside className="min-h-0 overflow-y-auto border-l border-stone-100 bg-stone-50/60 px-5 py-6">
             {activeModule ? (
               <>
                 <div className="rounded-[1.75rem] border border-stone-200 bg-white px-5 py-5 shadow-sm">
@@ -753,6 +754,7 @@ const DetailPageWorkbench: React.FC<DetailPageWorkbenchProps> = ({
             ) : null}
           </aside>
         </div>
+      </div>
       </div>
     </div>
   );

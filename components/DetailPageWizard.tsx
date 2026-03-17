@@ -60,6 +60,25 @@ const DETAIL_PAGE_USE_CASES = [
   { id: 'cta', icon: '👉', label: '购买收口', desc: '最后一屏做转化收束' },
 ];
 
+const STEP_SUMMARY = [
+  {
+    title: '锁定商品主体',
+    body: '先确认商品不漂，后面所有参考只学风格，不学参考里的商品。',
+  },
+  {
+    title: '上传参考图组',
+    body: '一次传 1 到 8 张即可，系统会自动判断哪张更适合哪一屏。',
+  },
+  {
+    title: '只定方向',
+    body: '平台、场景、色调决定后面规则，不需要写很长的说明。',
+  },
+  {
+    title: '先规划再出图',
+    body: '系统先拆成 8 屏，再进入确认页和编辑台，不会直接把你扔进复杂参数里。',
+  },
+] as const;
+
 const DetailPageWizard: React.FC<DetailPageWizardProps> = ({
   open,
   sourceImageUrl,
@@ -97,9 +116,10 @@ const DetailPageWizard: React.FC<DetailPageWizardProps> = ({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[265] flex items-center justify-center p-4 md:p-6">
+    <div className="fixed inset-0 z-[265] overflow-y-auto p-4 md:p-6">
       <div className="absolute inset-0 bg-stone-950/55 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-[1120px] overflow-hidden rounded-[2rem] border border-stone-200 bg-[radial-gradient(circle_at_top_left,rgba(239,246,255,0.95),rgba(255,255,255,0.97)_34%,rgba(248,250,252,0.96)_100%)] shadow-[0_30px_80px_rgba(15,23,42,0.18)]">
+      <div className="relative flex min-h-full items-start justify-center md:items-center">
+      <div className="relative my-4 flex w-full max-w-[1060px] max-h-[calc(100dvh-2rem)] flex-col overflow-hidden rounded-[2rem] border border-stone-200 bg-[radial-gradient(circle_at_top_left,rgba(239,246,255,0.95),rgba(255,255,255,0.97)_34%,rgba(248,250,252,0.96)_100%)] shadow-[0_30px_80px_rgba(15,23,42,0.18)] md:my-0 md:max-h-[calc(100dvh-3rem)]">
         <button
           type="button"
           onClick={onClose}
@@ -108,14 +128,14 @@ const DetailPageWizard: React.FC<DetailPageWizardProps> = ({
           <X size={16} />
         </button>
 
-        <div className="border-b border-stone-100 px-6 py-6 md:px-8">
+        <div className="shrink-0 border-b border-stone-100 px-5 py-5 md:px-7">
           <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
             <div>
               <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-stone-500 shadow-sm">
                 <LayoutTemplate size={12} />
                 Detail Page Wizard
               </div>
-              <h2 className="mt-4 text-[30px] font-black tracking-tight text-[#1d1d1f]">
+              <h2 className="mt-4 text-[26px] md:text-[28px] font-black tracking-tight text-[#1d1d1f]">
                 参考图复刻详情页
               </h2>
               <p className="mt-2 text-[14px] font-medium leading-6 text-stone-500">
@@ -123,7 +143,7 @@ const DetailPageWizard: React.FC<DetailPageWizardProps> = ({
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+            <div className="flex flex-wrap items-center justify-start gap-2 md:justify-end">
               {STEP_ITEMS.map((step, index) => {
                 const Icon = step.icon;
                 const isActive = index === stepIndex;
@@ -131,7 +151,7 @@ const DetailPageWizard: React.FC<DetailPageWizardProps> = ({
                 return (
                   <div
                     key={step.id}
-                    className={`rounded-2xl border px-4 py-3 transition-all ${
+                    className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 transition-all ${
                       isActive
                         ? 'border-stone-900 bg-white shadow-sm'
                         : isDone
@@ -139,21 +159,19 @@ const DetailPageWizard: React.FC<DetailPageWizardProps> = ({
                           : 'border-stone-200 bg-white/65'
                     }`}
                   >
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`flex h-7 w-7 items-center justify-center rounded-full text-[12px] font-black ${
-                          isActive
-                            ? 'bg-stone-900 text-white'
-                            : isDone
-                              ? 'bg-emerald-500 text-white'
-                              : 'bg-stone-100 text-stone-500'
-                        }`}
-                      >
-                        {isDone ? '✓' : index + 1}
-                      </span>
-                      <Icon size={14} className={isActive ? 'text-stone-900' : 'text-stone-400'} />
-                    </div>
-                    <p className="mt-3 text-[13px] font-black text-stone-900">{step.label}</p>
+                    <span
+                      className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-black ${
+                        isActive
+                          ? 'bg-stone-900 text-white'
+                          : isDone
+                            ? 'bg-emerald-500 text-white'
+                            : 'bg-stone-100 text-stone-500'
+                      }`}
+                    >
+                      {isDone ? '✓' : index + 1}
+                    </span>
+                    <Icon size={13} className={isActive ? 'text-stone-900' : 'text-stone-400'} />
+                    <p className="text-[12px] font-black text-stone-900">{step.label}</p>
                   </div>
                 );
               })}
@@ -161,10 +179,9 @@ const DetailPageWizard: React.FC<DetailPageWizardProps> = ({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-0 lg:grid-cols-[280px_minmax(0,1fr)]">
-          <aside className="border-r border-stone-100 bg-white/60 px-6 py-6">
-            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-stone-400">当前步骤</p>
-            <div className="mt-4 rounded-[1.75rem] border border-stone-200 bg-white px-5 py-5 shadow-sm">
+        <div className="grid flex-1 min-h-0 grid-cols-1 gap-0 lg:grid-cols-[240px_minmax(0,1fr)]">
+          <aside className="border-r border-stone-100 bg-white/60 px-5 py-5 overflow-y-auto">
+            <div className="rounded-[1.5rem] border border-stone-200 bg-white px-4 py-4 shadow-sm">
               <div className="flex items-center gap-3">
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-stone-900 text-white">
                   <CurrentStepIcon size={18} />
@@ -173,59 +190,45 @@ const DetailPageWizard: React.FC<DetailPageWizardProps> = ({
                   <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-stone-400">
                     Step {stepIndex + 1}
                   </p>
-                  <p className="mt-1 text-[20px] font-black tracking-tight text-stone-900">
+                  <p className="mt-1 text-[18px] font-black tracking-tight text-stone-900">
                     {currentStep.label}
                   </p>
                 </div>
               </div>
 
-              <div className="mt-5 space-y-3 text-[13px] leading-6 text-stone-500">
-                {stepIndex === 0 ? (
-                  <>
-                    <p>先确认你的商品图已经就绪。</p>
-                    <p>这一步不需要理解模块，只要锁住商品主体。</p>
-                  </>
-                ) : null}
-                {stepIndex === 1 ? (
-                  <>
-                    <p>一次上传 1 到 8 张参考详情图。</p>
-                    <p>系统会学习版式、色彩、留白和节奏，不学习参考图里的商品。</p>
-                  </>
-                ) : null}
-                {stepIndex === 2 ? (
-                  <>
-                    <p>这里只做方向选择，不需要写很多字。</p>
-                    <p>平台、场景和色调会影响后面的规划与生图规则。</p>
-                  </>
-                ) : null}
-                {stepIndex === 3 ? (
-                  <>
-                    <p>点击开始后，系统会先规划 8 屏，再带你看一页更直观的用途确认。</p>
-                    <p>确认后再逐屏出图，不会一上来把所有配置都压给你。</p>
-                  </>
-                ) : null}
+              <div className="mt-4 rounded-2xl bg-stone-50 px-4 py-3">
+                <p className="text-[13px] font-black text-stone-900">{STEP_SUMMARY[stepIndex].title}</p>
+                <p className="mt-2 text-[12px] leading-5 text-stone-500">{STEP_SUMMARY[stepIndex].body}</p>
               </div>
             </div>
 
-            <div className="mt-5 rounded-[1.75rem] border border-dashed border-stone-300 bg-white/65 px-5 py-5">
-              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-stone-400">你将得到</p>
-              <div className="mt-4 grid grid-cols-2 gap-2">
+            <div className="mt-4 rounded-[1.5rem] border border-dashed border-stone-300 bg-white/65 px-4 py-4">
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-stone-400">最终会产出</p>
+              <div className="mt-3 grid grid-cols-2 gap-2">
                 {DETAIL_PAGE_USE_CASES.slice(0, 4).map((item) => (
-                  <div key={item.id} className="rounded-2xl bg-stone-50 px-3 py-3">
-                    <p className="text-[15px] font-black text-stone-900">{item.icon} {item.label}</p>
-                    <p className="mt-1 text-[11px] leading-5 text-stone-500">{item.desc}</p>
+                  <div key={item.id} className="rounded-2xl bg-stone-50 px-3 py-2.5">
+                    <p className="text-[13px] font-black text-stone-900">{item.icon} {item.label}</p>
+                    <p className="mt-1 text-[10px] leading-4 text-stone-500">{item.desc}</p>
                   </div>
+                ))}
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {DETAIL_PAGE_USE_CASES.slice(4).map((item) => (
+                  <span key={item.id} className="rounded-full border border-stone-200 bg-white px-3 py-1 text-[11px] font-bold text-stone-700">
+                    {item.icon} {item.label}
+                  </span>
                 ))}
               </div>
             </div>
           </aside>
 
-          <main className="px-6 py-6 md:px-8">
+          <main className="flex min-h-0 flex-col px-6 py-6 md:px-8">
+            <div className="flex-1 overflow-y-auto pr-1">
             {stepIndex === 0 ? (
               <section className="space-y-5">
                 <div>
                   <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-stone-400">① 商品</p>
-                  <h3 className="mt-2 text-[28px] font-black tracking-tight text-stone-900">先锁定你的商品主体</h3>
+                  <h3 className="mt-2 text-[24px] md:text-[26px] font-black tracking-tight text-stone-900">先锁定你的商品主体</h3>
                   <p className="mt-2 text-[14px] leading-6 text-stone-500">
                     详情页复刻的前提是商品不漂。我们会优先沿用你已经上传的主商品图。
                   </p>
@@ -278,7 +281,7 @@ const DetailPageWizard: React.FC<DetailPageWizardProps> = ({
               <section className="space-y-5">
                 <div>
                   <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-stone-400">② 参考</p>
-                  <h3 className="mt-2 text-[28px] font-black tracking-tight text-stone-900">上传你想模仿的详情图</h3>
+                  <h3 className="mt-2 text-[24px] md:text-[26px] font-black tracking-tight text-stone-900">上传你想模仿的详情图</h3>
                   <p className="mt-2 text-[14px] leading-6 text-stone-500">
                     可以只传 1 张，也可以一次传多张。系统会自动理解哪一张更适合哪一屏。
                   </p>
@@ -347,7 +350,7 @@ const DetailPageWizard: React.FC<DetailPageWizardProps> = ({
               <section className="space-y-5">
                 <div>
                   <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-stone-400">③ 风格</p>
-                  <h3 className="mt-2 text-[28px] font-black tracking-tight text-stone-900">给系统一个明确方向</h3>
+                  <h3 className="mt-2 text-[24px] md:text-[26px] font-black tracking-tight text-stone-900">给系统一个明确方向</h3>
                   <p className="mt-2 text-[14px] leading-6 text-stone-500">
                     这一步只要决定平台、场景和色调，不需要写一大段说明。
                   </p>
@@ -356,13 +359,13 @@ const DetailPageWizard: React.FC<DetailPageWizardProps> = ({
                 <div className="rounded-[1.75rem] border border-stone-200 bg-white p-5 shadow-sm">
                   <div>
                     <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-stone-400">平台</p>
-                    <div className="mt-3 grid gap-3 md:grid-cols-2">
+                    <div className="mt-3 grid gap-2.5 md:grid-cols-2">
                       {PLATFORM_ITEMS.map((platform) => (
                         <button
                           key={platform.id}
                           type="button"
                           onClick={() => onTargetPlatformChange(platform.id)}
-                          className={`rounded-[1.35rem] border px-4 py-4 text-left transition-all ${
+                          className={`rounded-[1.25rem] border px-4 py-3.5 text-left transition-all ${
                             targetPlatform === platform.id
                               ? 'border-stone-900 bg-stone-900 text-white shadow-sm'
                               : 'border-stone-200 bg-stone-50 hover:border-stone-300'
@@ -403,7 +406,7 @@ const DetailPageWizard: React.FC<DetailPageWizardProps> = ({
                     <textarea
                       value={instructionValue}
                       onChange={(event) => onInstructionChange(event.target.value)}
-                      className="mt-2 min-h-[120px] w-full rounded-[1.5rem] border border-stone-200 bg-stone-50 px-4 py-4 text-[14px] leading-7 text-stone-900 outline-none focus:border-stone-400 resize-y"
+                      className="mt-2 min-h-[96px] max-h-[180px] w-full rounded-[1.5rem] border border-stone-200 bg-stone-50 px-4 py-4 text-[14px] leading-7 text-stone-900 outline-none focus:border-stone-400 resize-y"
                       placeholder="例如：封面更克制，卖点屏更像参考第二张，整体偏母婴安心感。"
                     />
                   </label>
@@ -415,7 +418,7 @@ const DetailPageWizard: React.FC<DetailPageWizardProps> = ({
               <section className="space-y-5">
                 <div>
                   <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-stone-400">④ 生成</p>
-                  <h3 className="mt-2 text-[28px] font-black tracking-tight text-stone-900">AI 会先规划，再逐屏出图</h3>
+                  <h3 className="mt-2 text-[24px] md:text-[26px] font-black tracking-tight text-stone-900">AI 会先规划，再逐屏出图</h3>
                   <p className="mt-2 text-[14px] leading-6 text-stone-500">
                     你不用先理解工作台。系统会先帮你拆好结构，接着再进入编辑界面。
                   </p>
@@ -449,7 +452,10 @@ const DetailPageWizard: React.FC<DetailPageWizardProps> = ({
               </section>
             ) : null}
 
-            <div className="mt-8 flex flex-col gap-3 border-t border-stone-100 pt-6 md:flex-row md:items-center md:justify-between">
+            </div>
+
+            <div className="mt-6 shrink-0 border-t border-stone-100 bg-[linear-gradient(180deg,rgba(255,255,255,0)_0%,rgba(255,255,255,0.92)_16%,rgba(255,255,255,1)_100%)] pt-5">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div className="text-[12px] font-medium text-stone-500">
                 {stepIndex < 3 ? '继续下一步，让系统知道该怎么做。' : '点击开始后，将自动进入工作台并生成 8 屏规划。'}
               </div>
@@ -487,8 +493,10 @@ const DetailPageWizard: React.FC<DetailPageWizardProps> = ({
                 )}
               </div>
             </div>
+            </div>
           </main>
         </div>
+      </div>
       </div>
     </div>
   );

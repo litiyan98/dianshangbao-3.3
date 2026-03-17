@@ -136,9 +136,10 @@ const DetailPagePlanPreview: React.FC<DetailPagePlanPreviewProps> = ({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[268] flex items-center justify-center p-4 md:p-6">
+    <div className="fixed inset-0 z-[268] overflow-y-auto p-4 md:p-6">
       <div className="absolute inset-0 bg-stone-950/55 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-[1320px] overflow-hidden rounded-[2rem] border border-stone-200 bg-[radial-gradient(circle_at_top_left,rgba(240,249,255,0.94),rgba(255,255,255,0.98)_38%,rgba(248,250,252,0.98)_100%)] shadow-[0_30px_90px_rgba(15,23,42,0.18)]">
+      <div className="relative flex min-h-full items-start justify-center md:items-center">
+      <div className="relative my-4 flex w-full max-w-[1200px] max-h-[calc(100dvh-2rem)] flex-col overflow-hidden rounded-[2rem] border border-stone-200 bg-[radial-gradient(circle_at_top_left,rgba(240,249,255,0.94),rgba(255,255,255,0.98)_38%,rgba(248,250,252,0.98)_100%)] shadow-[0_30px_90px_rgba(15,23,42,0.18)] md:my-0 md:max-h-[calc(100dvh-3rem)]">
         <button
           type="button"
           onClick={onClose}
@@ -147,14 +148,14 @@ const DetailPagePlanPreview: React.FC<DetailPagePlanPreviewProps> = ({
           <X size={16} />
         </button>
 
-        <div className="border-b border-stone-100 px-6 py-6 md:px-8">
+        <div className="shrink-0 border-b border-stone-100 px-5 py-5 md:px-7">
           <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
             <div>
               <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-stone-500 shadow-sm">
                 <FileStack size={12} />
                 Detail Page Blueprint
               </div>
-              <h2 className="mt-4 text-[30px] font-black tracking-tight text-[#1d1d1f]">
+              <h2 className="mt-4 text-[26px] md:text-[28px] font-black tracking-tight text-[#1d1d1f]">
                 8 屏用途确认与生成进度
               </h2>
               <p className="mt-2 max-w-3xl text-[14px] font-medium leading-6 text-stone-500">
@@ -162,26 +163,26 @@ const DetailPagePlanPreview: React.FC<DetailPagePlanPreviewProps> = ({
               </p>
             </div>
 
-            <div className="grid grid-cols-3 gap-3 md:min-w-[420px]">
+            <div className="grid grid-cols-3 gap-2 md:min-w-[360px]">
               <div className="rounded-2xl border border-stone-200 bg-white px-4 py-3 shadow-sm">
                 <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-stone-400">已规划</p>
-                <p className="mt-2 text-[22px] font-black text-stone-900">{plannedCount} / {modules.length}</p>
+                <p className="mt-1.5 text-[20px] font-black text-stone-900">{plannedCount} / {modules.length}</p>
               </div>
               <div className="rounded-2xl border border-stone-200 bg-white px-4 py-3 shadow-sm">
                 <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-stone-400">已出图</p>
-                <p className="mt-2 text-[22px] font-black text-stone-900">{generatedCount} / {modules.length}</p>
+                <p className="mt-1.5 text-[20px] font-black text-stone-900">{generatedCount} / {modules.length}</p>
               </div>
               <div className="rounded-2xl border border-stone-200 bg-white px-4 py-3 shadow-sm">
                 <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-stone-400">待重试</p>
-                <p className="mt-2 text-[22px] font-black text-stone-900">{retryCount}</p>
+                <p className="mt-1.5 text-[20px] font-black text-stone-900">{retryCount}</p>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-0 xl:grid-cols-[320px_minmax(0,1fr)]">
-          <aside className="border-r border-stone-100 bg-white/65 px-6 py-6">
-            <div className="rounded-[1.75rem] border border-stone-200 bg-white px-5 py-5 shadow-sm">
+        <div className="grid flex-1 min-h-0 grid-cols-1 gap-0 xl:grid-cols-[264px_minmax(0,1fr)]">
+          <aside className="border-r border-stone-100 bg-white/65 px-5 py-5 overflow-y-auto">
+            <div className="rounded-[1.5rem] border border-stone-200 bg-white px-4 py-4 shadow-sm">
               <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-stone-400">当前状态</p>
               <div className="mt-4 flex items-start gap-3">
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-stone-900 text-white">
@@ -264,12 +265,12 @@ const DetailPagePlanPreview: React.FC<DetailPagePlanPreviewProps> = ({
               </div>
             </div>
 
-            <div className="mt-5 rounded-[1.75rem] border border-dashed border-stone-300 bg-white/75 px-5 py-5">
+            <div className="mt-4 rounded-[1.5rem] border border-dashed border-stone-300 bg-white/75 px-4 py-4">
               <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-stone-400">
                 <Images size={13} />
                 风格摘要
               </div>
-              <div className="mt-4 space-y-3">
+              <div className="mt-3 space-y-2.5">
                 <div className="rounded-2xl bg-stone-50 px-4 py-3">
                   <p className="text-[12px] font-bold text-stone-500">版式节奏</p>
                   <p className="mt-1 text-[13px] font-black text-stone-900">
@@ -301,7 +302,7 @@ const DetailPagePlanPreview: React.FC<DetailPagePlanPreviewProps> = ({
               </div>
             </div>
 
-            <div className="mt-5 flex flex-col gap-3">
+            <div className="mt-4 flex flex-col gap-2.5">
               <button
                 type="button"
                 onClick={onGenerateAssets}
@@ -332,8 +333,8 @@ const DetailPagePlanPreview: React.FC<DetailPagePlanPreviewProps> = ({
             </div>
           </aside>
 
-          <main className="px-6 py-6 md:px-8">
-            <div className="mb-5 flex items-center justify-between gap-3">
+          <main className="flex min-h-0 flex-col px-6 py-6 md:px-8">
+            <div className="mb-5 shrink-0 flex items-center justify-between gap-3">
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-stone-400">8 张用途卡</p>
                 <p className="mt-1 text-[14px] font-medium text-stone-500">
@@ -348,7 +349,8 @@ const DetailPagePlanPreview: React.FC<DetailPagePlanPreviewProps> = ({
               ) : null}
             </div>
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               {modules.map((module) => {
                 const meta = MODULE_USE_CASES[module.type];
                 const previewStatus = resolveModulePreviewStatus(module, isPlanning);
@@ -483,9 +485,11 @@ const DetailPagePlanPreview: React.FC<DetailPagePlanPreviewProps> = ({
                   </div>
                 );
               })}
+              </div>
             </div>
           </main>
         </div>
+      </div>
       </div>
     </div>
   );
